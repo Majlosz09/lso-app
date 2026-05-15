@@ -387,9 +387,6 @@ function MemberScheduleView() {
     visible: boolean; assignmentId: string; title: string; reason: string
   }>({ visible: false, assignmentId: '', title: '', reason: '' })
 
-  // History
-  const [pastAssignments, setPastAssignments] = useState<any[]>([])
-  const [historyExpanded, setHistoryExpanded] = useState(false)
 
   useEffect(() => {
     const days = getWeekDays(weekOffset)
@@ -441,40 +438,13 @@ function MemberScheduleView() {
     setRefreshing(false)
   }
 
-  const fetchPastAssignments = async () => {
-    if (!profile?.id) return
-    const { data: assignments } = await supabase
-      .from('schedule_assignments')
-      .select('id, status, schedule_id, absence_reason, admin_note')
-      .eq('profile_id', profile.id)
-    if (!assignments?.length) { setPastAssignments([]); return }
-
-    const { data: schedules } = await supabase
-      .from('schedules')
-      .select('id, title, date, time, category, group:groups(name)')
-      .in('id', assignments.map((a: any) => a.schedule_id))
-      .lt('date', today)
-      .order('date', { ascending: false })
-      .limit(30)
-
-    const aMap = new Map(assignments.map((a: any) => [a.schedule_id, a]))
-    setPastAssignments(
-      (schedules ?? []).map((s: any) => ({
-        ...s,
-        assignment: aMap.get(s.id) ?? null,
-        hasAttendance: false,
-      }))
-    )
-  }
 
   useEffect(() => {
     fetchWeekSchedules(weekDays)
-    fetchPastAssignments()
   }, [profile?.id, weekDays])
 
   useRealtimeTable('schedule_assignments', () => {
     fetchWeekSchedules(weekDays)
-    fetchPastAssignments()
   })
 
   // --- Handlers ---
@@ -663,32 +633,6 @@ function MemberScheduleView() {
           ))
         )}
 
-        {/* Historia służb */}
-        <TouchableOpacity
-          style={styles.historiaToggle}
-          onPress={() => setHistoryExpanded(e => !e)}
-        >
-          <Text style={styles.historiaTitleText}>Historia służb</Text>
-          <Ionicons
-            name={historyExpanded ? 'chevron-up' : 'chevron-down'}
-            size={16} color="#888"
-          />
-        </TouchableOpacity>
-
-        {historyExpanded && pastAssignments.map((schedule: any) => (
-          <ScheduleTile
-            key={schedule.id}
-            schedule={schedule}
-            checkingIn={false}
-            signingUp={false}
-            unsigning={false}
-            reporting={false}
-            onCheckIn={() => {}}
-            onSignUp={() => {}}
-            onUnsign={() => {}}
-            onReportAbsence={() => {}}
-          />
-        ))}
       </ScrollView>
 
       {/* Absence modal */}

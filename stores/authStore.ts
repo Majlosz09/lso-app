@@ -5,6 +5,38 @@ import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { Profile, Parish } from '../types/database'
 
+async function ensureSchedulesCoverage(parishId: string) {
+  const oneYearOut = new Date()
+  oneYearOut.setFullYear(oneYearOut.getFullYear() + 1)
+  const oneYearStr = oneYearOut.toISOString().split('T')[0]
+
+  // Threshold: if last schedule is within 60 days of 1-year-out, extend
+  const threshold = new Date(oneYearOut)
+  threshold.setDate(threshold.getDate() - 60)
+  const thresholdStr = threshold.toISOString().split('T')[0]
+
+  const { data } = await supabase
+    .from('schedules')
+    .select('date')
+    .eq('parish_id', parishId)
+    .eq('category', 'msza')
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const lastDate = data?.date ?? null
+  if (!lastDate || lastDate < thresholdStr) {
+    const fromDate = lastDate
+      ? new Date(new Date(lastDate + 'T12:00:00').getTime() + 86400000).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0]
+    await supabase.rpc('generate_schedules_from_templates', {
+      p_parish_id: parishId,
+      p_from_date: fromDate,
+      p_to_date: oneYearStr,
+    })
+  }
+}
+
 interface AuthState {
   session: Session | null
   user: User | null
@@ -54,6 +86,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           .eq('id', profileData.parish_id)
           .single()
         set({ parish: parishData ?? null })
+        // Fire-and-forget: ensure schedules cover next year
+        ensureSchedulesCoverage(profileData.parish_id).catch(() => {})
       } else {
         set({ parish: null })
       }
