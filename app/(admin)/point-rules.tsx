@@ -1,69 +1,66 @@
 import { useEffect, useState } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Platform
+  ScrollView, Alert, ActivityIndicator
 } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
-import { useAuthStore } from '../../stores/authStore'
-import { PointRule } from '../../types/database'
 import { shadow } from '../../lib/shadows'
+import { useAuthStore } from '../../stores/authStore'
+import { ServiceType, SERVICE_TYPE_LABELS } from '../../types/database'
+
+const SERVICE_TYPES: ServiceType[] = ['msza_assigned', 'msza_extra', 'nabozenstwo', 'zbiorka']
+const DEFAULT_POINTS: Record<ServiceType, number> = {
+  msza_assigned: 5, msza_extra: 3, nabozenstwo: 3, zbiorka: 5,
+}
 
 export default function PointRulesScreen() {
   const { profile } = useAuthStore()
   const insets = useSafeAreaInsets()
-  const [rules, setRules] = useState<PointRule[]>([])
+  const [values, setValues] = useState<Record<ServiceType, string>>({
+    msza_assigned: '5', msza_extra: '3', nabozenstwo: '3', zbiorka: '5',
+  })
   const [loading, setLoading] = useState(true)
-  const [labelInput, setLabelInput] = useState('')
-  const [pointsInput, setPointsInput] = useState('')
-  const [adding, setAdding] = useState(false)
+  const [saving, setSaving] = useState(false)
 
-  const fetchRules = async () => {
-    const { data } = await supabase
+  useEffect(() => {
+    if (!profile?.parish_id) return
+    supabase
       .from('point_rules')
-      .select('*')
-      .eq('parish_id', profile?.parish_id)
-      .order('points', { ascending: false })
-    setRules((data as PointRule[]) ?? [])
-    setLoading(false)
-  }
+      .select('service_type, points')
+      .eq('parish_id', profile.parish_id)
+      .then(({ data }) => {
+        if (data) {
+          const next = { ...values }
+          for (const row of data as any[]) {
+            if (row.service_type in next) next[row.service_type as ServiceType] = String(row.points)
+          }
+          setValues(next)
+        }
+        setLoading(false)
+      })
+  }, [profile?.parish_id])
 
-  useEffect(() => { fetchRules() }, [])
-
-  const handleAdd = async () => {
-    if (!labelInput.trim()) { Alert.alert('Błąd', 'Wpisz nazwę służby.'); return }
-    const pts = parseInt(pointsInput)
-    if (isNaN(pts) || pts <= 0) { Alert.alert('Błąd', 'Wpisz prawidłową liczbę punktów.'); return }
-    setAdding(true)
-    const { error } = await supabase.from('point_rules').insert({
-      parish_id: profile?.parish_id,
-      label: labelInput.trim(),
-      points: pts,
-    })
-    setAdding(false)
-    if (error) { Alert.alert('Błąd', error.message) }
-    else { setLabelInput(''); setPointsInput(''); fetchRules() }
-  }
-
-  const doDelete = async (rule: PointRule) => {
-    const { data, error } = await supabase
-      .from('point_rules').delete().eq('id', rule.id).select('id')
-    if (error) Alert.alert('Błąd', error.message)
-    else if (!data?.length) Alert.alert('Błąd uprawnień', 'Brak polityki DELETE dla point_rules.')
-    else fetchRules()
-  }
-
-  const handleDelete = (rule: PointRule) => {
-    const msg = `Usunąć "${rule.label} (${rule.points} pkt)"?`
-    if (Platform.OS === 'web') {
-      if (window.confirm(msg)) doDelete(rule)
-    } else {
-      Alert.alert('Usuń regułę', msg, [
-        { text: 'Anuluj', style: 'cancel' },
-        { text: 'Usuń', style: 'destructive', onPress: () => doDelete(rule) },
-      ])
+  const handleSave = async () => {
+    for (const type of SERVICE_TYPES) {
+      const n = parseInt(values[type])
+      if (isNaN(n) || n < 0) {
+        Alert.alert('Błąd', `Nieprawidłowa wartość dla "${SERVICE_TYPE_LABELS[type]}".`)
+        return
+      }
     }
+    setSaving(true)
+    const upserts = SERVICE_TYPES.map(type => ({
+      parish_id: profile!.parish_id,
+      service_type: type,
+      points: parseInt(values[type]),
+    }))
+    const { error } = await supabase
+      .from('point_rules')
+      .upsert(upserts, { onConflict: 'parish_id,service_type' })
+    setSaving(false)
+    if (error) Alert.alert('Błąd', error.message)
+    else Alert.alert('Zapisano', 'Ustawienia punktów zostały zaktualizowane.')
   }
 
   if (loading) {
@@ -73,59 +70,33 @@ export default function PointRulesScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {rules.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="trophy-outline" size={48} color="#ccc" />
-            <Text style={styles.emptyText}>Brak reguł punktowania</Text>
-            <Text style={styles.emptySub}>Dodaj poniżej typy służb i ich wartości</Text>
-          </View>
-        ) : (
-          rules.map(rule => (
-            <View key={rule.id} style={styles.row}>
-              <View style={styles.pointsBadge}>
-                <Text style={styles.pointsText}>{rule.points}</Text>
-                <Text style={styles.pointsUnit}>pkt</Text>
-              </View>
-              <Text style={styles.ruleLabel} numberOfLines={1}>{rule.label}</Text>
-              <TouchableOpacity onPress={() => handleDelete(rule)} hitSlop={8}>
-                <Ionicons name="trash-outline" size={20} color="#e74c3c" />
-              </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Punkty za każdy rodzaj służby</Text>
+        {SERVICE_TYPES.map(type => (
+          <View key={type} style={styles.row}>
+            <Text style={styles.label}>{SERVICE_TYPE_LABELS[type]}</Text>
+            <View style={styles.inputGroup}>
+              <TextInput
+                style={styles.input}
+                value={values[type]}
+                onChangeText={v => setValues(prev => ({ ...prev, [type]: v.replace(/[^0-9]/g, '') }))}
+                keyboardType="number-pad"
+                maxLength={3}
+              />
+              <Text style={styles.unit}>pkt</Text>
             </View>
-          ))
-        )}
+          </View>
+        ))}
+        <TouchableOpacity
+          style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+          onPress={handleSave}
+          disabled={saving}
+        >
+          {saving
+            ? <ActivityIndicator size="small" color="#fff" />
+            : <Text style={styles.saveBtnText}>Zapisz zmiany</Text>
+          }
+        </TouchableOpacity>
       </ScrollView>
-
-      <View style={[styles.addBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <Text style={styles.addBarTitle}>Dodaj regułę</Text>
-        <View style={styles.addRow}>
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            placeholder="Nazwa służby"
-            placeholderTextColor="#aaa"
-            value={labelInput}
-            onChangeText={setLabelInput}
-          />
-          <TextInput
-            style={[styles.input, styles.inputPoints]}
-            placeholder="pkt"
-            placeholderTextColor="#aaa"
-            value={pointsInput}
-            onChangeText={v => setPointsInput(v.replace(/[^0-9]/g, ''))}
-            keyboardType="number-pad"
-            maxLength={3}
-          />
-          <TouchableOpacity
-            style={[styles.addBtn, (!labelInput.trim() || !pointsInput || adding) && { opacity: 0.4 }]}
-            onPress={handleAdd}
-            disabled={!labelInput.trim() || !pointsInput || adding}
-          >
-            {adding
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Ionicons name="add" size={22} color="#fff" />
-            }
-          </TouchableOpacity>
-        </View>
-      </View>
     </View>
   )
 }
@@ -133,40 +104,25 @@ export default function PointRulesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 16, gap: 8 },
-
-  empty: { alignItems: 'center', paddingVertical: 48, gap: 8 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: '#aaa' },
-  emptySub: { fontSize: 13, color: '#bbb', textAlign: 'center' },
-
+  content: { padding: 16, gap: 10 },
+  sectionTitle: { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#fff', borderRadius: 12, padding: 14,
     ...shadow.xs,
   },
-  pointsBadge: {
-    backgroundColor: '#534AB711', borderRadius: 10,
-    paddingHorizontal: 10, paddingVertical: 6,
-    minWidth: 54, alignItems: 'center',
-  },
-  pointsText: { fontSize: 17, fontWeight: '800', color: '#534AB7' },
-  pointsUnit: { fontSize: 10, color: '#534AB7', marginTop: -2 },
-  ruleLabel: { flex: 1, fontSize: 15, color: '#1a1a1a' },
-
-  addBar: {
-    backgroundColor: '#fff', padding: 16, gap: 10,
-    borderTopWidth: 1, borderTopColor: '#f0f0f0',
-  },
-  addBarTitle: { fontSize: 13, fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: 0.5 },
-  addRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  label: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
+  inputGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   input: {
-    backgroundColor: '#f5f5f5', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 11,
-    fontSize: 15, color: '#1a1a1a', borderWidth: 1, borderColor: '#e8e8e8',
+    backgroundColor: '#f0f0f0', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7,
+    fontSize: 18, fontWeight: '800', color: '#534AB7',
+    minWidth: 48, textAlign: 'center',
   },
-  inputPoints: { width: 62, textAlign: 'center' },
-  addBtn: {
-    width: 44, height: 44, borderRadius: 10,
-    backgroundColor: '#534AB7', justifyContent: 'center', alignItems: 'center',
+  unit: { fontSize: 12, color: '#888', fontWeight: '600' },
+  saveBtn: {
+    backgroundColor: '#534AB7', borderRadius: 12,
+    padding: 14, alignItems: 'center', marginTop: 8,
   },
+  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 })
