@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   View, Text, FlatList, ScrollView, StyleSheet, RefreshControl,
   TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput
@@ -11,7 +11,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { getLiturgicalDay, getLiturgicalAccentColor, getLiturgicalBgColor } from '../../lib/liturgy'
 import { STATUS_COLORS, STATUS_LABELS } from '../../lib/status'
 import { MassTemplate } from '../../types/database'
-import { CATEGORY_CONFIG, ScheduleCategory } from '../../types/database'
+import { CATEGORY_CONFIG, ScheduleCategory, AssignmentStatus } from '../../types/database'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 
 LocaleConfig.locales['pl'] = {
@@ -229,6 +229,163 @@ function WeekStrip({ weekDays, selectedDate, onSelect, onPrev, onNext, eventDate
       <TouchableOpacity onPress={onNext} style={styles.weekArrow} hitSlop={8}>
         <Ionicons name="chevron-forward" size={20} color="#534AB7" />
       </TouchableOpacity>
+    </View>
+  )
+}
+
+interface ScheduleTileProps {
+  schedule: any
+  checkingIn: boolean
+  signingUp: boolean
+  unsigning: boolean
+  reporting: boolean
+  onCheckIn: () => void
+  onSignUp: () => void
+  onUnsign: () => void
+  onReportAbsence: () => void
+}
+
+function ScheduleTile({
+  schedule, checkingIn, signingUp, unsigning, reporting,
+  onCheckIn, onSignUp, onUnsign, onReportAbsence,
+}: ScheduleTileProps) {
+  const assignment = schedule.assignment
+  const alreadyCheckedIn = schedule.hasAttendance || assignment?.status === 'present'
+  const windowOpen = isCheckInWindowOpen(schedule)
+  const isSun = isSunday(schedule.date)
+  const cat = schedule.category as ScheduleCategory
+  const cfg = CATEGORY_CONFIG[cat]
+  const status: AssignmentStatus | undefined = assignment?.status
+
+  // Border color: colored border only when window is open and not yet checked in
+  let borderColor = '#eee'
+  if (!isSun && windowOpen && !alreadyCheckedIn) {
+    borderColor = (cat === 'msza' && assignment) ? '#27ae60' : '#534AB7'
+  }
+
+  // Determine the primary action button
+  let actionButton: React.ReactElement | null = null
+
+  if (alreadyCheckedIn) {
+    // No button — badge OBECNY shown in badges section below
+  } else if (isSun) {
+    // No action for Sunday masses
+  } else if (cat === 'msza') {
+    if (windowOpen) {
+      const isAssigned = !!assignment
+      actionButton = (
+        <TouchableOpacity
+          style={[styles.tileBtn, { backgroundColor: isAssigned ? '#27ae60' : '#534AB7' }]}
+          onPress={onCheckIn}
+          disabled={checkingIn}
+        >
+          {checkingIn
+            ? <ActivityIndicator size="small" color="#fff" />
+            : <Text style={styles.tileBtnText}>Obecny</Text>
+          }
+        </TouchableOpacity>
+      )
+    } else if (!status || status === 'assigned') {
+      if (assignment) {
+        actionButton = (
+          <TouchableOpacity
+            style={[styles.tileBtn, styles.tileBtnOutline]}
+            onPress={onUnsign}
+            disabled={unsigning}
+          >
+            {unsigning
+              ? <ActivityIndicator size="small" color="#e67e22" />
+              : <Text style={[styles.tileBtnText, { color: '#e67e22' }]}>Wypisz się</Text>
+            }
+          </TouchableOpacity>
+        )
+      } else {
+        actionButton = (
+          <TouchableOpacity
+            style={[styles.tileBtn, styles.tileBtnSecondary]}
+            onPress={onSignUp}
+            disabled={signingUp}
+          >
+            {signingUp
+              ? <ActivityIndicator size="small" color="#534AB7" />
+              : <Text style={[styles.tileBtnText, { color: '#534AB7' }]}>Zapisz się</Text>
+            }
+          </TouchableOpacity>
+        )
+      }
+    }
+  } else {
+    // nabozenstwo or zbiorka
+    if (windowOpen) {
+      actionButton = (
+        <TouchableOpacity
+          style={[styles.tileBtn, { backgroundColor: '#534AB7' }]}
+          onPress={onCheckIn}
+          disabled={checkingIn}
+        >
+          {checkingIn
+            ? <ActivityIndicator size="small" color="#fff" />
+            : <Text style={styles.tileBtnText}>Obecny</Text>
+          }
+        </TouchableOpacity>
+      )
+    }
+  }
+
+  return (
+    <View style={[styles.schedTile, { borderColor }]}>
+      <View style={styles.schedTileTop}>
+        <View style={styles.schedTileLeft}>
+          <View style={styles.schedTileTitleRow}>
+            <Text style={styles.schedTileTitle}>{schedule.title}</Text>
+            <View style={[styles.catBadge, { backgroundColor: cfg.bg }]}>
+              <Text style={[styles.catBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
+            </View>
+          </View>
+          <View style={styles.schedTileMeta}>
+            {schedule.time && (
+              <MetaRow icon="time-outline" text={schedule.time.slice(0, 5)} />
+            )}
+            {schedule.group?.name && (
+              <MetaRow icon="people-outline" text={schedule.group.name} color="#534AB7" />
+            )}
+          </View>
+          {/* Status badges */}
+          <View style={styles.badgeRow}>
+            {alreadyCheckedIn && (
+              <View style={[styles.pill, { backgroundColor: '#27ae6022' }]}>
+                <Text style={[styles.pillText, { color: '#27ae60' }]}>OBECNY</Text>
+              </View>
+            )}
+            {!alreadyCheckedIn && assignment && (
+              <View style={[styles.pill, { backgroundColor: '#27ae6022' }]}>
+                <Text style={[styles.pillText, { color: '#27ae60' }]}>DYŻUR</Text>
+              </View>
+            )}
+            {status && !['assigned', 'present'].includes(status) && (
+              <View style={[styles.pill, { backgroundColor: (STATUS_COLORS[status] ?? '#888') + '22' }]}>
+                <Text style={[styles.pillText, { color: STATUS_COLORS[status] ?? '#888' }]}>
+                  {STATUS_LABELS[status] ?? status}
+                </Text>
+              </View>
+            )}
+            {assignment?.admin_note && (
+              <View style={[styles.pill, { backgroundColor: '#e74c3c22' }]}>
+                <Text style={[styles.pillText, { color: '#e74c3c' }]}>
+                  {assignment.admin_note}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+        {actionButton && <View style={styles.schedTileAction}>{actionButton}</View>}
+      </View>
+      {/* Absence reporting for assigned tiles */}
+      {assignment && !alreadyCheckedIn && !windowOpen && !['excused', 'absent', 'confirmed'].includes(status ?? '') && (
+        <TouchableOpacity style={styles.absenceLink} onPress={onReportAbsence} disabled={reporting}>
+          <Text style={styles.absenceLinkText}>Zgłoś nieobecność</Text>
+        </TouchableOpacity>
+      )}
     </View>
   )
 }
@@ -1359,4 +1516,27 @@ const styles = StyleSheet.create({
   dayPillNum: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
   dayPillDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#534AB7', marginTop: 2 },
   dayPillDotEmpty: { width: 4, height: 4, marginTop: 2 },
+
+  schedTile: {
+    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1.5,
+    padding: 12, ...shadow.xs,
+  },
+  schedTileTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  schedTileLeft: { flex: 1 },
+  schedTileAction: { justifyContent: 'center' },
+  schedTileTitleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
+  schedTileTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
+  schedTileMeta: { gap: 1, marginBottom: 4 },
+  catBadge: { borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 },
+  catBadgeText: { fontSize: 9, fontWeight: '700' },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
+  tileBtn: {
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7,
+    minWidth: 80, alignItems: 'center',
+  },
+  tileBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  tileBtnOutline: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#e67e22' },
+  tileBtnSecondary: { backgroundColor: '#f0f0f0' },
+  absenceLink: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f5f5f5' },
+  absenceLinkText: { fontSize: 12, color: '#e74c3c', fontWeight: '600' },
 })
