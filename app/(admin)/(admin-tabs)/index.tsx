@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, ActivityIndicator,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { Calendar, LocaleConfig } from 'react-native-calendars'
 import { supabase } from '../../../lib/supabase'
@@ -36,8 +36,8 @@ export default function AdminHome() {
 
   const today = localDateStr(new Date())
 
-  // Load stats once
-  useEffect(() => {
+  // Load stats on focus
+  const fetchStats = useCallback(() => {
     const nextWeek = new Date()
     nextWeek.setDate(nextWeek.getDate() + 7)
     const nextWeekStr = localDateStr(nextWeek)
@@ -50,7 +50,9 @@ export default function AdminHome() {
       setStats({ members: membersRes.count ?? 0, absent: absentRes.count ?? 0, unstaff: unstaffCount })
       setStatsLoading(false)
     })
-  }, [])
+  }, [today])
+
+  useFocusEffect(fetchStats)
 
   // Fetch schedule dates for a month to mark calendar
   const fetchMonthSchedules = useCallback(async (year: number, month: number) => {
@@ -97,8 +99,27 @@ export default function AdminHome() {
           <StatCard icon="calendar-clear" color="#e67e22" value={stats.unstaff} label="Nieprzypisane służby (7 dni)"
             onPress={() => router.push('/(admin)/(admin-tabs)/schedules')} />
           <StatCard icon="alert-circle" color="#e74c3c" value={stats.absent} label="Prośby o usprawiedliwienie"
-            onPress={() => router.push('/(admin)/(admin-tabs)/schedules')} />
+            onPress={() => router.push('/(admin)/absence-requests')} />
         </View>
+      )}
+
+      {!statsLoading && stats.absent > 0 && (
+        <TouchableOpacity
+          style={styles.absenceBanner}
+          onPress={() => router.push('/(admin)/absence-requests')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.absenceBannerBadge}>
+            <Text style={styles.absenceBannerBadgeText}>{stats.absent}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.absenceBannerTitle}>Usprawiedliwienia nieobecności</Text>
+            <Text style={styles.absenceBannerSub}>
+              {stats.absent === 1 ? '1 oczekuje' : `${stats.absent} oczekują`} na decyzję
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#e67e22" />
+        </TouchableOpacity>
       )}
 
       {/* Today's liturgy banner */}
@@ -292,4 +313,17 @@ const styles = StyleSheet.create({
     gap: 6, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: '#534AB733',
   },
   backToUserText: { fontSize: 14, color: '#534AB7', fontWeight: '500' },
+
+  absenceBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#fff3e0', borderRadius: 14, padding: 14,
+    borderWidth: 1.5, borderColor: '#e67e22',
+  },
+  absenceBannerBadge: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#e67e22', justifyContent: 'center', alignItems: 'center',
+  },
+  absenceBannerBadgeText: { fontSize: 13, fontWeight: '800', color: '#fff' },
+  absenceBannerTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
+  absenceBannerSub: { fontSize: 12, color: '#888', marginTop: 1 },
 })
