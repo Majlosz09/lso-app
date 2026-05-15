@@ -22,18 +22,18 @@ export const shadow = {
   // Subtle — elevation 1, used for small cards and chips
   xs: Platform.select({
     native: nat('#000', 0.04, 4, 1),
-    web: { boxShadow: '0 1px 4px rgba(0,0,0,0.08)' },
+    web: { boxShadow: '0 1px 4px rgba(0,0,0,0.08)' } as any,
   })!,
 
   // Standard — elevation 2, used for main content cards
   md: Platform.select({
     native: nat('#000', 0.06, 8, 2),
-    web: { boxShadow: '0 2px 8px rgba(0,0,0,0.10)' },
+    web: { boxShadow: '0 2px 8px rgba(0,0,0,0.10)' } as any,
   })!,
 
   // Brand — purple glow, used for primary action cards/buttons
   brand: Platform.select({
     native: nat('#534AB7', 0.30, 10, 4),
-    web: { boxShadow: '0 4px 10px rgba(83,74,183,0.30)' },
+    web: { boxShadow: '0 4px 10px rgba(83,74,183,0.30)' } as any,
   })!,
 }

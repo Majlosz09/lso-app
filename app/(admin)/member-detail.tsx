@@ -66,7 +66,7 @@ export default function MemberDetailScreen() {
     if (!id) return
     const today = new Date().toISOString().split('T')[0]
 
-    const queries: Promise<any>[] = [
+    const queries: PromiseLike<any>[] = [
       supabase.from('profiles').select('id, full_name, role, phone, rocznik, avatar_url, rank_id').eq('id', id).single(),
       supabase.from('schedule_assignments')
         .select('id, status, schedule:schedules(id, title, date, time)')

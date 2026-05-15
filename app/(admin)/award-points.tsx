@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
-import { Profile, PointRule } from '../../types/database'
+import { Profile, PointRule, ServiceType, SERVICE_TYPE_LABELS } from '../../types/database'
 
 export default function AwardPoints() {
   const { profile: adminProfile } = useAuthStore()
@@ -141,13 +141,13 @@ export default function AwardPoints() {
                   {pointRules.map(r => (
                     <TouchableOpacity
                       key={r.id}
-                      style={[styles.ruleChip, amount === String(r.points) && reason === r.label && styles.ruleChipActive]}
-                      onPress={() => { setAmount(String(r.points)); setReason(r.label) }}
+                      style={[styles.ruleChip, amount === String(r.points) && reason === SERVICE_TYPE_LABELS[r.service_type as ServiceType] && styles.ruleChipActive]}
+                      onPress={() => { setAmount(String(r.points)); setReason(SERVICE_TYPE_LABELS[r.service_type as ServiceType]) }}
                     >
-                      <Text style={[styles.ruleChipLabel, amount === String(r.points) && reason === r.label && styles.ruleChipLabelActive]}>
-                        {r.label}
+                      <Text style={[styles.ruleChipLabel, amount === String(r.points) && reason === SERVICE_TYPE_LABELS[r.service_type as ServiceType] && styles.ruleChipLabelActive]}>
+                        {SERVICE_TYPE_LABELS[r.service_type as ServiceType]}
                       </Text>
-                      <Text style={[styles.ruleChipPts, amount === String(r.points) && reason === r.label && styles.ruleChipLabelActive]}>
+                      <Text style={[styles.ruleChipPts, amount === String(r.points) && reason === SERVICE_TYPE_LABELS[r.service_type as ServiceType] && styles.ruleChipLabelActive]}>
                         {r.points} pkt
                       </Text>
                     </TouchableOpacity>

@@ -116,7 +116,7 @@ function MemberProfile() {
 
   useEffect(() => {
     if (!profile?.id) return
-    const queries: Promise<any>[] = [
+    const queries: PromiseLike<any>[] = [
       supabase.from('points_summary').select('total_points, services_count').eq('profile_id', profile.id).maybeSingle(),
       supabase.from('points_summary').select('profile_id').order('total_points', { ascending: false }),
     ]

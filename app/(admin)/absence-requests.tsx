@@ -33,7 +33,7 @@ export default function AbsenceRequestsScreen() {
         .select('id, absence_reason, profile:profiles(full_name), schedule:schedules(title, date, time)')
         .eq('status', 'excused')
       if (error) { Alert.alert('Błąd', error.message); return }
-      const sorted = ((data ?? []) as AbsenceRequest[]).sort((a, b) =>
+      const sorted = ((data ?? []) as unknown as AbsenceRequest[]).sort((a, b) =>
         a.schedule.date.localeCompare(b.schedule.date)
       )
       setRequests(sorted)
