@@ -10,9 +10,6 @@ import { useAuthStore } from '../../stores/authStore'
 import { ServiceType, SERVICE_TYPE_LABELS } from '../../types/database'
 
 const SERVICE_TYPES: ServiceType[] = ['msza_assigned', 'msza_extra', 'nabozenstwo', 'zbiorka']
-const DEFAULT_POINTS: Record<ServiceType, number> = {
-  msza_assigned: 5, msza_extra: 3, nabozenstwo: 3, zbiorka: 5,
-}
 
 export default function PointRulesScreen() {
   const { profile } = useAuthStore()
@@ -29,7 +26,8 @@ export default function PointRulesScreen() {
       .from('point_rules')
       .select('service_type, points')
       .eq('parish_id', profile.parish_id)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) Alert.alert('Błąd', 'Nie udało się wczytać ustawień.')
         if (data) {
           const next = { ...values }
           for (const row of data as any[]) {
