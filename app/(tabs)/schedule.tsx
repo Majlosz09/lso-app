@@ -931,10 +931,24 @@ function MyScheduleCard({ schedule, unsigning, onUnsign, onAttendanceSaved, repo
         </TouchableOpacity>
       ) : null}
 
-      {(schedule.myStatus === 'excused' || schedule.myStatus === 'confirmed') && schedule.myAbsenceReason && (
+      {(schedule.myStatus === 'excused') && schedule.myAbsenceReason && (
         <View style={styles.absenceReasonBadge}>
           <Ionicons name="chatbubble-outline" size={13} color="#e67e22" />
           <Text style={styles.absenceReasonText}>{schedule.myAbsenceReason}</Text>
+        </View>
+      )}
+
+      {schedule.myStatus === 'confirmed' && (
+        <View style={styles.confirmedBadge}>
+          <Ionicons name="checkmark-circle" size={13} color="#2980b9" />
+          <Text style={styles.confirmedText}>Nieobecność usprawiedliwiona</Text>
+        </View>
+      )}
+
+      {schedule.myStatus === 'absent' && schedule.myAdminNote && (
+        <View style={styles.rejectionBadge}>
+          <Ionicons name="alert-circle-outline" size={13} color="#e74c3c" />
+          <Text style={styles.rejectionText}>{schedule.myAdminNote}</Text>
         </View>
       )}
 
@@ -1335,6 +1349,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 7, marginTop: 2,
   },
   absenceReasonText: { fontSize: 12, color: '#e74c3c', flex: 1, fontStyle: 'italic' },
+
+  confirmedBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#eaf4fb', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 6, marginTop: 2,
+  },
+  confirmedText: { fontSize: 12, color: '#2980b9', fontWeight: '500' },
+
+  rejectionBadge: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    backgroundColor: '#fff3f3', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7, marginTop: 2,
+  },
+  rejectionText: { fontSize: 12, color: '#e74c3c', flex: 1, lineHeight: 17 },
 
   absenceInput: {
     borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10,
