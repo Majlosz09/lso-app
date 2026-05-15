@@ -392,195 +392,176 @@ function ScheduleTile({
 
 function MemberScheduleView() {
   const { profile } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<'mine' | 'signup' | 'history'>('mine')
+  const today = new Date().toISOString().split('T')[0]
 
-  // "Moje służby" data
-  const [mySchedules, setMySchedules] = useState<any[]>([])
-  const [loadingMine, setLoadingMine] = useState(true)
-  const [refreshingMine, setRefreshingMine] = useState(false)
+  // Week navigation
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [weekDays, setWeekDays] = useState<string[]>(() => getWeekDays(0))
+  const [selectedDate, setSelectedDate] = useState<string>(today)
+
+  // Unified schedule data
+  const [weekSchedules, setWeekSchedules] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+
+  // Action states
+  const [checkingInId, setCheckingInId] = useState<string | null>(null)
+  const [signingUpId, setSigningUpId] = useState<string | null>(null)
   const [unsigningId, setUnsigningId] = useState<string | null>(null)
   const [reportingAbsenceId, setReportingAbsenceId] = useState<string | null>(null)
-  const [absenceModal, setAbsenceModal] = useState<{ visible: boolean; assignmentId: string; title: string; reason: string }>(
-    { visible: false, assignmentId: '', title: '', reason: '' }
-  )
-  const [pastSchedules, setPastSchedules] = useState<any[]>([])
-  const [massTemplates, setMassTemplates] = useState<MassTemplate[]>([])
+  const [absenceModal, setAbsenceModal] = useState<{
+    visible: boolean; assignmentId: string; title: string; reason: string
+  }>({ visible: false, assignmentId: '', title: '', reason: '' })
+
+  // History
+  const [pastAssignments, setPastAssignments] = useState<any[]>([])
+  const [historyExpanded, setHistoryExpanded] = useState(false)
 
   useEffect(() => {
-    if (!profile?.parish_id) return
-    supabase.from('mass_templates')
-      .select('*')
-      .eq('parish_id', profile.parish_id)
-      .order('day_of_week').order('time')
-      .then(({ data }) => {
-        setMassTemplates((data as MassTemplate[]) ?? [])
-      })
-  }, [profile?.parish_id])
+    const days = getWeekDays(weekOffset)
+    setWeekDays(days)
+    if (!days.includes(selectedDate)) setSelectedDate(days[0])
+  }, [weekOffset])
 
-  // "Zapisy" data
-  const [allSchedules, setAllSchedules] = useState<any[]>([])
-  const [loadingSignup, setLoadingSignup] = useState(true)
-  const [refreshingSignup, setRefreshingSignup] = useState(false)
-  const [signingUpId, setSigningUpId] = useState<string | null>(null)
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const fetchWeekSchedules = async (days: string[] = weekDays) => {
+    if (!profile?.id || !profile?.parish_id || days.length === 0) return
+    const [weekStart, weekEnd] = [days[0], days[days.length - 1]]
 
-  const today = new Date().toISOString().split('T')[0]
-  const thirtyDaysLater = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0] })()
-
-  const fetchMine = async () => {
-    if (!profile?.id) return
-
-    const { data: assignments } = await supabase
-      .from('schedule_assignments')
-      .select('id, role, status, schedule_id, absence_reason, admin_note')
-      .eq('profile_id', profile.id)
-
-    if (!assignments?.length) {
-      setMySchedules([])
-      setPastSchedules([])
-      setLoadingMine(false)
-      setRefreshingMine(false)
-      return
-    }
-
-    const scheduleIds = assignments.map((a: any) => a.schedule_id)
-
-    const [schedulesRes, attendanceRes, recurringRes] = await Promise.all([
-      supabase
-        .from('schedules')
-        .select('*, group:groups(name)')
-        .in('id', scheduleIds)
-        .order('date', { ascending: true }),
-      supabase
-        .from('attendance')
-        .select('id, schedule_id, method, checked_at')
-        .eq('profile_id', profile.id)
-        .in('schedule_id', scheduleIds),
-      supabase
-        .from('recurring_commitments')
-        .select('id, day_of_week, time_slot')
-        .eq('profile_id', profile.id),
-    ])
-
-    const aMap = new Map(assignments.map((a: any) => [a.schedule_id, a]))
-    const attMap = new Map((attendanceRes.data ?? []).map((a: any) => [a.schedule_id, a]))
-    const recurMap = new Map(
-      (recurringRes.data ?? []).map((c: any) => [`${c.day_of_week}_${c.time_slot}`, c])
-    )
-
-    const allWithMeta = (schedulesRes.data ?? []).map((s: any) => {
-      const dow = new Date(s.date + 'T12:00:00').getDay()
-      const timeKey = `${dow}_${s.time?.slice(0, 5)}`
-      return {
-        ...s,
-        assignmentId: aMap.get(s.id)?.id,
-        myRole: aMap.get(s.id)?.role,
-        myStatus: aMap.get(s.id)?.status,
-        myAbsenceReason: aMap.get(s.id)?.absence_reason ?? null,
-        myAdminNote: aMap.get(s.id)?.admin_note ?? null,
-        attendance: attMap.get(s.id) ?? null,
-        recurringCommitment: recurMap.get(timeKey) ?? null,
-      }
-    })
-
-    setMySchedules(allWithMeta.filter((s: any) => s.date >= today))
-    setPastSchedules(allWithMeta.filter((s: any) => s.date < today).reverse())
-    setLoadingMine(false)
-    setRefreshingMine(false)
-  }
-
-  const fetchSignup = async () => {
-    if (!profile?.id) return
     const [schedulesRes, assignmentsRes] = await Promise.all([
       supabase
         .from('schedules')
         .select('*, group:groups(name)')
-        .gte('date', today)
-        .order('date', { ascending: true }),
+        .eq('parish_id', profile.parish_id)
+        .gte('date', weekStart)
+        .lte('date', weekEnd)
+        .order('date').order('time'),
       supabase
         .from('schedule_assignments')
-        .select('id, schedule_id, status')
+        .select('id, schedule_id, status, absence_reason, admin_note')
         .eq('profile_id', profile.id),
     ])
 
-    const scheduleIds = schedulesRes.data?.map((s: any) => s.id) ?? []
-    let attendanceMap = new Map<string, any>()
+    const scheduleIds = (schedulesRes.data ?? []).map((s: any) => s.id)
+    let attendanceSet = new Set<string>()
     if (scheduleIds.length > 0) {
       const { data: attData } = await supabase
         .from('attendance')
-        .select('id, schedule_id, method, checked_at')
+        .select('schedule_id')
         .eq('profile_id', profile.id)
         .in('schedule_id', scheduleIds)
-      attendanceMap = new Map((attData ?? []).map((a: any) => [a.schedule_id, a]))
+      attendanceSet = new Set((attData ?? []).map((a: any) => a.schedule_id))
     }
 
     const assignmentMap = new Map(
-      assignmentsRes.data?.map((a: any) => [a.schedule_id, a]) ?? []
+      (assignmentsRes.data ?? []).map((a: any) => [a.schedule_id, a])
     )
 
-    setAllSchedules(
-      schedulesRes.data?.map(s => ({
+    setWeekSchedules(
+      (schedulesRes.data ?? []).map((s: any) => ({
         ...s,
         assignment: assignmentMap.get(s.id) ?? null,
-        attendance: attendanceMap.get(s.id) ?? null,
-      })) ?? []
+        hasAttendance: attendanceSet.has(s.id),
+      }))
     )
-    setLoadingSignup(false)
-    setRefreshingSignup(false)
+    setLoading(false)
+    setRefreshing(false)
   }
 
-  const baseDates = useMemo(() => {
-    const marks: Record<string, any> = {}
-    // Marks from actual schedules
-    for (const s of allSchedules) {
-      if (!marks[s.date]) marks[s.date] = { dots: [], marked: true }
-      if (marks[s.date].dots.length < 3) {
-        marks[s.date].dots.push({ key: s.id, color: s.assignment ? '#f0a500' : '#534AB7' })
-      }
-    }
-    // Faint marks for template-based days with no schedule yet
-    const now = new Date()
-    for (let i = 0; i < 60; i++) {
-      const d = new Date(now)
-      d.setDate(now.getDate() + i)
-      const dateStr = d.toISOString().split('T')[0]
-      if (!marks[dateStr] && massTemplates.some(t => t.day_of_week === d.getDay())) {
-        marks[dateStr] = { dots: [{ key: 'tpl', color: '#534AB766' }], marked: true }
-      }
-    }
-    return marks
-  }, [allSchedules, massTemplates])
+  const fetchPastAssignments = async () => {
+    if (!profile?.id) return
+    const { data: assignments } = await supabase
+      .from('schedule_assignments')
+      .select('id, status, schedule_id, absence_reason, admin_note')
+      .eq('profile_id', profile.id)
+    if (!assignments?.length) { setPastAssignments([]); return }
 
-  const markedDates = useMemo(() => {
-    if (!selectedDate) return baseDates
-    return {
-      ...baseDates,
-      [selectedDate]: { ...(baseDates[selectedDate] ?? {}), selected: true, selectedColor: '#534AB7' },
-    }
-  }, [baseDates, selectedDate])
+    const { data: schedules } = await supabase
+      .from('schedules')
+      .select('id, title, date, time, category, group:groups(name)')
+      .in('id', assignments.map((a: any) => a.schedule_id))
+      .lt('date', today)
+      .order('date', { ascending: false })
+      .limit(30)
 
-  const findScheduleForTime = (date: string, time: string) => {
-    const [th, tm] = time.split(':')
-    return allSchedules.find(s => {
-      if (s.date !== date) return false
-      const [sh, sm] = s.time.split(':')
-      return parseInt(sh) === parseInt(th) && sm === tm.padStart(2, '0')
-    }) ?? null
+    const aMap = new Map(assignments.map((a: any) => [a.schedule_id, a]))
+    setPastAssignments(
+      (schedules ?? []).map((s: any) => ({
+        ...s,
+        assignment: aMap.get(s.id) ?? null,
+        hasAttendance: false,
+      }))
+    )
   }
 
   useEffect(() => {
-    fetchMine()
-    fetchSignup()
-  }, [profile?.id])
+    fetchWeekSchedules(weekDays)
+    fetchPastAssignments()
+  }, [profile?.id, weekDays])
 
-  useRealtimeTable('schedule_assignments', () => { fetchMine(); fetchSignup() })
+  useRealtimeTable('schedule_assignments', () => {
+    fetchWeekSchedules(weekDays)
+    fetchPastAssignments()
+  })
+
+  // --- Handlers ---
+
+  const handleCheckIn = async (schedule: any) => {
+    setCheckingInId(schedule.id)
+    const assignmentId = schedule.assignment?.id ?? null
+    const { data, error } = await supabase.rpc('check_in_and_award_points', {
+      p_schedule_id: schedule.id,
+      p_assignment_id: assignmentId,
+    })
+    setCheckingInId(null)
+    if (error) { Alert.alert('Błąd', error.message); return }
+    const result = data as any
+    if (result.already_checked_in) {
+      Alert.alert('', 'Obecność już zaznaczona.')
+    } else if (result.points_awarded > 0) {
+      Alert.alert('', `+${result.points_awarded} pkt — ${result.reason}`)
+    } else {
+      Alert.alert('', 'Obecność zaznaczona.')
+    }
+    fetchWeekSchedules(weekDays)
+  }
+
+  const handleSignUp = (schedule: any) => {
+    Alert.alert(
+      'Zapisz się',
+      `${schedule.title}\n${formatDateHeader(schedule.date)}, ${schedule.time?.slice(0, 5)}`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        { text: 'Jednorazowo', onPress: () => doSignUp(schedule.id, schedule.date, schedule.time?.slice(0, 5), 'once') },
+        { text: 'Cyklicznie', onPress: () => doSignUp(schedule.id, schedule.date, schedule.time?.slice(0, 5), 'recurring') },
+      ]
+    )
+  }
+
+  const doSignUp = async (scheduleId: string, date: string, timeSlot: string, mode: 'once' | 'recurring') => {
+    const key = `${date}_${timeSlot}`
+    setSigningUpId(key)
+    const { data, error } = await supabase.rpc('sign_up_for_slot', {
+      p_date: date,
+      p_time_label: timeSlot,
+      p_mode: mode,
+    })
+    setSigningUpId(null)
+    if (error) { Alert.alert('Błąd', error.message); return }
+    if (mode === 'recurring') {
+      const dow = new Date(date + 'T12:00:00').getDay()
+      const DAY_FULL_LOCAL = ['Niedzielę', 'Poniedziałek', 'Wtorek', 'Środę', 'Czwartek', 'Piątek', 'Sobotę']
+      Alert.alert('Cykl aktywny',
+        `Zapisano cyklicznie na każd${dow === 0 || dow === 3 || dow === 6 ? 'ą' : 'y'} ${DAY_FULL_LOCAL[dow]} o ${timeSlot}. Objęto ${(data as any)?.count ?? 1} służb.`
+      )
+    }
+    fetchWeekSchedules(weekDays)
+  }
 
   const unsignOne = async (assignmentId: string) => {
     setUnsigningId(assignmentId)
     await supabase.from('schedule_assignments').delete().eq('id', assignmentId)
     setUnsigningId(null)
-    fetchMine()
-    fetchSignup()
+    fetchWeekSchedules(weekDays)
   }
 
   const unsignCycle = async (assignmentId: string, commitmentId: string) => {
@@ -590,371 +571,187 @@ function MemberScheduleView() {
       supabase.from('recurring_commitments').delete().eq('id', commitmentId),
     ])
     setUnsigningId(null)
-    fetchMine()
-    fetchSignup()
+    fetchWeekSchedules(weekDays)
   }
 
-  const handleUnsign = (assignmentId: string, title: string, recurringCommitment?: any) => {
-    if (recurringCommitment) {
-      Alert.alert(
-        'Wypisz się',
-        `Ten dyżur jest częścią cyklu. Co chcesz zrobić?`,
-        [
-          { text: 'Anuluj', style: 'cancel' },
-          { text: 'Tylko tę służbę', onPress: () => unsignOne(assignmentId) },
-          { text: 'Cały cykl', style: 'destructive', onPress: () => unsignCycle(assignmentId, recurringCommitment.id) },
-        ]
-      )
-    } else {
-      Alert.alert('Wypisz się', `Wypisać się ze służby "${title}"?`, [
+  const handleUnsign = async (schedule: any) => {
+    const a = schedule.assignment
+    if (!a) return
+    const dow = new Date(schedule.date + 'T12:00:00').getDay()
+    const timeSlot = schedule.time?.slice(0, 5)
+    const { data: commitment } = await supabase
+      .from('recurring_commitments')
+      .select('id')
+      .eq('profile_id', profile!.id)
+      .eq('day_of_week', dow)
+      .eq('time_slot', timeSlot)
+      .maybeSingle()
+    if (commitment) {
+      Alert.alert('Wypisz się', `Ten dyżur jest częścią cyklu. Co chcesz zrobić?`, [
         { text: 'Anuluj', style: 'cancel' },
-        { text: 'Wypisz', style: 'destructive', onPress: () => unsignOne(assignmentId) },
+        { text: 'Tylko tę służbę', onPress: () => unsignOne(a.id) },
+        { text: 'Cały cykl', style: 'destructive', onPress: () => unsignCycle(a.id, commitment.id) },
+      ])
+    } else {
+      Alert.alert('Wypisz się', `Wypisać się ze służby "${schedule.title}"?`, [
+        { text: 'Anuluj', style: 'cancel' },
+        { text: 'Wypisz', style: 'destructive', onPress: () => unsignOne(a.id) },
       ])
     }
   }
 
   const reportAbsence = async (assignmentId: string, reason: string) => {
     setReportingAbsenceId(assignmentId)
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('schedule_assignments')
       .update({ status: 'excused', absence_reason: reason })
       .eq('id', assignmentId)
-      .select('id')
     setReportingAbsenceId(null)
-    if (error) {
-      Alert.alert('Błąd', error.message)
-      return
-    }
-    if (!data || data.length === 0) {
-      Alert.alert('Błąd uprawnień', 'Brak polityki RLS — uruchom w Supabase:\n\nCREATE POLICY "member_update_own_assignment"\nON schedule_assignments FOR UPDATE\nTO authenticated\nUSING (profile_id = auth.uid())\nWITH CHECK (profile_id = auth.uid());')
-      return
-    }
+    if (error) { Alert.alert('Błąd', error.message); return }
     setAbsenceModal({ visible: false, assignmentId: '', title: '', reason: '' })
-    setMySchedules(prev => prev.map(s =>
-      s.assignmentId === assignmentId
-        ? { ...s, myStatus: 'excused', myAbsenceReason: reason }
-        : s
-    ))
-    fetchMine()
+    fetchWeekSchedules(weekDays)
   }
 
-  const handleReportAbsence = (assignmentId: string, title: string) => {
-    setAbsenceModal({ visible: true, assignmentId, title, reason: '' })
-  }
+  // --- Derived data ---
 
-  const handleSignUpForSlot = async (date: string, timeSlot: string, mode: 'once' | 'recurring') => {
-    setSigningUpId(`${date}_${timeSlot}`)
+  const eventDates = useMemo(
+    () => new Set(weekSchedules.map((s: any) => s.date)),
+    [weekSchedules]
+  )
 
-    const { data, error } = await supabase.rpc('sign_up_for_slot', {
-      p_date: date,
-      p_time_label: timeSlot,
-      p_mode: mode,
-    })
+  const daySchedules = useMemo(
+    () => weekSchedules.filter((s: any) => s.date === selectedDate),
+    [weekSchedules, selectedDate]
+  )
 
-    if (error) {
-      Alert.alert('Błąd', error.message)
-      setSigningUpId(null)
-      return
-    }
+  // --- Render ---
 
-    if (mode === 'recurring') {
-      const dow = new Date(date + 'T12:00:00').getDay()
-      Alert.alert(
-        'Cykl aktywny',
-        `Zapisano cyklicznie na każdą ${DAY_FULL[dow]} o ${timeSlot}. Objęto ${(data as any)?.count ?? 1} służb w kalendarzu.`
-      )
-    }
-
-    setSigningUpId(null)
-    fetchMine()
-    fetchSignup()
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <WeekStrip
+          weekDays={weekDays} selectedDate={selectedDate}
+          onSelect={setSelectedDate}
+          onPrev={() => setWeekOffset(o => o - 1)}
+          onNext={() => setWeekOffset(o => o + 1)}
+          eventDates={eventDates}
+        />
+        <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
+      </View>
+    )
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.segmentBar}>
-        <TouchableOpacity
-          style={[styles.segment, activeTab === 'mine' && styles.segmentActive]}
-          onPress={() => setActiveTab('mine')}
-        >
-          <Text style={[styles.segmentText, activeTab === 'mine' && styles.segmentTextActive]}>Służby</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.segment, activeTab === 'signup' && styles.segmentActive]}
-          onPress={() => setActiveTab('signup')}
-        >
-          <Text style={[styles.segmentText, activeTab === 'signup' && styles.segmentTextActive]}>Zapisy</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.segment, activeTab === 'history' && styles.segmentActive]}
-          onPress={() => setActiveTab('history')}
-        >
-          <Text style={[styles.segmentText, activeTab === 'history' && styles.segmentTextActive]}>Historia</Text>
-        </TouchableOpacity>
-      </View>
-
-      {activeTab === 'mine' ? (
-        loadingMine ? (
-          <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
-        ) : (
-          <FlatList
-            style={{ flex: 1 }}
-            data={mySchedules.filter((s: any) => s.date > today && s.date <= thirtyDaysLater)}
-            keyExtractor={(item) => item.id}
-            refreshControl={<RefreshControl refreshing={refreshingMine} onRefresh={() => { setRefreshingMine(true); fetchMine() }} />}
-            ListEmptyComponent={
-              <View style={styles.empty}>
-                <Ionicons name="calendar-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>Brak dyżurów w najbliższym miesiącu</Text>
-                <TouchableOpacity onPress={() => setActiveTab('signup')}>
-                  <Text style={styles.emptyLink}>Przejdź do zapisów →</Text>
-                </TouchableOpacity>
-              </View>
-            }
-            ListHeaderComponent={((): React.ReactElement | null => {
-              const todaySchedules = mySchedules.filter((s: any) => s.date === today)
-              if (todaySchedules.length === 0) return null
-              return (
-                <View style={styles.todaySection}>
-                  <View style={styles.todayBadge}>
-                    <Ionicons name="flash" size={13} color="#fff" />
-                    <Text style={styles.todayBadgeText}>DZIŚ</Text>
-                  </View>
-                  {todaySchedules.map((item: any) => (
-                    <MyScheduleCard
-                      key={item.id}
-                      schedule={item}
-                      unsigning={unsigningId === item.assignmentId}
-                      onUnsign={() => handleUnsign(item.assignmentId, item.title, item.recurringCommitment)}
-                      onAttendanceSaved={fetchMine}
-                      reporting={reportingAbsenceId === item.assignmentId}
-                      onReportAbsence={() => handleReportAbsence(item.assignmentId, item.title)}
-                    />
-                  ))}
-                </View>
-              )
-            })()}
-            renderItem={({ item }) => (
-              <MyScheduleCard
-                schedule={item}
-                unsigning={unsigningId === item.assignmentId}
-                onUnsign={() => handleUnsign(item.assignmentId, item.title, item.recurringCommitment)}
-                onAttendanceSaved={fetchMine}
-                reporting={reportingAbsenceId === item.assignmentId}
-                onReportAbsence={() => handleReportAbsence(item.assignmentId, item.title)}
-              />
-            )}
-            contentContainerStyle={{ padding: 16, gap: 12 }}
+      <WeekStrip
+        weekDays={weekDays} selectedDate={selectedDate}
+        onSelect={setSelectedDate}
+        onPrev={() => setWeekOffset(o => o - 1)}
+        onNext={() => setWeekOffset(o => o + 1)}
+        eventDates={eventDates}
+      />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, gap: 10 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); fetchWeekSchedules(weekDays) }}
           />
-        )
-      ) : activeTab === 'history' ? (
-        loadingMine ? (
-          <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
-        ) : (
-          <FlatList
-            style={{ flex: 1 }}
-            data={pastSchedules}
-            keyExtractor={(item) => item.id}
-            refreshControl={<RefreshControl refreshing={refreshingMine} onRefresh={() => { setRefreshingMine(true); fetchMine() }} />}
-            ListEmptyComponent={
-              <View style={styles.empty}>
-                <Ionicons name="time-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyText}>Brak historii dyżurów</Text>
-              </View>
-            }
-            renderItem={({ item }) => (
-              <MyScheduleCard
-                schedule={item}
-                unsigning={false}
-                onUnsign={() => {}}
-                onAttendanceSaved={fetchMine}
-                reporting={false}
-                onReportAbsence={() => {}}
-              />
-            )}
-            contentContainerStyle={{ padding: 16, gap: 12 }}
-          />
-        )
-      ) : (
-        loadingSignup ? (
-          <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
-        ) : (
-          <View style={{ flex: 1 }}>
-            <Calendar
-              markingType="multi-dot"
-              markedDates={markedDates}
-              onDayPress={(day: { dateString: string }) => setSelectedDate(day.dateString)}
-              theme={{
-                selectedDayBackgroundColor: '#534AB7',
-                arrowColor: '#534AB7',
-                dotColor: '#534AB7',
-                selectedDotColor: '#fff',
-              }}
-              firstDay={1}
-              style={styles.calendar}
-              dayComponent={({ date, state, marking, onPress }: any) => {
-                const isToday = state === 'today'
-                const isSelected = date.dateString === selectedDate
-                const isDisabled = state === 'disabled'
-                const lit = getLiturgicalDay(date.dateString)
-                const litBg = lit ? getLiturgicalBgColor(lit) : null
-                const dots: any[] = marking?.dots ?? []
-                return (
-                  <TouchableOpacity onPress={() => onPress(date)} activeOpacity={0.7}
-                    style={styles.dayWrapper}>
-                    <View style={[
-                      styles.dayCircle,
-                      !isSelected && litBg && { backgroundColor: litBg + '40' },
-                      isToday && !isSelected && styles.dayTodayCircle,
-                      isSelected && styles.daySelectedCircle,
-                    ]}>
-                      <Text style={[
-                        styles.dayNum,
-                        isSelected
-                          ? { color: '#fff' }
-                          : isDisabled
-                          ? { color: '#ccc' }
-                          : { color: '#1a1a1a' },
-                        isToday && !isSelected && styles.dayTodayNum,
-                      ]}>
-                        {date.day}
-                      </Text>
-                    </View>
-                    <View style={styles.dayDots}>
-                      {dots.slice(0, 3).map((dot: any, i: number) => (
-                        <View key={i} style={[styles.dayDot,
-                          { backgroundColor: isSelected ? '#ffffff99' : dot.color }]} />
-                      ))}
-                    </View>
-                  </TouchableOpacity>
-                )
-              }}
-            />
-
-            {!selectedDate ? (
-              <View style={styles.calendarPlaceholder}>
-                <Ionicons name="calendar-outline" size={36} color="#ccc" />
-                <Text style={styles.calendarPlaceholderText}>Wybierz dzień z kalendarza</Text>
-              </View>
-            ) : (
-              <View style={{ flex: 1 }}>
-                {(() => {
-                  const lit = getLiturgicalDay(selectedDate)
-                  if (!lit) return null
-                  const accentColor = getLiturgicalAccentColor(lit)
-                  const bgColor = getLiturgicalBgColor(lit)
-                  return (
-                    <View style={[styles.liturgyRow, bgColor && { backgroundColor: bgColor + '18', borderColor: bgColor + '40' }]}>
-                      {accentColor && <View style={[styles.liturgyDot, { backgroundColor: accentColor }]} />}
-                      <Text style={styles.liturgyTypeLabel}>{lit.typeLabel}:</Text>
-                      <Text style={styles.liturgyName} numberOfLines={2}>{lit.name}</Text>
-                    </View>
-                  )
-                })()}
-                <ScrollView
-                  contentContainerStyle={{ padding: 16, gap: 12 }}
-                  refreshControl={<RefreshControl refreshing={refreshingSignup} onRefresh={() => { setRefreshingSignup(true); fetchSignup() }} />}
-                >
-                  {(() => {
-                    const templateTimes = new Set(
-                      getTemplatesForDate(selectedDate, massTemplates).map(t => t.time.slice(0, 5))
-                    )
-                    const templateSlots = getTemplatesForDate(selectedDate, massTemplates)
-                    const extraSchedules = allSchedules.filter(s =>
-                      s.date === selectedDate && !templateTimes.has(s.time?.slice(0, 5))
-                    )
-                    const allSlots = [
-                      ...templateSlots.map(t => ({ type: 'template' as const, t })),
-                      ...extraSchedules.map(s => ({ type: 'extra' as const, s })),
-                    ].sort((a, b) => {
-                      const ta = a.type === 'template' ? a.t.time.slice(0, 5) : a.s.time?.slice(0, 5) ?? ''
-                      const tb = b.type === 'template' ? b.t.time.slice(0, 5) : b.s.time?.slice(0, 5) ?? ''
-                      return ta.localeCompare(tb)
-                    })
-
-                    return allSlots.map(item => {
-                      if (item.type === 'template') {
-                        const { t } = item
-                        const time = t.time.slice(0, 5)
-                        const schedule = findScheduleForTime(selectedDate, time)
-                        return (
-                          <TimeSlotCard
-                            key={`tpl-${time}`}
-                            date={selectedDate}
-                            time={time}
-                            label={t.label ?? undefined}
-                            schedule={schedule}
-                            signingUp={signingUpId === `${selectedDate}_${time}`}
-                            onSignUp={(mode) => handleSignUpForSlot(selectedDate, time, mode)}
-                            onUnsign={schedule?.assignment
-                              ? () => handleUnsign(schedule.assignment.id, time)
-                              : undefined}
-                          />
-                        )
-                      } else {
-                        const { s } = item
-                        const time = s.time?.slice(0, 5) ?? ''
-                        return (
-                          <ExtraScheduleCard
-                            key={`extra-${s.id}`}
-                            schedule={s}
-                            signingUp={signingUpId === `${selectedDate}_${time}`}
-                            onSignUp={() => handleSignUpForSlot(selectedDate, time, 'once')}
-                            onUnsign={s.assignment ? () => handleUnsign(s.assignment.id, s.title) : undefined}
-                          />
-                        )
-                      }
-                    })
-                  })()}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-        )
-      )}
-
-      <Modal
-        visible={absenceModal.visible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setAbsenceModal({ visible: false, assignmentId: '', title: '', reason: '' })}
+        }
       >
+        <Text style={styles.dayHeader}>{formatDateHeader(selectedDate)}</Text>
+
+        {daySchedules.length === 0 ? (
+          <View style={styles.empty}>
+            <Ionicons name="calendar-outline" size={40} color="#ccc" />
+            <Text style={styles.emptyText}>Brak służb w tym dniu</Text>
+          </View>
+        ) : (
+          daySchedules.map((schedule: any) => (
+            <ScheduleTile
+              key={schedule.id}
+              schedule={schedule}
+              checkingIn={checkingInId === schedule.id}
+              signingUp={signingUpId === `${schedule.date}_${schedule.time?.slice(0, 5)}`}
+              unsigning={unsigningId === schedule.assignment?.id}
+              reporting={reportingAbsenceId === schedule.assignment?.id}
+              onCheckIn={() => handleCheckIn(schedule)}
+              onSignUp={() => handleSignUp(schedule)}
+              onUnsign={() => handleUnsign(schedule)}
+              onReportAbsence={() => setAbsenceModal({
+                visible: true,
+                assignmentId: schedule.assignment?.id ?? '',
+                title: schedule.title,
+                reason: '',
+              })}
+            />
+          ))
+        )}
+
+        {/* Historia służb */}
+        <TouchableOpacity
+          style={styles.historiaToggle}
+          onPress={() => setHistoryExpanded(e => !e)}
+        >
+          <Text style={styles.historiaTitleText}>Historia służb</Text>
+          <Ionicons
+            name={historyExpanded ? 'chevron-up' : 'chevron-down'}
+            size={16} color="#888"
+          />
+        </TouchableOpacity>
+
+        {historyExpanded && pastAssignments.map((schedule: any) => (
+          <ScheduleTile
+            key={schedule.id}
+            schedule={schedule}
+            checkingIn={false}
+            signingUp={false}
+            unsigning={false}
+            reporting={false}
+            onCheckIn={() => {}}
+            onSignUp={() => {}}
+            onUnsign={() => {}}
+            onReportAbsence={() => {}}
+          />
+        ))}
+      </ScrollView>
+
+      {/* Absence modal */}
+      <Modal visible={absenceModal.visible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Zgłoś nieobecność</Text>
             <Text style={styles.modalSubtitle}>{absenceModal.title}</Text>
             <TextInput
-              style={styles.absenceInput}
-              placeholder="Podaj powód nieobecności..."
-              placeholderTextColor="#bbb"
-              value={absenceModal.reason}
-              onChangeText={(text) => setAbsenceModal(prev => ({ ...prev, reason: text }))}
+              style={styles.modalInput}
+              placeholder="Powód nieobecności..."
+              placeholderTextColor="#aaa"
               multiline
-              numberOfLines={3}
-              maxLength={300}
+              value={absenceModal.reason}
+              onChangeText={r => setAbsenceModal(m => ({ ...m, reason: r }))}
             />
-            <View style={styles.modalActions}>
+            <View style={styles.modalBtns}>
               <TouchableOpacity
-                style={styles.cancelBtn}
+                style={[styles.modalBtn, styles.modalBtnCancel]}
                 onPress={() => setAbsenceModal({ visible: false, assignmentId: '', title: '', reason: '' })}
               >
-                <Text style={styles.cancelBtnText}>Anuluj</Text>
+                <Text style={styles.modalBtnCancelText}>Anuluj</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.confirmBtn, absenceModal.reason.trim().length < 3 && { opacity: 0.5 }]}
-                onPress={() => reportAbsence(absenceModal.assignmentId, absenceModal.reason.trim())}
-                disabled={absenceModal.reason.trim().length < 3 || reportingAbsenceId !== null}
+                style={[styles.modalBtn, styles.modalBtnSubmit]}
+                onPress={() => reportAbsence(absenceModal.assignmentId, absenceModal.reason)}
+                disabled={!absenceModal.reason.trim() || !!reportingAbsenceId}
               >
                 {reportingAbsenceId
                   ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={styles.confirmBtnText}>Wyślij</Text>
+                  : <Text style={styles.modalBtnSubmitText}>Zgłoś</Text>
                 }
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-
     </View>
   )
 }
@@ -1491,6 +1288,23 @@ const styles = StyleSheet.create({
     padding: 12, fontSize: 14, color: '#1a1a1a',
     minHeight: 80, textAlignVertical: 'top', marginBottom: 4,
   },
+
+  dayHeader: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
+  historiaToggle: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: 8, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 10,
+  },
+  historiaTitleText: { fontSize: 13, fontWeight: '700', color: '#888' },
+  modalInput: {
+    backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12,
+    fontSize: 14, color: '#1a1a1a', minHeight: 80, textAlignVertical: 'top',
+  },
+  modalBtns: { flexDirection: 'row', gap: 10 },
+  modalBtn: { flex: 1, borderRadius: 10, padding: 13, alignItems: 'center' },
+  modalBtnCancel: { backgroundColor: '#f0f0f0' },
+  modalBtnCancelText: { fontSize: 14, fontWeight: '600', color: '#888' },
+  modalBtnSubmit: { backgroundColor: '#e74c3c' },
+  modalBtnSubmitText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 
   dayWrapper: { alignItems: 'center', paddingVertical: 2, width: 32 },
   dayCircle: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
