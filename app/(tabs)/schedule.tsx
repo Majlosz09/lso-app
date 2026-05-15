@@ -12,6 +12,7 @@ import { getLiturgicalDay, getLiturgicalAccentColor, getLiturgicalBgColor } from
 import { STATUS_COLORS, STATUS_LABELS } from '../../lib/status'
 import { MassTemplate } from '../../types/database'
 import { CATEGORY_CONFIG, ScheduleCategory } from '../../types/database'
+import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 
 LocaleConfig.locales['pl'] = {
   monthNames: ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'],
@@ -369,6 +370,8 @@ function MemberScheduleView() {
     fetchMine()
     fetchSignup()
   }, [profile?.id])
+
+  useRealtimeTable('schedule_assignments', () => { fetchMine(); fetchSignup() })
 
   const unsignOne = async (assignmentId: string) => {
     setUnsigningId(assignmentId)
