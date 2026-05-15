@@ -5,6 +5,15 @@ export type Role = 'admin' | 'member' | 'parent'
 export type AssignmentStatus = 'assigned' | 'present' | 'confirmed' | 'absent' | 'excused' | 'swapped'
 export type ScheduleCategory = 'msza' | 'nabozenstwo' | 'zbiorka'
 
+export type ServiceType = 'msza_assigned' | 'msza_extra' | 'nabozenstwo' | 'zbiorka'
+
+export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
+  msza_assigned: 'Msza Święta z dyżurem',
+  msza_extra:    'Msza Święta poza dyżurem',
+  nabozenstwo:   'Nabożeństwo',
+  zbiorka:       'Zbiórka',
+}
+
 export const CATEGORY_CONFIG: Record<ScheduleCategory, { label: string; color: string; bg: string }> = {
   msza:        { label: 'Msza Święta',  color: '#534AB7', bg: '#534AB714' },
   nabozenstwo: { label: 'Nabożeństwo', color: '#1A8FD1', bg: '#1A8FD114' },
@@ -24,7 +33,7 @@ export interface Parish {
 export interface PointRule {
   id: string
   parish_id: string
-  label: string
+  service_type: ServiceType
   points: number
   created_at: string
 }
@@ -134,6 +143,7 @@ export interface Point {
   amount: number
   reason: string
   schedule_id: string | null
+  service_type: ServiceType | null
   awarded_by: string | null
   parish_id: string
   created_at: string
