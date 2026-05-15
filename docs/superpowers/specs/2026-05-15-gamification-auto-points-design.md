@@ -135,6 +135,14 @@ Check-in window: 30 min before start → 90 min after start (matches existing lo
 
 Sign-up: available any time before the check-in window opens. Calls existing `sign_up_for_slot` RPC.
 
+### What's preserved from the existing schedule.tsx
+
+- Absence reporting ("Zgłoś nieobecność") — still available on assigned-service tiles before the check-in window opens
+- Sign-up modal (jednorazowo / cyklicznie) — tapping "Zapisz się" opens the same choice, calls the same `sign_up_for_slot` RPC
+- Unsigning ("Wypisz się") — still available on assigned tiles before the window
+- Status badges (DYŻUR, OBECNY, excused, absent, etc.) — shown on each tile based on `schedule_assignment.status`
+- Admin-visible history and status tracking — unchanged
+
 ### What's removed from schedule.tsx
 
 - Tab: "Zapisy" (calendar-based)
