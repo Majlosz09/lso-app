@@ -16,7 +16,7 @@ type AbsenceRequest = {
   id: string
   absence_reason: string
   profile: { full_name: string }
-  schedule: { title: string; date: string; time: string }
+  schedule: { title: string; date: string; time: string | null }
 }
 
 export default function AbsenceRequestsScreen() {
@@ -27,39 +27,49 @@ export default function AbsenceRequestsScreen() {
   const [processingAll, setProcessingAll] = useState(false)
 
   const fetchRequests = async () => {
-    const { data } = await supabase
-      .from('schedule_assignments')
-      .select('id, absence_reason, profile:profiles(full_name), schedule:schedules(title, date, time)')
-      .eq('status', 'excused')
-    const sorted = ((data ?? []) as AbsenceRequest[]).sort((a, b) =>
-      a.schedule.date.localeCompare(b.schedule.date)
-    )
-    setRequests(sorted)
-    setLoading(false)
+    try {
+      const { data, error } = await supabase
+        .from('schedule_assignments')
+        .select('id, absence_reason, profile:profiles(full_name), schedule:schedules(title, date, time)')
+        .eq('status', 'excused')
+      if (error) { Alert.alert('Błąd', error.message); return }
+      const sorted = ((data ?? []) as AbsenceRequest[]).sort((a, b) =>
+        a.schedule.date.localeCompare(b.schedule.date)
+      )
+      setRequests(sorted)
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => { fetchRequests() }, [])
 
   const handleApprove = async (id: string) => {
     setProcessingId(id)
-    const { error } = await supabase
-      .from('schedule_assignments')
-      .update({ status: 'confirmed', admin_note: null })
-      .eq('id', id)
-    setProcessingId(null)
-    if (error) { Alert.alert('Błąd', error.message); return }
-    setRequests(prev => prev.filter(r => r.id !== id))
+    try {
+      const { error } = await supabase
+        .from('schedule_assignments')
+        .update({ status: 'confirmed', admin_note: null })
+        .eq('id', id)
+      if (error) { Alert.alert('Błąd', error.message); return }
+      setRequests(prev => prev.filter(r => r.id !== id))
+    } finally {
+      setProcessingId(null)
+    }
   }
 
   const handleReject = async (id: string) => {
     setProcessingId(id)
-    const { error } = await supabase
-      .from('schedule_assignments')
-      .update({ status: 'absent', admin_note: REJECTION_NOTE })
-      .eq('id', id)
-    setProcessingId(null)
-    if (error) { Alert.alert('Błąd', error.message); return }
-    setRequests(prev => prev.filter(r => r.id !== id))
+    try {
+      const { error } = await supabase
+        .from('schedule_assignments')
+        .update({ status: 'absent', admin_note: REJECTION_NOTE })
+        .eq('id', id)
+      if (error) { Alert.alert('Błąd', error.message); return }
+      setRequests(prev => prev.filter(r => r.id !== id))
+    } finally {
+      setProcessingId(null)
+    }
   }
 
   const handleApproveAll = () => {
@@ -72,14 +82,17 @@ export default function AbsenceRequestsScreen() {
           text: 'Zatwierdź wszystkie',
           onPress: async () => {
             setProcessingAll(true)
-            const ids = requests.map(r => r.id)
-            const { error } = await supabase
-              .from('schedule_assignments')
-              .update({ status: 'confirmed', admin_note: null })
-              .in('id', ids)
-            setProcessingAll(false)
-            if (error) { Alert.alert('Błąd', error.message); return }
-            setRequests([])
+            try {
+              const ids = requests.map(r => r.id)
+              const { error } = await supabase
+                .from('schedule_assignments')
+                .update({ status: 'confirmed', admin_note: null })
+                .in('id', ids)
+              if (error) { Alert.alert('Błąd', error.message); return }
+              setRequests([])
+            } finally {
+              setProcessingAll(false)
+            }
           },
         },
       ]
