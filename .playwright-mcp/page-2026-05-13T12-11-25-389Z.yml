@@ -1,0 +1,15 @@
+- generic [ref=e309]:
+  - generic [ref=e310]:
+    - generic:
+      - generic:
+        - generic:
+          - link "Panel administratora, back" [ref=e312] [cursor=pointer]:
+            - /url: /
+          - heading "Ogłoszenia" [level=1] [ref=e315]
+  - generic [ref=e318]:
+    - generic [ref=e319] [cursor=pointer]:
+      - generic [ref=e320]: 
+      - generic [ref=e321]: Nowe ogłoszenie
+    - generic [ref=e325]:
+      - generic [ref=e326]: 
+      - generic [ref=e327]: Brak ogłoszeń

@@ -1,0 +1,90 @@
+- generic [ref=e66]:
+  - generic [ref=e68]:
+    - heading "Dyżur" [level=1] [ref=e71]
+    - generic [ref=e73]:
+      - generic [ref=e74]:
+        - generic [ref=e76] [cursor=pointer]: Służby
+        - generic [ref=e78] [cursor=pointer]: Zapisy
+        - generic [ref=e80] [cursor=pointer]: Historia
+      - generic [ref=e136]:
+        - generic [ref=e138]:
+          - slider [ref=e139]:
+            - generic [ref=e145]: Maj 2026
+            - generic [ref=e149]:
+              - generic [ref=e150]: Pn
+              - generic [ref=e151]: Wt
+              - generic [ref=e152]: Śr
+              - generic [ref=e153]: Cz
+              - generic [ref=e154]: Pt
+              - generic [ref=e155]: Sb
+              - generic [ref=e156]: Nd
+          - generic [ref=e157]:
+            - generic [ref=e158]:
+              - generic [ref=e162] [cursor=pointer]: "27"
+              - generic [ref=e166] [cursor=pointer]: "28"
+              - generic [ref=e170] [cursor=pointer]: "29"
+              - generic [ref=e174] [cursor=pointer]: "30"
+              - generic [ref=e178] [cursor=pointer]: "1"
+              - generic [ref=e182] [cursor=pointer]: "2"
+              - generic [ref=e186] [cursor=pointer]: "3"
+            - generic [ref=e187]:
+              - generic [ref=e191] [cursor=pointer]: "4"
+              - generic [ref=e195] [cursor=pointer]: "5"
+              - generic [ref=e199] [cursor=pointer]: "6"
+              - generic [ref=e203] [cursor=pointer]: "7"
+              - generic [ref=e207] [cursor=pointer]: "8"
+              - generic [ref=e211] [cursor=pointer]: "9"
+              - generic [ref=e215] [cursor=pointer]: "10"
+            - generic [ref=e216]:
+              - generic [ref=e220] [cursor=pointer]: "11"
+              - generic [ref=e224] [cursor=pointer]: "12"
+              - generic [ref=e228] [cursor=pointer]: "13"
+              - generic [ref=e234] [cursor=pointer]: "14"
+              - generic [ref=e240] [cursor=pointer]: "15"
+              - generic [ref=e246] [cursor=pointer]: "16"
+              - generic [ref=e252] [cursor=pointer]: "17"
+            - generic [ref=e256]:
+              - generic [ref=e260] [cursor=pointer]: "18"
+              - generic [ref=e267] [cursor=pointer]: "19"
+              - generic [ref=e274] [cursor=pointer]: "20"
+              - generic [ref=e281] [cursor=pointer]: "21"
+              - generic [ref=e288] [cursor=pointer]: "22"
+              - generic [ref=e295] [cursor=pointer]: "23"
+              - generic [ref=e302] [cursor=pointer]: "24"
+            - generic [ref=e306]:
+              - generic [ref=e310] [cursor=pointer]: "25"
+              - generic [ref=e317] [cursor=pointer]: "26"
+              - generic [ref=e324] [cursor=pointer]: "27"
+              - generic [ref=e331] [cursor=pointer]: "28"
+              - generic [ref=e338] [cursor=pointer]: "29"
+              - generic [ref=e345] [cursor=pointer]: "30"
+              - generic [ref=e352] [cursor=pointer]: "31"
+        - generic [ref=e356]:
+          - generic [ref=e357]: 
+          - generic [ref=e358]: Wybierz dzień z kalendarza
+  - tablist [ref=e95]:
+    - tab "  Dom" [ref=e97] [cursor=pointer]:
+      - generic [ref=e98]:
+        - generic [ref=e100]: 
+        - generic [ref=e102]: 
+      - generic [ref=e103]: Dom
+    - tab "  Dyżur" [selected] [ref=e105] [cursor=pointer]:
+      - generic [ref=e106]:
+        - generic [ref=e108]: 
+        - generic [ref=e110]: 
+      - generic [ref=e111]: Dyżur
+    - tab "  Ogłoszenia" [ref=e113] [cursor=pointer]:
+      - generic [ref=e114]:
+        - generic [ref=e116]: 
+        - generic [ref=e118]: 
+      - generic [ref=e119]: Ogłoszenia
+    - tab "  Punkty" [ref=e121] [cursor=pointer]:
+      - generic [ref=e122]:
+        - generic [ref=e124]: 
+        - generic [ref=e126]: 
+      - generic [ref=e127]: Punkty
+    - tab "  Profil" [ref=e129] [cursor=pointer]:
+      - generic [ref=e130]:
+        - generic [ref=e132]: 
+        - generic [ref=e134]: 
+      - generic [ref=e135]: Profil

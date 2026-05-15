@@ -1,0 +1,120 @@
+<h2>Gdzie admin zarządza nieobecnościami?</h2>
+<p class="subtitle">Dwa podejścia — które bardziej pasuje do tego jak admin używa aplikacji?</p>
+
+<div class="split">
+
+  <div class="mockup" data-choice="a" onclick="toggleSelect(this)" style="cursor:pointer">
+    <div class="mockup-header">A — Centralna sekcja na panelu admina</div>
+    <div class="mockup-body" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+
+      <div style="background:#534AB7;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:700">
+        Panel administratora
+      </div>
+
+      <div style="background:#fff3e0;border:1.5px solid #e67e22;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px">
+        <span style="background:#e67e22;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">3</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:#1a1a1a">Zgłoszenia nieobecności</div>
+          <div style="font-size:11px;color:#888">3 oczekujące na zatwierdzenie</div>
+        </div>
+        <span style="font-size:16px;color:#aaa">›</span>
+      </div>
+
+      <div style="background:#fff;border-radius:10px;padding:0;overflow:hidden;border:1px solid #eee">
+        <div style="background:#fafafa;padding:8px 12px;font-size:11px;font-weight:700;color:#888;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center">
+          <span>OCZEKUJĄCE (3)</span>
+          <span style="background:#534AB7;color:#fff;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer">Zatwierdź wszystkie</span>
+        </div>
+        <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0">
+          <div style="font-size:13px;font-weight:600;color:#1a1a1a">Milosz Jakubczak</div>
+          <div style="font-size:11px;color:#888">Msza 10:00 · sob 17.05</div>
+          <div style="font-size:11px;color:#e74c3c;font-style:italic;margin-top:2px">"Wyjazd rodzinny"</div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <span style="background:#27ae6022;color:#27ae60;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600">✓ Zatwierdź</span>
+            <span style="background:#e74c3c22;color:#e74c3c;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600">✕ Odrzuć</span>
+          </div>
+        </div>
+        <div style="padding:10px 12px;border-bottom:1px solid #f0f0f0;opacity:0.7">
+          <div style="font-size:13px;font-weight:600;color:#1a1a1a">Piotr Kowalski</div>
+          <div style="font-size:11px;color:#888">Msza 12:00 · sob 17.05</div>
+          <div style="font-size:11px;color:#e74c3c;font-style:italic;margin-top:2px">"Choroba"</div>
+        </div>
+        <div style="padding:10px 12px;opacity:0.5">
+          <div style="font-size:13px;font-weight:600;color:#1a1a1a">Tomek Nowak</div>
+          <div style="font-size:11px;color:#888">Msza 16:00 · nd 18.05</div>
+        </div>
+      </div>
+
+    </div>
+    <div style="padding:8px 12px;background:#f5f5f5;font-size:11px;color:#666;line-height:1.5">
+      ✅ Admin widzi wszystkie zgłoszenia w jednym miejscu<br>
+      ✅ Bulk approve jednym kliknięciem<br>
+      ✅ Badge z licznikiem na panelu<br>
+      ⚠️ Nowy ekran do zbudowania
+    </div>
+  </div>
+
+  <div class="mockup" data-choice="b" onclick="toggleSelect(this)" style="cursor:pointer">
+    <div class="mockup-header">B — Inline w szczegółach służby</div>
+    <div class="mockup-body" style="padding:12px;display:flex;flex-direction:column;gap:8px">
+
+      <div style="background:#534AB7;color:#fff;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:700">
+        Msza Święta · 17.05 10:00
+      </div>
+
+      <div style="background:#fff;border-radius:10px;padding:10px 12px;border:1px solid #eee">
+        <div style="font-size:11px;font-weight:700;color:#888;margin-bottom:6px">MINISTRANCI</div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0">
+          <div>
+            <div style="font-size:13px;font-weight:600">Milosz Jakubczak</div>
+            <div style="font-size:11px;color:#e67e22;font-weight:600">⚠ Nieobecność zgłoszona</div>
+            <div style="font-size:11px;color:#999;font-style:italic">"Wyjazd rodzinny"</div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <span style="background:#27ae6022;color:#27ae60;border-radius:6px;padding:3px 8px;font-size:11px">✓</span>
+            <span style="background:#e74c3c22;color:#e74c3c;border-radius:6px;padding:3px 8px;font-size:11px">✕</span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0">
+          <div>
+            <div style="font-size:13px;font-weight:600">Piotr Kowalski</div>
+            <div style="font-size:11px;color:#e67e22;font-weight:600">⚠ Nieobecność zgłoszona</div>
+            <div style="font-size:11px;color:#999;font-style:italic">"Choroba"</div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <span style="background:#27ae6022;color:#27ae60;border-radius:6px;padding:3px 8px;font-size:11px">✓</span>
+            <span style="background:#e74c3c22;color:#e74c3c;border-radius:6px;padding:3px 8px;font-size:11px">✕</span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0">
+          <div>
+            <div style="font-size:13px;font-weight:600">Adam Wiśniewski</div>
+            <div style="font-size:11px;color:#27ae60;font-weight:600">● Obecny</div>
+          </div>
+          <span style="font-size:18px;color:#27ae60">✓</span>
+        </div>
+
+        <div style="margin-top:8px;padding:8px;background:#534AB711;border-radius:8px;text-align:center;font-size:12px;font-weight:600;color:#534AB7">
+          Zatwierdź obie nieobecności
+        </div>
+      </div>
+
+      <div style="background:#f0f0f0;border-radius:8px;padding:8px 12px;font-size:11px;color:#888;text-align:center">
+        Wróć → Panel → Grafiki → wybierz służbę
+      </div>
+
+    </div>
+    <div style="padding:8px 12px;background:#f5f5f5;font-size:11px;color:#666;line-height:1.5">
+      ✅ Approve/reject w kontekście konkretnej służby<br>
+      ✅ Bez nowych ekranów — rozbudowa istniejącego<br>
+      ⚠️ Admin musi wiedzieć które służby mają zgłoszenia<br>
+      ⚠️ Brak globalnego przeglądu
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px">Kliknij preferowane podejście lub napisz co myślisz</p>

@@ -1,0 +1,266 @@
+- generic [ref=e23]:
+  - generic [ref=e24]:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=1] [ref=e351]: Panel administratora
+                - generic [ref=e30] [cursor=pointer]: 
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic: Witaj, Michał!
+                - generic: Panel zarządzania LSO
+              - generic:
+                - generic:
+                  - generic: 
+                  - generic: "0"
+                  - generic: Ministranci
+                - generic:
+                  - generic: 
+                  - generic: "12"
+                  - generic: Bez obsady (7 dni)
+                - generic:
+                  - generic: 
+                  - generic: "0"
+                  - generic: Prośby o usprawiedliwienie
+              - generic:
+                - generic: "Wspomnienie dowolne:"
+                - generic: Najświętszej Maryi Panny z Fatimy
+              - generic:
+                - generic:
+                  - generic:
+                    - slider:
+                      - generic:
+                        - generic:
+                          - generic: Maj 2026
+                      - generic:
+                        - generic: Pn
+                        - generic: Wt
+                        - generic: Śr
+                        - generic: Cz
+                        - generic: Pt
+                        - generic: Sb
+                        - generic: Nd
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "27"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "28"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "29"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "30"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "1"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "2"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "3"
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "4"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "5"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "6"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "7"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "8"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "9"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "10"
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "11"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "12"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "13"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "14"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "15"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "16"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "17"
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "18"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "19"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "20"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "21"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "22"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "23"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "24"
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "25"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "26"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "27"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "28"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "29"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "30"
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic: "31"
+              - generic: Sekcje
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: 
+                  - generic: Ministranci
+                  - generic: Przeglądaj profile i historię
+                - generic:
+                  - generic:
+                    - generic: 
+                  - generic: Grafiki służb
+                  - generic: Tygodniowy widok Mszy
+                - generic:
+                  - generic:
+                    - generic: 
+                  - generic: Punkty
+                  - generic: Ranking i przyznawanie
+                - generic:
+                  - generic:
+                    - generic: 
+                  - generic: Ogłoszenia
+                  - generic: Komunikacja z grupą
+                - generic:
+                  - generic:
+                    - generic: 
+                  - generic: Parafia
+                  - generic: Ustawienia, Msza, Punktacja
+    - generic [ref=e352]:
+      - generic [ref=e353]:
+        - generic:
+          - generic:
+            - generic:
+              - heading "Ministranci" [level=1] [ref=e355]
+              - generic [ref=e357] [cursor=pointer]: 
+      - generic [ref=e359]:
+        - generic [ref=e360]:
+          - generic [ref=e361]:
+            - generic [ref=e362]: 
+            - textbox "Szukaj po imieniu..." [ref=e363]
+          - generic [ref=e364]:
+            - generic [ref=e366] [cursor=pointer]: Ministranci
+            - generic [ref=e368] [cursor=pointer]: Rodzice
+        - generic [ref=e371]:
+          - generic [ref=e372]: 
+          - generic [ref=e373]: Brak użytkowników
+          - generic [ref=e374]: "Zaproś ministrantów kodem: 9EA2F0"
+          - generic [ref=e376] [cursor=pointer]: Zarządzaj kodem zaproszenia
+  - tablist [ref=e310]:
+    - tab "  Panel" [ref=e312] [cursor=pointer]:
+      - generic [ref=e313]:
+        - generic [ref=e315]: 
+        - generic [ref=e317]: 
+      - generic [ref=e318]: Panel
+    - tab "  Ministranci" [active] [selected] [ref=e320] [cursor=pointer]:
+      - generic [ref=e321]:
+        - generic [ref=e323]: 
+        - generic [ref=e325]: 
+      - generic [ref=e326]: Ministranci
+    - tab "  Grafiki" [ref=e328] [cursor=pointer]:
+      - generic [ref=e329]:
+        - generic [ref=e331]: 
+        - generic [ref=e333]: 
+      - generic [ref=e334]: Grafiki
+    - tab "  Ogłoszenia" [ref=e336] [cursor=pointer]:
+      - generic [ref=e337]:
+        - generic [ref=e339]: 
+        - generic [ref=e341]: 
+      - generic [ref=e342]: Ogłoszenia
+    - tab "  Punkty" [ref=e344] [cursor=pointer]:
+      - generic [ref=e345]:
+        - generic [ref=e347]: 
+        - generic [ref=e349]: 
+      - generic [ref=e350]: Punkty

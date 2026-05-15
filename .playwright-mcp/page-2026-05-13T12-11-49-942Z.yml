@@ -1,0 +1,38 @@
+- generic [ref=e1]:
+  - generic [ref=e309]:
+    - generic [ref=e310]:
+      - generic:
+        - generic:
+          - generic:
+            - link "Panel administratora, back" [ref=e312] [cursor=pointer]:
+              - /url: /
+            - heading "Ogłoszenia" [level=1] [ref=e315]
+    - generic [ref=e318]:
+      - generic [active] [ref=e319] [cursor=pointer]:
+        - generic [ref=e320]: 
+        - generic [ref=e321]: Nowe ogłoszenie
+      - generic [ref=e325]:
+        - generic [ref=e326]: 
+        - generic [ref=e327]: Brak ogłoszeń
+  - generic [ref=e331]:
+    - generic [ref=e332]:
+      - generic [ref=e334] [cursor=pointer]: 
+      - generic [ref=e335]: Nowe ogłoszenie
+      - generic [ref=e337] [cursor=pointer]: Opublikuj
+    - generic [ref=e339]:
+      - generic [ref=e340]: Tytuł *
+      - textbox "Tytuł ogłoszenia" [ref=e341]
+      - generic [ref=e342]: Treść *
+      - textbox "Treść ogłoszenia..." [ref=e343]
+      - generic [ref=e344]: Odbiorcy
+      - generic [ref=e347]:
+        - generic [ref=e349] [cursor=pointer]: Wszyscy
+        - generic [ref=e351] [cursor=pointer]: Ministranci
+        - generic [ref=e353] [cursor=pointer]: Rodzice
+        - generic [ref=e355] [cursor=pointer]: Kandydat
+        - generic [ref=e357] [cursor=pointer]: Ministrant
+        - generic [ref=e359] [cursor=pointer]: Lektor
+        - generic [ref=e361] [cursor=pointer]: Ceremoniarz
+      - generic [ref=e362] [cursor=pointer]:
+        - generic [ref=e363]: 
+        - generic [ref=e364]: Przypiąć ogłoszenie na górze

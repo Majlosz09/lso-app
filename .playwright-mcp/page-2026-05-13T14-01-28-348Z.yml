@@ -1,0 +1,21 @@
+- generic [ref=e8]:
+  - generic [ref=e10]:
+    - heading "Dyżur" [level=1] [ref=e13]
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e18] [cursor=pointer]: Służby
+        - generic [ref=e20] [cursor=pointer]: Zapisy
+        - generic [ref=e22] [cursor=pointer]: Historia
+      - progressbar [ref=e24]:
+        - img [ref=e26]
+  - tablist [ref=e30]:
+    - tab "Dom" [ref=e32] [cursor=pointer]:
+      - generic [ref=e36]: Dom
+    - tab "Dyżur" [selected] [ref=e38] [cursor=pointer]:
+      - generic [ref=e42]: Dyżur
+    - tab "Ogłoszenia" [ref=e44] [cursor=pointer]:
+      - generic [ref=e48]: Ogłoszenia
+    - tab "Punkty" [ref=e50] [cursor=pointer]:
+      - generic [ref=e54]: Punkty
+    - tab "Profil" [ref=e56] [cursor=pointer]:
+      - generic [ref=e60]: Profil

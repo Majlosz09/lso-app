@@ -1,0 +1,199 @@
+- generic [ref=e247]:
+  - generic [ref=e248]:
+    - generic:
+      - generic:
+        - generic:
+          - link "Panel administratora, back" [ref=e250] [cursor=pointer]:
+            - /url: /
+          - heading "Grafiki służb" [level=1] [ref=e253]
+  - generic [ref=e256]:
+    - generic [ref=e257]:
+      - generic [ref=e259] [cursor=pointer]: 
+      - generic [ref=e260]: 11 maj – 17 maj 2026
+      - generic [ref=e262] [cursor=pointer]: 
+    - generic [ref=e263]:
+      - generic [ref=e264] [cursor=pointer]:
+        - generic [ref=e265]: 
+        - generic [ref=e266]: Dodaj jednorazową służbę
+      - generic [ref=e267] [cursor=pointer]:
+        - generic [ref=e268]: 
+        - generic [ref=e269]: Dodaj cykliczne służby
+    - generic [ref=e271]:
+      - generic [ref=e272]:
+        - generic [ref=e273]:
+          - generic [ref=e274]: Poniedziałek
+          - generic [ref=e275]: 11 maja
+        - generic [ref=e276] [cursor=pointer]:
+          - generic [ref=e277]:
+            - generic [ref=e279]: 18:30
+            - generic [ref=e280]:
+              - generic [ref=e281]: majowe
+              - generic [ref=e282]: Nabożeństwo
+            - generic [ref=e283]: 
+          - generic [ref=e284]:
+            - generic [ref=e285]: 
+            - generic [ref=e286]: Brak zapisanych ministrantów
+        - generic [ref=e287] [cursor=pointer]:
+          - generic [ref=e288]:
+            - generic [ref=e290]: 19:00
+            - generic [ref=e291]:
+              - generic [ref=e292]: Msza Święta
+              - generic [ref=e293]: Msza Święta
+            - generic [ref=e294]: 
+          - generic [ref=e295]:
+            - generic [ref=e296]: 
+            - generic [ref=e297]: Brak zapisanych ministrantów
+      - generic [ref=e298]:
+        - generic [ref=e299]:
+          - generic [ref=e300]: Wtorek
+          - generic [ref=e301]: 12 maja
+        - generic [ref=e302] [cursor=pointer]:
+          - generic [ref=e303]:
+            - generic [ref=e305]: 18:30
+            - generic [ref=e306]:
+              - generic [ref=e307]: majowe
+              - generic [ref=e308]: Nabożeństwo
+            - generic [ref=e309]: 
+          - generic [ref=e310]:
+            - generic [ref=e311]: 
+            - generic [ref=e312]: Brak zapisanych ministrantów
+        - generic [ref=e313] [cursor=pointer]:
+          - generic [ref=e314]:
+            - generic [ref=e316]: 19:00
+            - generic [ref=e317]:
+              - generic [ref=e318]: Msza Święta
+              - generic [ref=e319]: Msza Święta
+            - generic [ref=e320]: 
+          - generic [ref=e321]:
+            - generic [ref=e322]: 
+            - generic [ref=e323]: Brak zapisanych ministrantów
+      - generic [ref=e324]:
+        - generic [ref=e325]:
+          - generic [ref=e326]: Środa
+          - generic [ref=e327]: 13 maja
+        - generic [ref=e328] [cursor=pointer]:
+          - generic [ref=e329]:
+            - generic [ref=e331]: 18:30
+            - generic [ref=e332]:
+              - generic [ref=e333]: majowe
+              - generic [ref=e334]: Nabożeństwo
+            - generic [ref=e335]: 
+          - generic [ref=e336]:
+            - generic [ref=e337]: 
+            - generic [ref=e338]: Brak zapisanych ministrantów
+        - generic [ref=e339] [cursor=pointer]:
+          - generic [ref=e340]:
+            - generic [ref=e342]: 19:00
+            - generic [ref=e343]:
+              - generic [ref=e344]: Msza Święta
+              - generic [ref=e345]: Msza Święta
+            - generic [ref=e346]: 
+          - generic [ref=e347]:
+            - generic [ref=e348]: 
+            - generic [ref=e349]: Brak zapisanych ministrantów
+      - generic [ref=e350]:
+        - generic [ref=e351]:
+          - generic [ref=e352]: Czwartek
+          - generic [ref=e353]: 14 maja
+        - generic [ref=e354] [cursor=pointer]:
+          - generic [ref=e355]:
+            - generic [ref=e357]: 18:30
+            - generic [ref=e358]:
+              - generic [ref=e359]: majowe
+              - generic [ref=e360]: Nabożeństwo
+            - generic [ref=e361]: 
+          - generic [ref=e362]:
+            - generic [ref=e363]: 
+            - generic [ref=e364]: Brak zapisanych ministrantów
+        - generic [ref=e365] [cursor=pointer]:
+          - generic [ref=e366]:
+            - generic [ref=e368]: 19:00
+            - generic [ref=e369]:
+              - generic [ref=e370]: Msza Święta
+              - generic [ref=e371]: Msza Święta
+            - generic [ref=e372]: 
+          - generic [ref=e373]:
+            - generic [ref=e374]: 
+            - generic [ref=e375]: Brak zapisanych ministrantów
+      - generic [ref=e376]:
+        - generic [ref=e377]:
+          - generic [ref=e378]: Piątek
+          - generic [ref=e379]: 15 maja
+        - generic [ref=e380] [cursor=pointer]:
+          - generic [ref=e381]:
+            - generic [ref=e383]: 18:30
+            - generic [ref=e384]:
+              - generic [ref=e385]: majowe
+              - generic [ref=e386]: Nabożeństwo
+            - generic [ref=e387]: 
+          - generic [ref=e388]:
+            - generic [ref=e389]: 
+            - generic [ref=e390]: Brak zapisanych ministrantów
+        - generic [ref=e391] [cursor=pointer]:
+          - generic [ref=e392]:
+            - generic [ref=e394]: 19:00
+            - generic [ref=e395]:
+              - generic [ref=e396]: Msza Święta
+              - generic [ref=e397]: Msza Święta
+            - generic [ref=e398]: 
+          - generic [ref=e399]:
+            - generic [ref=e400]: 
+            - generic [ref=e401]: Brak zapisanych ministrantów
+      - generic [ref=e402]:
+        - generic [ref=e403]:
+          - generic [ref=e404]: Sobota
+          - generic [ref=e405]: 16 maja
+        - generic [ref=e406] [cursor=pointer]:
+          - generic [ref=e407]:
+            - generic [ref=e409]: 10:00
+            - generic [ref=e410]:
+              - generic [ref=e411]: Zbiórka
+              - generic [ref=e412]: Zbiórka
+            - generic [ref=e413]: 
+          - generic [ref=e414]:
+            - generic [ref=e415]: 
+            - generic [ref=e416]: Brak zapisanych ministrantów
+      - generic [ref=e417]:
+        - generic [ref=e418]:
+          - generic [ref=e419]: Niedziela
+          - generic [ref=e420]: 17 maja
+        - generic [ref=e421] [cursor=pointer]:
+          - generic [ref=e422]:
+            - generic [ref=e424]: 10:00
+            - generic [ref=e425]:
+              - generic [ref=e426]: Msza Święta
+              - generic [ref=e427]: Msza Święta
+            - generic [ref=e428]: 
+          - generic [ref=e429]:
+            - generic [ref=e430]: 
+            - generic [ref=e431]: Brak zapisanych ministrantów
+        - generic [ref=e432] [cursor=pointer]:
+          - generic [ref=e433]:
+            - generic [ref=e435]: 11:30
+            - generic [ref=e436]:
+              - generic [ref=e437]: Msza Święta
+              - generic [ref=e438]: Msza Święta
+            - generic [ref=e439]: 
+          - generic [ref=e440]:
+            - generic [ref=e441]: 
+            - generic [ref=e442]: Brak zapisanych ministrantów
+        - generic [ref=e443] [cursor=pointer]:
+          - generic [ref=e444]:
+            - generic [ref=e446]: 19:30
+            - generic [ref=e447]:
+              - generic [ref=e448]: majowe
+              - generic [ref=e449]: Nabożeństwo
+            - generic [ref=e450]: 
+          - generic [ref=e451]:
+            - generic [ref=e452]: 
+            - generic [ref=e453]: Brak zapisanych ministrantów
+        - generic [ref=e454] [cursor=pointer]:
+          - generic [ref=e455]:
+            - generic [ref=e457]: 20:00
+            - generic [ref=e458]:
+              - generic [ref=e459]: Msza Święta - studencka 20
+              - generic [ref=e460]: Msza Święta
+            - generic [ref=e461]: 
+          - generic [ref=e462]:
+            - generic [ref=e463]: 
+            - generic [ref=e464]: Brak zapisanych ministrantów

@@ -1,0 +1,48 @@
+- generic [ref=e309]:
+  - generic [ref=e310]:
+    - generic:
+      - generic:
+        - generic:
+          - link "Panel administratora, back" [ref=e312] [cursor=pointer]:
+            - /url: /
+          - heading "Profil" [level=1] [ref=e315]
+  - generic [ref=e319]:
+    - generic [ref=e320]:
+      - generic [ref=e321] [cursor=pointer]:
+        - generic [ref=e323]: 
+        - generic [ref=e325]: 
+      - generic [ref=e326]: Michał Krawczyk
+      - generic [ref=e328]: Administrator
+      - generic [ref=e329]: michal.krawczyk@outlook.com
+    - generic [ref=e330]:
+      - generic [ref=e331]:
+        - generic [ref=e332]: 
+        - generic [ref=e333]: "0"
+        - generic [ref=e334]: Ministranci
+      - generic [ref=e335]:
+        - generic [ref=e336]: 
+        - generic [ref=e337]: "38"
+        - generic [ref=e338]: Nadch. służby
+    - generic [ref=e339]:
+      - generic [ref=e340]:
+        - generic [ref=e341]: Informacje
+        - generic [ref=e343] [cursor=pointer]: Edytuj
+      - generic [ref=e344]:
+        - generic [ref=e345]:
+          - generic [ref=e346]: 
+          - generic [ref=e347]:
+            - generic [ref=e348]: Imię i nazwisko
+            - generic [ref=e349]: Michał Krawczyk
+        - generic [ref=e350]:
+          - generic [ref=e351]: 
+          - generic [ref=e352]:
+            - generic [ref=e353]: Email
+            - generic [ref=e354]: michal.krawczyk@outlook.com
+        - generic [ref=e355]:
+          - generic [ref=e356]: 
+          - generic [ref=e357]:
+            - generic [ref=e358]: Telefon
+            - generic [ref=e359]: "098123567"
+    - generic [ref=e360] [cursor=pointer]:
+      - generic [ref=e361]: 
+      - generic [ref=e362]: Wyloguj się

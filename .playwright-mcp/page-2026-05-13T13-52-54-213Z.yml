@@ -1,0 +1,160 @@
+- generic [ref=e19]:
+  - generic [ref=e20]:
+    - generic:
+      - generic:
+        - heading [level=1] [ref=e110]: Dom
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic: Witaj, Miłosz!
+                - generic:
+                  - generic: Ministrant
+                  - generic: 
+                  - generic: "#1 w rankingu"
+              - generic:
+                - generic: "Wspomnienie dowolne:"
+                - generic: Najświętszej Maryi Panny z Fatimy
+              - generic:
+                - generic:
+                  - generic: 
+                  - generic: "0"
+                  - generic: Punkty
+                - generic:
+                  - generic: 
+                  - generic: "0"
+                  - generic: Służby
+              - generic:
+                - generic: Nadchodzące służby
+                - generic:
+                  - generic: 
+                  - generic: Brak nadchodzących służb
+                  - generic:
+                    - generic: Przejdź do zapisów →
+              - generic: Szybkie akcje
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: 
+                  - generic: Zapisy
+                - generic:
+                  - generic:
+                    - generic: 
+                  - generic: Ogłoszenia
+                - generic:
+                  - generic:
+                    - generic: 
+                  - generic: Punkty
+    - generic [ref=e111]:
+      - heading "Dyżur" [level=1] [ref=e114]
+      - generic [ref=e116]:
+        - generic [ref=e117]:
+          - generic [ref=e119] [cursor=pointer]: Służby
+          - generic [ref=e121] [cursor=pointer]: Zapisy
+          - generic [ref=e123] [cursor=pointer]: Historia
+        - generic [ref=e137]:
+          - generic [ref=e139]:
+            - slider [ref=e140]:
+              - generic [ref=e146]: Maj 2026
+              - generic [ref=e150]:
+                - generic [ref=e151]: Pn
+                - generic [ref=e152]: Wt
+                - generic [ref=e153]: Śr
+                - generic [ref=e154]: Cz
+                - generic [ref=e155]: Pt
+                - generic [ref=e156]: Sb
+                - generic [ref=e157]: Nd
+            - generic [ref=e158]:
+              - generic [ref=e159]:
+                - generic [ref=e362] [cursor=pointer]: "27"
+                - generic [ref=e365] [cursor=pointer]: "28"
+                - generic [ref=e368] [cursor=pointer]: "29"
+                - generic [ref=e371] [cursor=pointer]: "30"
+                - generic [ref=e374] [cursor=pointer]: "1"
+                - generic [ref=e377] [cursor=pointer]: "2"
+                - generic [ref=e380] [cursor=pointer]: "3"
+              - generic [ref=e188]:
+                - generic [ref=e383] [cursor=pointer]: "4"
+                - generic [ref=e386] [cursor=pointer]: "5"
+                - generic [ref=e389] [cursor=pointer]: "6"
+                - generic [ref=e392] [cursor=pointer]: "7"
+                - generic [ref=e395] [cursor=pointer]: "8"
+                - generic [ref=e398] [cursor=pointer]: "9"
+                - generic [ref=e401] [cursor=pointer]: "10"
+              - generic [ref=e217]:
+                - generic [ref=e404] [cursor=pointer]: "11"
+                - generic [ref=e407] [cursor=pointer]: "12"
+                - generic [ref=e410] [cursor=pointer]: "13"
+                - generic [ref=e415] [cursor=pointer]: "14"
+                - generic [ref=e420] [cursor=pointer]: "15"
+                - generic [ref=e425] [cursor=pointer]: "16"
+                - generic [ref=e430] [cursor=pointer]: "17"
+              - generic [ref=e257]:
+                - generic [ref=e436] [cursor=pointer]: "18"
+                - generic [ref=e442] [cursor=pointer]: "19"
+                - generic [ref=e448] [cursor=pointer]: "20"
+                - generic [ref=e454] [cursor=pointer]: "21"
+                - generic [ref=e460] [cursor=pointer]: "22"
+                - generic [ref=e466] [cursor=pointer]: "23"
+                - generic [ref=e472] [cursor=pointer]: "24"
+              - generic [ref=e307]:
+                - generic [ref=e478] [cursor=pointer]: "25"
+                - generic [ref=e484] [cursor=pointer]: "26"
+                - generic [ref=e490] [cursor=pointer]: "27"
+                - generic [ref=e496] [cursor=pointer]: "28"
+                - generic [ref=e502] [cursor=pointer]: "29"
+                - generic [ref=e508] [cursor=pointer]: "30"
+                - generic [ref=e514] [cursor=pointer]: "31"
+          - generic [ref=e357]:
+            - generic [ref=e518]:
+              - generic [ref=e520]: "Uroczystość:"
+              - generic [ref=e521]: Wniebowstąpienie Pańskie
+            - generic [ref=e524]:
+              - generic [ref=e525]:
+                - generic [ref=e528]:
+                  - generic [ref=e529]: majowe
+                  - generic [ref=e530]:
+                    - generic [ref=e531]: 18:30
+                    - generic [ref=e533]: Nabożeństwo
+                - generic [ref=e535] [cursor=pointer]: Zapisz się
+              - generic [ref=e536]:
+                - generic [ref=e538]:
+                  - generic [ref=e539]: 
+                  - generic [ref=e540]:
+                    - generic [ref=e541]: Msza Święta
+                    - generic [ref=e542]: 19:00
+                - generic [ref=e543]:
+                  - generic [ref=e544]:
+                    - generic [ref=e545] [cursor=pointer]:
+                      - generic [ref=e546]: 
+                      - generic [ref=e547]: Jednorazowo
+                    - generic [ref=e548] [cursor=pointer]:
+                      - generic [ref=e549]: 
+                      - generic [ref=e550]: Cyklicznie
+                  - generic [ref=e552] [cursor=pointer]: Zapisz się
+  - tablist [ref=e69]:
+    - tab "  Dom" [ref=e71] [cursor=pointer]:
+      - generic [ref=e72]:
+        - generic [ref=e74]: 
+        - generic [ref=e76]: 
+      - generic [ref=e77]: Dom
+    - tab "  Dyżur" [selected] [ref=e79] [cursor=pointer]:
+      - generic [ref=e80]:
+        - generic [ref=e82]: 
+        - generic [ref=e84]: 
+      - generic [ref=e85]: Dyżur
+    - tab "  Ogłoszenia" [ref=e87] [cursor=pointer]:
+      - generic [ref=e88]:
+        - generic [ref=e90]: 
+        - generic [ref=e92]: 
+      - generic [ref=e93]: Ogłoszenia
+    - tab "  Punkty" [ref=e95] [cursor=pointer]:
+      - generic [ref=e96]:
+        - generic [ref=e98]: 
+        - generic [ref=e100]: 
+      - generic [ref=e101]: Punkty
+    - tab "  Profil" [ref=e103] [cursor=pointer]:
+      - generic [ref=e104]:
+        - generic [ref=e106]: 
+        - generic [ref=e108]: 
+      - generic [ref=e109]: Profil

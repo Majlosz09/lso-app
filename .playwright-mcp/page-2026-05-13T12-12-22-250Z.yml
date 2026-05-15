@@ -1,0 +1,42 @@
+- generic [ref=e309]:
+  - generic [ref=e310]:
+    - generic:
+      - generic:
+        - generic:
+          - link "(admin-tabs), back" [ref=e312] [cursor=pointer]:
+            - /url: /
+          - heading "Ustawienia parafii" [level=1] [ref=e315]
+  - generic [ref=e319]:
+    - generic [ref=e320]:
+      - generic [ref=e321]: Dane parafii
+      - generic [ref=e322]: Nazwa parafii *
+      - textbox "Nazwa parafii" [ref=e323]: DA Emaus
+      - generic [ref=e324]: Miejscowość
+      - textbox "np. Warszawa" [ref=e325]: Częstochowa
+      - generic [ref=e327] [cursor=pointer]: Zapisz zmiany
+    - generic [ref=e328]:
+      - generic [ref=e329]: Kod zaproszenia
+      - generic [ref=e330]: Podaj ten kod ministrantom i rodzicom, aby mogli dołączyć do Twojej parafii.
+      - generic [ref=e331]:
+        - generic [ref=e332]: 9EA2F0
+        - generic [ref=e333] [cursor=pointer]:
+          - generic [ref=e334]: 
+          - generic [ref=e335]: Kopiuj
+      - generic [ref=e336] [cursor=pointer]:
+        - generic [ref=e337]: 
+        - generic [ref=e338]: Regeneruj kod
+    - generic [ref=e339]:
+      - generic [ref=e340]: Konfiguracja
+      - generic [ref=e341]: Zarządzaj rozkładem Mszy i regułami punktowania.
+      - generic [ref=e342] [cursor=pointer]:
+        - generic [ref=e344]: 
+        - generic [ref=e345]:
+          - generic [ref=e346]: Rozkład Mszy
+          - generic [ref=e347]: Tygodniowy plan godzin
+        - generic [ref=e348]: 
+      - generic [ref=e350] [cursor=pointer]:
+        - generic [ref=e352]: 
+        - generic [ref=e353]:
+          - generic [ref=e354]: Reguły punktowania
+          - generic [ref=e355]: Typy służb i ich wartości
+        - generic [ref=e356]: 

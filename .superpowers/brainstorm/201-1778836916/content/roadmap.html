@@ -1,0 +1,71 @@
+<h2>Proponowana kolejność</h2>
+<p class="subtitle">Od najszybszych korzyści do największych zmian — kliknij feature od którego chcesz zacząć</p>
+
+<div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+
+  <div class="option" data-choice="absence" onclick="toggleSelect(this)" style="cursor:pointer">
+    <div class="letter" style="background:#534AB722;color:#534AB7;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">1</div>
+    <div class="content">
+      <h3>📋 Zgłaszanie nieobecności</h3>
+      <p>Baner w aplikacji już na to wskazuje — ministranci oczekują tej funkcji. Wymaga tylko ekranu zgłoszenia + widoku admina. Szybko dostarcza realną wartość.</p>
+    </div>
+    <span style="color:#aaa;font-size:12px;white-space:nowrap">~3–4 ekrany</span>
+  </div>
+
+  <div class="option" data-choice="realtime" onclick="toggleSelect(this)" style="cursor:pointer">
+    <div class="letter" style="background:#534AB722;color:#534AB7;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">2</div>
+    <div class="content">
+      <h3>⚡ Realtime updates</h3>
+      <p>Supabase Realtime jest już w zależnościach. Usuwa potrzebę pull-to-refresh i sprawia że app "żyje". Fundament pod powiadomienia.</p>
+    </div>
+    <span style="color:#aaa;font-size:12px;white-space:nowrap">bez nowych ekranów</span>
+  </div>
+
+  <div class="option" data-choice="gamification" onclick="toggleSelect(this)" style="cursor:pointer">
+    <div class="letter" style="background:#534AB722;color:#534AB7;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">3</div>
+    <div class="content">
+      <h3>🏆 Gamifikacja i rangi</h3>
+      <p>Tabela rang istnieje w DB. Dodanie odznak i automatycznych awansów zwiększa motywację do służb. Duże zaangażowanie za relatywnie mały koszt.</p>
+    </div>
+    <span style="color:#aaa;font-size:12px;white-space:nowrap">DB + UI</span>
+  </div>
+
+  <div class="option" data-choice="notifications" onclick="toggleSelect(this)" style="cursor:pointer">
+    <div class="letter" style="background:#534AB722;color:#534AB7;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">4</div>
+    <div class="content">
+      <h3>🔔 Powiadomienia push</h3>
+      <p>Expo Notifications + Supabase Edge Functions (lub webhook). Wymaga tokenu urządzenia i backendu do wysyłki. Najlepiej po Realtime.</p>
+    </div>
+    <span style="color:#aaa;font-size:12px;white-space:nowrap">backend required</span>
+  </div>
+
+  <div class="option" data-choice="stats" onclick="toggleSelect(this)" style="cursor:pointer">
+    <div class="letter" style="background:#534AB722;color:#534AB7;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">5</div>
+    <div class="content">
+      <h3>📊 Statystyki admina</h3>
+      <p>Wykresy frekwencji, aktywności, rankingu w czasie. Dane już są w DB — potrzeba tylko widoku analitycznego na panelu admina.</p>
+    </div>
+    <span style="color:#aaa;font-size:12px;white-space:nowrap">nowy ekran admina</span>
+  </div>
+
+  <div class="option" data-choice="calendar" onclick="toggleSelect(this)" style="cursor:pointer">
+    <div class="letter" style="background:#534AB722;color:#534AB7;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">6</div>
+    <div class="content">
+      <h3>📅 Eksport kalendarza</h3>
+      <p>Generowanie .ics z listą własnych służb. Proste technicznie, przydatne szczególnie dla bardziej aktywnych ministrantów.</p>
+    </div>
+    <span style="color:#aaa;font-size:12px;white-space:nowrap">biblioteka ics</span>
+  </div>
+
+  <div class="option" data-choice="darkmode" onclick="toggleSelect(this)" style="cursor:pointer">
+    <div class="letter" style="background:#534AB722;color:#534AB7;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700">7</div>
+    <div class="content">
+      <h3>🌙 Tryb ciemny</h3>
+      <p>Wymaga przepisania kolorów w każdym ekranie na system tokenów. Największa zmiana — najlepiej na końcu gdy reszta jest stabilna.</p>
+    </div>
+    <span style="color:#aaa;font-size:12px;white-space:nowrap">duży refactor</span>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:20px">Kliknij feature od którego zaczynamy i napisz czy zgadzasz się z kolejnością</p>

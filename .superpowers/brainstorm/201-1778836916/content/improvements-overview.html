@@ -1,0 +1,78 @@
+<h2>Co możemy ulepszyć w LSO?</h2>
+<p class="subtitle">Kliknij obszary, które najbardziej Cię interesują — możemy wybrać kilka</p>
+
+<div class="options" data-multiselect>
+
+  <div class="option" data-choice="notifications" onclick="toggleSelect(this)">
+    <div class="letter">🔔</div>
+    <div class="content">
+      <h3>Powiadomienia push</h3>
+      <p>Ministranci dostają alert gdy pojawi się nowe ogłoszenie, nowa służba, zmiana grafiku lub przypomnienie przed służbą</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="swaps" onclick="toggleSelect(this)">
+    <div class="letter">🔄</div>
+    <div class="content">
+      <h3>Zamiany służb</h3>
+      <p>Ministrant może wysłać prośbę o zamianę do innego ministranta — ekran <code>swaps.tsx</code> już istnieje w projekcie, ale jest ukryty</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="realtime" onclick="toggleSelect(this)">
+    <div class="letter">⚡</div>
+    <div class="content">
+      <h3>Aktualizacje w czasie rzeczywistym</h3>
+      <p>Dane odświeżają się automatycznie bez pull-to-refresh — Supabase Realtime już jest w projekcie, tylko nieuaktywione</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="absence" onclick="toggleSelect(this)">
+    <div class="letter">📋</div>
+    <div class="content">
+      <h3>Zgłaszanie nieobecności</h3>
+      <p>Ministrant zgłasza usprawiedliwioną nieobecność na konkretnej służbie — admin widzi i akceptuje. Baner o tej funkcji już jest w aplikacji</p>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top: 24px;">
+<div class="options" data-multiselect>
+
+  <div class="option" data-choice="darkmode" onclick="toggleSelect(this)">
+    <div class="letter">🌙</div>
+    <div class="content">
+      <h3>Tryb ciemny</h3>
+      <p>Dark mode — aplikacja już ma <code>useColorScheme</code> w komponentach, ale nie jest używany w żadnym ekranie</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="stats" onclick="toggleSelect(this)">
+    <div class="letter">📊</div>
+    <div class="content">
+      <h3>Lepsze statystyki admina</h3>
+      <p>Panel admina z wykresami aktywności, frekwencji, rankingu w czasie — tygodniowe / miesięczne widoki</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="calendar" onclick="toggleSelect(this)">
+    <div class="letter">📅</div>
+    <div class="content">
+      <h3>Eksport kalendarza</h3>
+      <p>Ministrant eksportuje swoje służby do Google Calendar / Apple Calendar (.ics)</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="gamification" onclick="toggleSelect(this)">
+    <div class="letter">🏆</div>
+    <div class="content">
+      <h3>Gamifikacja i rangi</h3>
+      <p>Odznaki za osiągnięcia, automatyczne awanse rang po progach punktowych, historia rang</p>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">Zaznacz interesujące obszary i napisz w terminalu co myślisz</p>

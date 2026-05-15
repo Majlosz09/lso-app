@@ -1,0 +1,20 @@
+- generic [ref=e309]:
+  - generic [ref=e310]:
+    - generic:
+      - generic:
+        - generic:
+          - link "Panel administratora, back" [ref=e312] [cursor=pointer]:
+            - /url: /
+          - heading "Ministranci" [level=1] [ref=e315]
+          - generic [ref=e317] [cursor=pointer]: 
+  - generic [ref=e320]:
+    - generic [ref=e321]:
+      - generic [ref=e322]:
+        - generic [ref=e323]: 
+        - textbox "Szukaj po imieniu..." [ref=e324]
+      - generic [ref=e325]:
+        - generic [ref=e327] [cursor=pointer]: Ministranci
+        - generic [ref=e329] [cursor=pointer]: Rodzice
+    - generic [ref=e332]:
+      - generic [ref=e333]: 
+      - generic [ref=e334]: Brak użytkowników
