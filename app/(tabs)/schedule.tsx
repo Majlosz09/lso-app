@@ -46,27 +46,28 @@ function isCheckInWindowOpen(schedule: any): boolean {
   return now >= windowOpen && now <= windowClose
 }
 
-type ExtraSlot = { time: string; eventType: 'msza' | 'nabożeństwo' }
+const DAY_SHORT = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb']
 
-function getNabożeństwoTime(dateStr: string): string | null {
-  const d = new Date(dateStr + 'T12:00:00')
-  const month = d.getMonth() + 1
-  if (![5, 6, 10].includes(month)) return null
-  return d.getDay() === 0 ? '16:30' : '17:30'
+function getWeekDays(weekOffset: number): string[] {
+  const today = new Date()
+  const dow = today.getDay()
+  const daysToMonday = dow === 0 ? -6 : 1 - dow
+  const monday = new Date(today)
+  monday.setDate(today.getDate() + daysToMonday + weekOffset * 7)
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    return d.toISOString().split('T')[0]
+  })
 }
 
-function getAvailableExtraSlots(now: Date, templates: MassTemplate[]): ExtraSlot[] {
-  const dateStr = now.toISOString().split('T')[0]
-  const msza: ExtraSlot[] = getExpectedTimesFromTemplates(dateStr, templates).map(t => ({ time: t, eventType: 'msza' as const }))
-  const nabTime = getNabożeństwoTime(dateStr)
-  const nab: ExtraSlot[] = nabTime ? [{ time: nabTime, eventType: 'nabożeństwo' as const }] : []
-  return [...msza, ...nab].filter(({ time }) => {
-    const [h, m] = time.split(':').map(Number)
-    const slotMs = new Date(now)
-    slotMs.setHours(h, m, 0, 0)
-    const diffMin = (now.getTime() - slotMs.getTime()) / 60000
-    return diffMin >= -30 && diffMin <= 90
-  })
+function isSunday(dateStr: string): boolean {
+  return new Date(dateStr + 'T12:00:00').getDay() === 0
+}
+
+function formatDateHeader(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00')
+  return d.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 export default function ScheduleScreen() {
@@ -175,6 +176,63 @@ function ChildScheduleCard({ schedule }: { schedule: any }) {
   )
 }
 
+interface WeekStripProps {
+  weekDays: string[]
+  selectedDate: string
+  onSelect: (date: string) => void
+  onPrev: () => void
+  onNext: () => void
+  eventDates: Set<string>
+}
+
+function WeekStrip({ weekDays, selectedDate, onSelect, onPrev, onNext, eventDates }: WeekStripProps) {
+  const today = new Date().toISOString().split('T')[0]
+  return (
+    <View style={styles.weekStripContainer}>
+      <TouchableOpacity onPress={onPrev} style={styles.weekArrow} hitSlop={8}>
+        <Ionicons name="chevron-back" size={20} color="#534AB7" />
+      </TouchableOpacity>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.weekDaysScroll}>
+        {weekDays.map(date => {
+          const d = new Date(date + 'T12:00:00')
+          const isSelected = date === selectedDate
+          const isToday = date === today
+          const hasEvents = eventDates.has(date)
+          return (
+            <TouchableOpacity key={date} onPress={() => onSelect(date)}
+              style={styles.dayPill} activeOpacity={0.7}>
+              <Text style={[styles.dayPillLabel, isSelected && { color: '#534AB7' }]}>
+                {DAY_SHORT[d.getDay()]}
+              </Text>
+              <View style={[
+                styles.dayPillCircle,
+                isSelected && styles.dayPillSelected,
+                isToday && !isSelected && styles.dayPillToday,
+              ]}>
+                <Text style={[
+                  styles.dayPillNum,
+                  isSelected && { color: '#fff', fontWeight: '800' },
+                  isToday && !isSelected && { color: '#534AB7', fontWeight: '700' },
+                ]}>
+                  {d.getDate()}
+                </Text>
+              </View>
+              {hasEvents
+                ? <View style={[styles.dayPillDot, isSelected && { backgroundColor: '#fff' }]} />
+                : <View style={styles.dayPillDotEmpty} />
+              }
+            </TouchableOpacity>
+          )
+        })}
+      </ScrollView>
+      <TouchableOpacity onPress={onNext} style={styles.weekArrow} hitSlop={8}>
+        <Ionicons name="chevron-forward" size={20} color="#534AB7" />
+      </TouchableOpacity>
+    </View>
+  )
+}
+
 function MemberScheduleView() {
   const { profile } = useAuthStore()
   const [activeTab, setActiveTab] = useState<'mine' | 'signup' | 'history'>('mine')
@@ -190,10 +248,6 @@ function MemberScheduleView() {
   )
   const [pastSchedules, setPastSchedules] = useState<any[]>([])
   const [massTemplates, setMassTemplates] = useState<MassTemplate[]>([])
-  const [availableExtraSlots, setAvailableExtraSlots] = useState<ExtraSlot[]>([])
-  const [showExtraModal, setShowExtraModal] = useState(false)
-  const [selectedSlot, setSelectedSlot] = useState<ExtraSlot | null>(null)
-  const [submittingExtra, setSubmittingExtra] = useState(false)
 
   useEffect(() => {
     if (!profile?.parish_id) return
@@ -202,18 +256,9 @@ function MemberScheduleView() {
       .eq('parish_id', profile.parish_id)
       .order('day_of_week').order('time')
       .then(({ data }) => {
-        const t = (data as MassTemplate[]) ?? []
-        setMassTemplates(t)
-        setAvailableExtraSlots(getAvailableExtraSlots(new Date(), t))
+        setMassTemplates((data as MassTemplate[]) ?? [])
       })
   }, [profile?.parish_id])
-
-  useEffect(() => {
-    if (massTemplates.length === 0) return
-    const tick = () => setAvailableExtraSlots(getAvailableExtraSlots(new Date(), massTemplates))
-    const id = setInterval(tick, 60_000)
-    return () => clearInterval(id)
-  }, [massTemplates])
 
   // "Zapisy" data
   const [allSchedules, setAllSchedules] = useState<any[]>([])
@@ -468,24 +513,6 @@ function MemberScheduleView() {
     fetchSignup()
   }
 
-  const handleExtraCheckIn = async () => {
-    if (!selectedSlot) return
-    setSubmittingExtra(true)
-    const todayStr = new Date().toISOString().split('T')[0]
-    const { error } = await supabase.rpc('record_extra_attendance', {
-      p_event_type: selectedSlot.eventType,
-      p_event_date: todayStr,
-      p_event_time: selectedSlot.time + ':00',
-    })
-    setSubmittingExtra(false)
-    if (error) {
-      Alert.alert('Błąd', error.code === '23505' ? 'Obecność już zarejestrowana.' : error.message)
-      return
-    }
-    setShowExtraModal(false)
-    Alert.alert('Zapisano', 'Obecność i punkty zostały zarejestrowane.')
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.segmentBar}>
@@ -517,7 +544,7 @@ function MemberScheduleView() {
             style={{ flex: 1 }}
             data={mySchedules.filter((s: any) => s.date > today && s.date <= thirtyDaysLater)}
             keyExtractor={(item) => item.id}
-            refreshControl={<RefreshControl refreshing={refreshingMine} onRefresh={() => { setRefreshingMine(true); fetchMine(); setAvailableExtraSlots(getAvailableExtraSlots(new Date(), massTemplates)) }} />}
+            refreshControl={<RefreshControl refreshing={refreshingMine} onRefresh={() => { setRefreshingMine(true); fetchMine() }} />}
             ListEmptyComponent={
               <View style={styles.empty}>
                 <Ionicons name="calendar-outline" size={48} color="#ccc" />
@@ -529,36 +556,25 @@ function MemberScheduleView() {
             }
             ListHeaderComponent={((): React.ReactElement | null => {
               const todaySchedules = mySchedules.filter((s: any) => s.date === today)
+              if (todaySchedules.length === 0) return null
               return (
-                <>
-                  <TouchableOpacity
-                    style={[styles.extraAttendanceBanner, { marginBottom: 4 }]}
-                    onPress={() => { setSelectedSlot(availableExtraSlots[0] ?? null); setShowExtraModal(true) }}
-                  >
-                    <Ionicons name="add-circle-outline" size={20} color="#534AB7" />
-                    <Text style={styles.extraAttendanceBannerText}>Służyłeś poza dyżurem lub na nabożeństwie?</Text>
-                    <Ionicons name="chevron-forward" size={16} color="#534AB7" />
-                  </TouchableOpacity>
-                  {todaySchedules.length > 0 && (
-                    <View style={styles.todaySection}>
-                      <View style={styles.todayBadge}>
-                        <Ionicons name="flash" size={13} color="#fff" />
-                        <Text style={styles.todayBadgeText}>DZIŚ</Text>
-                      </View>
-                      {todaySchedules.map((item: any) => (
-                        <MyScheduleCard
-                          key={item.id}
-                          schedule={item}
-                          unsigning={unsigningId === item.assignmentId}
-                          onUnsign={() => handleUnsign(item.assignmentId, item.title, item.recurringCommitment)}
-                          onAttendanceSaved={fetchMine}
-                          reporting={reportingAbsenceId === item.assignmentId}
-                          onReportAbsence={() => handleReportAbsence(item.assignmentId, item.title)}
-                        />
-                      ))}
-                    </View>
-                  )}
-                </>
+                <View style={styles.todaySection}>
+                  <View style={styles.todayBadge}>
+                    <Ionicons name="flash" size={13} color="#fff" />
+                    <Text style={styles.todayBadgeText}>DZIŚ</Text>
+                  </View>
+                  {todaySchedules.map((item: any) => (
+                    <MyScheduleCard
+                      key={item.id}
+                      schedule={item}
+                      unsigning={unsigningId === item.assignmentId}
+                      onUnsign={() => handleUnsign(item.assignmentId, item.title, item.recurringCommitment)}
+                      onAttendanceSaved={fetchMine}
+                      reporting={reportingAbsenceId === item.assignmentId}
+                      onReportAbsence={() => handleReportAbsence(item.assignmentId, item.title)}
+                    />
+                  ))}
+                </View>
               )
             })()}
             renderItem={({ item }) => (
@@ -782,60 +798,6 @@ function MemberScheduleView() {
         </View>
       </Modal>
 
-      <Modal
-        visible={showExtraModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowExtraModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Obecność poza dyżurem lub na nabożeństwie</Text>
-            {availableExtraSlots.length === 0 ? (
-              <View style={styles.modalEmpty}>
-                <Ionicons name="time-outline" size={32} color="#ccc" />
-                <Text style={styles.modalEmptyText}>Żadne nabożeństwo lub Msza Święta nie jest teraz w toku.</Text>
-                <Text style={styles.modalEmptySubtext}>Możesz wpisać obecność 30 min przed i 90 min po rozpoczęciu mszy lub nabożeństwa.</Text>
-              </View>
-            ) : (
-              <>
-                <Text style={styles.modalSubtitle}>Wybierz nabożeństwo, w którym uczestniczyłeś/aś</Text>
-                {availableExtraSlots.map(slot => (
-                  <TouchableOpacity
-                    key={slot.time}
-                    style={[styles.slotRow, selectedSlot?.time === slot.time && styles.slotRowSelected]}
-                    onPress={() => setSelectedSlot(slot)}
-                  >
-                    <View style={[styles.radio, selectedSlot?.time === slot.time && styles.radioSelected]}>
-                      {selectedSlot?.time === slot.time && <View style={styles.radioDot} />}
-                    </View>
-                    <Text style={styles.slotText}>
-                      {slot.time} · {slot.eventType === 'msza' ? 'Msza Święta' : 'Nabożeństwo'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </>
-            )}
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowExtraModal(false)}>
-                <Text style={styles.cancelBtnText}>Zamknij</Text>
-              </TouchableOpacity>
-              {availableExtraSlots.length > 0 && (
-                <TouchableOpacity
-                  style={[styles.confirmBtn, (!selectedSlot || submittingExtra) && { opacity: 0.6 }]}
-                  onPress={handleExtraCheckIn}
-                  disabled={!selectedSlot || submittingExtra}
-                >
-                  {submittingExtra
-                    ? <ActivityIndicator size="small" color="#fff" />
-                    : <Text style={styles.confirmBtnText}>Potwierdź</Text>
-                  }
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   )
 }
@@ -1381,4 +1343,20 @@ const styles = StyleSheet.create({
   dayTodayNum: { fontWeight: '700' },
   dayDots: { flexDirection: 'row', gap: 2, marginTop: 1, minHeight: 5 },
   dayDot: { width: 4, height: 4, borderRadius: 2 },
+
+  weekStripContainer: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff', paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+  },
+  weekArrow: { paddingHorizontal: 8 },
+  weekDaysScroll: { paddingHorizontal: 4, gap: 2 },
+  dayPill: { alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2, minWidth: 38 },
+  dayPillLabel: { fontSize: 10, fontWeight: '700', color: '#aaa', marginBottom: 2 },
+  dayPillCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  dayPillSelected: { backgroundColor: '#534AB7' },
+  dayPillToday: { backgroundColor: '#534AB714' },
+  dayPillNum: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
+  dayPillDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#534AB7', marginTop: 2 },
+  dayPillDotEmpty: { width: 4, height: 4, marginTop: 2 },
 })
