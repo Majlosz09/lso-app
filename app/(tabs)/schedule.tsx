@@ -229,7 +229,7 @@ function MemberScheduleView() {
 
     const { data: assignments } = await supabase
       .from('schedule_assignments')
-      .select('id, role, status, schedule_id, absence_reason')
+      .select('id, role, status, schedule_id, absence_reason, admin_note')
       .eq('profile_id', profile.id)
 
     if (!assignments?.length) {
@@ -274,6 +274,7 @@ function MemberScheduleView() {
         myRole: aMap.get(s.id)?.role,
         myStatus: aMap.get(s.id)?.status,
         myAbsenceReason: aMap.get(s.id)?.absence_reason ?? null,
+        myAdminNote: aMap.get(s.id)?.admin_note ?? null,
         attendance: attMap.get(s.id) ?? null,
         recurringCommitment: recurMap.get(timeKey) ?? null,
       }
