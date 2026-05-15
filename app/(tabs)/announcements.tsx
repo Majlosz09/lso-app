@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase'
 import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { Announcement } from '../../types/database'
+import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 
 export default function AnnouncementsScreen() {
   const { profile } = useAuthStore()
@@ -46,6 +47,8 @@ export default function AnnouncementsScreen() {
   }
 
   useEffect(() => { fetchAnnouncements() }, [])
+
+  useRealtimeTable('announcements', fetchAnnouncements)
 
   const onRefresh = () => { setRefreshing(true); fetchAnnouncements() }
 
