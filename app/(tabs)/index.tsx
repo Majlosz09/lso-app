@@ -10,6 +10,7 @@ import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { getLiturgicalDay, getLiturgicalAccentColor, getLiturgicalBgColor } from '../../lib/liturgy'
 import { CATEGORY_CONFIG, ScheduleCategory, MassTemplate } from '../../types/database'
+import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 
 function localDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -55,9 +56,9 @@ function MemberHomeView() {
   const litBg = todayLiturgy ? getLiturgicalBgColor(todayLiturgy) : null
   const firstName = profile?.full_name?.split(' ')[0] ?? '—'
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!profile?.id || !profile?.parish_id) return
-    Promise.all([
+    const [summaryRes, rankingRes, nextRes, templatesRes, schedulesRes] = await Promise.all([
       supabase.from('points_summary').select('total_points, services_count').eq('profile_id', profile.id).maybeSingle(),
       supabase.from('points_summary').select('profile_id').order('total_points', { ascending: false }),
       supabase.from('schedule_assignments')
@@ -76,19 +77,21 @@ function MemberHomeView() {
         .gte('date', today)
         .lte('date', days[days.length - 1])
         .order('date').order('time'),
-    ]).then(([summaryRes, rankingRes, nextRes, templatesRes, schedulesRes]) => {
-      if (summaryRes.data) setSummary(summaryRes.data as any)
-      if (rankingRes.data) {
-        const pos = (rankingRes.data as any[]).findIndex(r => r.profile_id === profile.id) + 1
-        setRankPos(pos)
-      }
-      const valid = (nextRes.data ?? []).filter((a: any) => a.schedule !== null)
-      setNextDuties(valid.slice(0, 3))
-      setMassTemplates((templatesRes.data as MassTemplate[]) ?? [])
-      setUpcomingSchedules(schedulesRes.data ?? [])
-      setLoading(false)
-    })
-  }, [profile?.id])
+    ])
+    if (summaryRes.data) setSummary(summaryRes.data as any)
+    if (rankingRes.data) {
+      const pos = (rankingRes.data as any[]).findIndex(r => r.profile_id === profile.id) + 1
+      setRankPos(pos)
+    }
+    const valid = (nextRes.data ?? []).filter((a: any) => a.schedule !== null)
+    setNextDuties(valid.slice(0, 3))
+    setMassTemplates((templatesRes.data as MassTemplate[]) ?? [])
+    setUpcomingSchedules(schedulesRes.data ?? [])
+    setLoading(false)
+  }
+
+  useEffect(() => { fetchData() }, [profile?.id])
+  useRealtimeTable('schedule_assignments', fetchData)
 
   const eventsForDay = (() => {
     const templateSlots = getTemplatesForDate(selectedDay, massTemplates)
