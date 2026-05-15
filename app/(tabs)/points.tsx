@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase'
 import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { PointsSummary } from '../../types/database'
+import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 
 type PointWithSchedule = {
   id: string
@@ -71,6 +72,8 @@ export default function PointsScreen() {
   }
 
   useEffect(() => { fetchData() }, [profile?.id])
+
+  useRealtimeTable('points', fetchData)
 
   const onRefresh = () => { setRefreshing(true); fetchData() }
 
