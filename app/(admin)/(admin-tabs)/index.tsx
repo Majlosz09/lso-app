@@ -49,6 +49,8 @@ export default function AdminHome() {
       const unstaffCount = (unstaffRes.data ?? []).filter((s: any) => s.schedule_assignments.length === 0).length
       setStats({ members: membersRes.count ?? 0, absent: absentRes.count ?? 0, unstaff: unstaffCount })
       setStatsLoading(false)
+    }).catch(() => {
+      setStatsLoading(false)
     })
   }, [today])
 
