@@ -8,29 +8,31 @@ import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
-import { ServiceType } from '../../types/database'
+import { ServiceType, SERVICE_TYPE_LABELS } from '../../types/database'
 
 const DAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So']
 const DAYS_FULL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+const SERVICE_TYPES: ServiceType[] = ['msza_assigned', 'msza_extra', 'nabozenstwo', 'zbiorka']
 
 type MassEntry = { key: string; day: number; time: string; label: string }
-
-const DEFAULT_POINT_RULES: { service_type: ServiceType; points: number }[] = [
-  { service_type: 'msza_assigned', points: 5 },
-  { service_type: 'msza_extra',    points: 3 },
-  { service_type: 'nabozenstwo',   points: 3 },
-  { service_type: 'zbiorka',       points: 5 },
-]
 
 export default function OnboardingScreen() {
   const router = useRouter()
   const { profile, parish, fetchProfile } = useAuthStore()
+  const [step, setStep] = useState(0)
 
+  // Step 0: mass schedule
   const [masses, setMasses] = useState<MassEntry[]>([])
   const [selectedDay, setSelectedDay] = useState(0)
   const [timeInput, setTimeInput] = useState('')
   const [labelInput, setLabelInput] = useState('')
+
+  // Step 1: point rules
+  const [pointValues, setPointValues] = useState<Record<ServiceType, string>>({
+    msza_assigned: '5', msza_extra: '3', nabozenstwo: '3', zbiorka: '5',
+  })
+
   const [saving, setSaving] = useState(false)
 
   const addMass = () => {
@@ -51,9 +53,12 @@ export default function OnboardingScreen() {
   const removeMass = (key: string) => setMasses(prev => prev.filter(m => m.key !== key))
 
   const handleFinish = async () => {
-    if (masses.length === 0) {
-      Alert.alert('Błąd', 'Dodaj co najmniej jedną Mszę.')
-      return
+    for (const type of SERVICE_TYPES) {
+      const n = parseInt(pointValues[type])
+      if (isNaN(n) || n < 0) {
+        Alert.alert('Błąd', `Nieprawidłowa wartość dla "${SERVICE_TYPE_LABELS[type]}".`)
+        return
+      }
     }
     setSaving(true)
 
@@ -72,9 +77,13 @@ export default function OnboardingScreen() {
       return
     }
 
-    // 2. Seed default point rules (4 fixed categories)
+    // 2. Save point rules with admin-chosen values
     await supabase.from('point_rules').upsert(
-      DEFAULT_POINT_RULES.map(r => ({ parish_id: profile?.parish_id, ...r })),
+      SERVICE_TYPES.map(type => ({
+        parish_id: profile?.parish_id,
+        service_type: type,
+        points: parseInt(pointValues[type]),
+      })),
       { onConflict: 'parish_id,service_type' }
     )
 
@@ -102,103 +111,167 @@ export default function OnboardingScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#f5f5f5' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* Progress bar */}
+      <View style={styles.progressBar}>
+        <View style={styles.progressStep}>
+          <View style={[styles.dot, styles.dotActive]} />
+          <Text style={[styles.stepLabel, step === 0 && styles.stepLabelActive]}>Rozkład Mszy</Text>
+        </View>
+        <View style={[styles.progressLine, step >= 1 && styles.progressLineActive]} />
+        <View style={styles.progressStep}>
+          <View style={[styles.dot, step >= 1 && styles.dotActive]} />
+          <Text style={[styles.stepLabel, step === 1 && styles.stepLabelActive]}>Punktacja</Text>
+        </View>
+      </View>
+
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Rozkład Mszy Świętych</Text>
-        <Text style={styles.subtitle}>
-          Podaj kiedy odbywają się Msze w Twojej parafii. Na tej podstawie aplikacja automatycznie wypełni grafik służb na cały rok.
-        </Text>
+        {step === 0 ? (
+          <>
+            <Text style={styles.title}>Rozkład Mszy Świętych</Text>
+            <Text style={styles.subtitle}>
+              Podaj kiedy odbywają się Msze w Twojej parafii. Na tej podstawie aplikacja automatycznie wypełni grafik służb na cały rok.
+            </Text>
 
-        <View style={styles.dayChips}>
-          {DAYS.map((d, i) => (
-            <TouchableOpacity
-              key={i}
-              style={[styles.dayChip, selectedDay === i && styles.dayChipActive]}
-              onPress={() => setSelectedDay(i)}
-            >
-              <Text style={[styles.dayChipText, selectedDay === i && styles.dayChipTextActive]}>{d}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <View style={styles.addRow}>
-          <TextInput
-            style={[styles.input, styles.inputTime]}
-            placeholder="GG:MM"
-            placeholderTextColor="#aaa"
-            value={timeInput}
-            onChangeText={setTimeInput}
-            keyboardType="numbers-and-punctuation"
-            maxLength={5}
-          />
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            placeholder="Etykieta (opcjonalnie)"
-            placeholderTextColor="#aaa"
-            value={labelInput}
-            onChangeText={setLabelInput}
-          />
-          <TouchableOpacity
-            style={[styles.addBtn, !timeInput.trim() && { opacity: 0.4 }]}
-            onPress={addMass}
-            disabled={!timeInput.trim()}
-          >
-            <Ionicons name="add" size={22} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {groupedMasses.length === 0 ? (
-          <View style={styles.emptyHint}>
-            <Ionicons name="time-outline" size={32} color="#ccc" />
-            <Text style={styles.emptyHintText}>Dodaj co najmniej jedną Mszę</Text>
-          </View>
-        ) : (
-          groupedMasses.map(({ day, items }) => (
-            <View key={day} style={styles.daySection}>
-              <Text style={styles.daySectionHeader}>{DAYS_FULL[day]}</Text>
-              {items.map(m => (
-                <View key={m.key} style={styles.massRow}>
-                  <View style={styles.timeBadge}>
-                    <Text style={styles.timeBadgeText}>{m.time}</Text>
-                  </View>
-                  <Text style={styles.massLabel} numberOfLines={1}>{m.label || 'Msza Święta'}</Text>
-                  <TouchableOpacity onPress={() => removeMass(m.key)} hitSlop={8}>
-                    <Ionicons name="trash-outline" size={18} color="#e74c3c" />
-                  </TouchableOpacity>
-                </View>
+            <View style={styles.dayChips}>
+              {DAYS.map((d, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.dayChip, selectedDay === i && styles.dayChipActive]}
+                  onPress={() => setSelectedDay(i)}
+                >
+                  <Text style={[styles.dayChipText, selectedDay === i && styles.dayChipTextActive]}>{d}</Text>
+                </TouchableOpacity>
               ))}
             </View>
-          ))
-        )}
 
-        <View style={styles.infoBox}>
-          <Ionicons name="information-circle-outline" size={18} color="#534AB7" />
-          <Text style={styles.infoText}>
-            Grafik zostanie uzupełniony automatycznie na rok do przodu. Punkty za służby możesz dostosować w panelu admina po konfiguracji.
-          </Text>
-        </View>
+            <View style={styles.addRow}>
+              <TextInput
+                style={[styles.input, styles.inputTime]}
+                placeholder="GG:MM"
+                placeholderTextColor="#aaa"
+                value={timeInput}
+                onChangeText={setTimeInput}
+                keyboardType="numbers-and-punctuation"
+                maxLength={5}
+              />
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="Etykieta (opcjonalnie)"
+                placeholderTextColor="#aaa"
+                value={labelInput}
+                onChangeText={setLabelInput}
+              />
+              <TouchableOpacity
+                style={[styles.addBtn, !timeInput.trim() && { opacity: 0.4 }]}
+                onPress={addMass}
+                disabled={!timeInput.trim()}
+              >
+                <Ionicons name="add" size={22} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            {groupedMasses.length === 0 ? (
+              <View style={styles.emptyHint}>
+                <Ionicons name="time-outline" size={32} color="#ccc" />
+                <Text style={styles.emptyHintText}>Dodaj co najmniej jedną Mszę</Text>
+              </View>
+            ) : (
+              groupedMasses.map(({ day, items }) => (
+                <View key={day} style={styles.daySection}>
+                  <Text style={styles.daySectionHeader}>{DAYS_FULL[day]}</Text>
+                  {items.map(m => (
+                    <View key={m.key} style={styles.massRow}>
+                      <View style={styles.timeBadge}>
+                        <Text style={styles.timeBadgeText}>{m.time}</Text>
+                      </View>
+                      <Text style={styles.massLabel} numberOfLines={1}>{m.label || 'Msza Święta'}</Text>
+                      <TouchableOpacity onPress={() => removeMass(m.key)} hitSlop={8}>
+                        <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              ))
+            )}
+          </>
+        ) : (
+          <>
+            <Text style={styles.title}>Punktacja za służby</Text>
+            <Text style={styles.subtitle}>
+              Ustaw ile punktów ministranci otrzymują za każdy rodzaj służby. Możesz to zmienić w dowolnym momencie w panelu admina.
+            </Text>
+
+            {SERVICE_TYPES.map(type => (
+              <View key={type} style={styles.ruleRow}>
+                <Text style={styles.ruleLabel}>{SERVICE_TYPE_LABELS[type]}</Text>
+                <View style={styles.ruleInputGroup}>
+                  <TextInput
+                    style={styles.ruleInput}
+                    value={pointValues[type]}
+                    onChangeText={v => setPointValues(prev => ({ ...prev, [type]: v.replace(/[^0-9]/g, '') }))}
+                    keyboardType="number-pad"
+                    maxLength={3}
+                  />
+                  <Text style={styles.ruleUnit}>pkt</Text>
+                </View>
+              </View>
+            ))}
+          </>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.finishBtn, (masses.length === 0 || saving) && styles.finishBtnDisabled]}
-          onPress={handleFinish}
-          disabled={masses.length === 0 || saving}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <>
-              <Text style={styles.finishBtnText}>Zakończ konfigurację</Text>
-              <Ionicons name="checkmark" size={18} color="#fff" />
-            </>
-          )}
-        </TouchableOpacity>
+        {step === 1 && (
+          <TouchableOpacity style={styles.backBtn} onPress={() => setStep(0)}>
+            <Ionicons name="arrow-back" size={18} color="#534AB7" />
+            <Text style={styles.backBtnText}>Wróć</Text>
+          </TouchableOpacity>
+        )}
+        {step === 0 ? (
+          <TouchableOpacity
+            style={[styles.nextBtn, masses.length === 0 && styles.nextBtnDisabled]}
+            onPress={() => setStep(1)}
+            disabled={masses.length === 0}
+          >
+            <Text style={styles.nextBtnText}>Dalej</Text>
+            <Ionicons name="arrow-forward" size={18} color="#fff" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.nextBtn, saving && styles.nextBtnDisabled]}
+            onPress={handleFinish}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Text style={styles.nextBtnText}>Zakończ konfigurację</Text>
+                <Ionicons name="checkmark" size={18} color="#fff" />
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     </KeyboardAvoidingView>
   )
 }
 
 const styles = StyleSheet.create({
+  progressBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 32, paddingVertical: 20,
+    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    gap: 0,
+  },
+  progressStep: { alignItems: 'center', gap: 6 },
+  dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: '#e0e0e0' },
+  dotActive: { backgroundColor: '#534AB7' },
+  stepLabel: { fontSize: 12, color: '#aaa', fontWeight: '500' },
+  stepLabelActive: { color: '#534AB7', fontWeight: '700' },
+  progressLine: { flex: 1, height: 2, backgroundColor: '#e0e0e0', marginHorizontal: 8, marginBottom: 18 },
+  progressLineActive: { backgroundColor: '#534AB7' },
+
   scroll: { flex: 1 },
   content: { padding: 20, gap: 14 },
 
@@ -206,10 +279,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: '#777', lineHeight: 20 },
 
   dayChips: { flexDirection: 'row', gap: 6 },
-  dayChip: {
-    flex: 1, paddingVertical: 9, borderRadius: 10,
-    backgroundColor: '#f0f0f0', alignItems: 'center',
-  },
+  dayChip: { flex: 1, paddingVertical: 9, borderRadius: 10, backgroundColor: '#f0f0f0', alignItems: 'center' },
   dayChipActive: { backgroundColor: '#534AB7' },
   dayChipText: { fontSize: 12, fontWeight: '600', color: '#888' },
   dayChipTextActive: { color: '#fff' },
@@ -228,15 +298,11 @@ const styles = StyleSheet.create({
 
   emptyHint: {
     alignItems: 'center', paddingVertical: 32, gap: 8,
-    backgroundColor: '#fff', borderRadius: 14,
-    borderWidth: 1, borderColor: '#f0f0f0',
+    backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: '#f0f0f0',
   },
   emptyHintText: { fontSize: 14, color: '#bbb' },
 
-  daySection: {
-    backgroundColor: '#fff', borderRadius: 14,
-    overflow: 'hidden', borderWidth: 1, borderColor: '#f0f0f0',
-  },
+  daySection: { backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: '#f0f0f0' },
   daySectionHeader: {
     fontSize: 11, fontWeight: '700', color: '#534AB7',
     textTransform: 'uppercase', letterSpacing: 0.8,
@@ -250,27 +316,41 @@ const styles = StyleSheet.create({
   },
   timeBadge: {
     backgroundColor: '#534AB711', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 4,
-    minWidth: 52, alignItems: 'center',
+    paddingHorizontal: 10, paddingVertical: 4, minWidth: 52, alignItems: 'center',
   },
   timeBadgeText: { fontSize: 14, fontWeight: '700', color: '#534AB7' },
   massLabel: { flex: 1, fontSize: 14, color: '#555' },
 
-  infoBox: {
-    flexDirection: 'row', gap: 10, alignItems: 'flex-start',
-    backgroundColor: '#534AB710', borderRadius: 12, padding: 14,
+  ruleRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#fff', borderRadius: 12, padding: 14,
+    borderWidth: 1, borderColor: '#f0f0f0',
   },
-  infoText: { flex: 1, fontSize: 13, color: '#534AB7', lineHeight: 18 },
+  ruleLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
+  ruleInputGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ruleInput: {
+    backgroundColor: '#f0f0f0', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7,
+    fontSize: 18, fontWeight: '800', color: '#534AB7',
+    minWidth: 48, textAlign: 'center',
+  },
+  ruleUnit: { fontSize: 12, color: '#888', fontWeight: '600' },
 
   footer: {
-    padding: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',
+    padding: 16, gap: 12,
     backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0',
   },
-  finishBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#534AB7',
-    paddingVertical: 14, borderRadius: 12,
+  backBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 12, paddingHorizontal: 16,
+    borderRadius: 12, borderWidth: 1, borderColor: '#534AB733',
   },
-  finishBtnDisabled: { opacity: 0.45 },
-  finishBtnText: { fontSize: 15, color: '#fff', fontWeight: '700' },
+  backBtnText: { fontSize: 15, color: '#534AB7', fontWeight: '600' },
+  nextBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#534AB7', paddingVertical: 14, borderRadius: 12,
+  },
+  nextBtnDisabled: { opacity: 0.45 },
+  nextBtnText: { fontSize: 15, color: '#fff', fontWeight: '700' },
 })
