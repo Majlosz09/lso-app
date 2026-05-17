@@ -446,6 +446,9 @@ function MemberScheduleView() {
   useRealtimeTable('schedule_assignments', () => {
     fetchWeekSchedules(weekDays)
   })
+  useRealtimeTable('schedules', () => {
+    fetchWeekSchedules(weekDays)
+  })
 
   // --- Handlers ---
 
