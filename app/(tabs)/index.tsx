@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, useWindowDimensions
@@ -11,6 +11,8 @@ import { useAuthStore } from '../../stores/authStore'
 import { getLiturgicalDay, getLiturgicalAccentColor, getLiturgicalBgColor } from '../../lib/liturgy'
 import { CATEGORY_CONFIG, ScheduleCategory, MassTemplate } from '../../types/database'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
+import { useTheme } from '../../lib/ThemeContext'
+import { Colors } from '../../lib/theme'
 
 function localDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -42,6 +44,9 @@ function MemberHomeView() {
   const [massTemplates, setMassTemplates] = useState<MassTemplate[]>([])
   const [upcomingSchedules, setUpcomingSchedules] = useState<any[]>([])
 
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
+
   const today = localDateStr(new Date())
   const [selectedDay, setSelectedDay] = useState(today)
 
@@ -60,7 +65,7 @@ function MemberHomeView() {
     if (!profile?.id || !profile?.parish_id) return
     const [summaryRes, rankingRes, nextRes, templatesRes, schedulesRes] = await Promise.all([
       supabase.from('points_summary').select('total_points, services_count').eq('profile_id', profile.id).maybeSingle(),
-      supabase.from('points_summary').select('profile_id').order('total_points', { ascending: false }),
+      supabase.from('points_summary').select('profile_id').eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
       supabase.from('schedule_assignments')
         .select('id, status, schedule:schedules(id, title, date, time, category)')
         .eq('profile_id', profile.id)
@@ -74,6 +79,7 @@ function MemberHomeView() {
         .order('day_of_week').order('time'),
       supabase.from('schedules')
         .select('*, group:groups(name)')
+        .eq('parish_id', profile.parish_id)
         .gte('date', today)
         .lte('date', days[days.length - 1])
         .order('date').order('time'),
@@ -189,7 +195,7 @@ function MemberHomeView() {
       {/* Events list */}
       {eventsForDay.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Ionicons name="calendar-outline" size={24} color="#ccc" />
+          <Ionicons name="calendar-outline" size={24} color={c.iconMuted} />
           <Text style={styles.emptyText}>Brak wydarzeń w tym dniu</Text>
         </View>
       ) : (
@@ -216,7 +222,7 @@ function MemberHomeView() {
       <Text style={styles.sectionLabel}>Nadchodzące służby</Text>
       {nextDuties.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Ionicons name="calendar-outline" size={28} color="#ccc" />
+          <Ionicons name="calendar-outline" size={28} color={c.iconMuted} />
           <Text style={styles.emptyText}>Brak nadchodzących służb</Text>
           <TouchableOpacity onPress={() => router.push('/(tabs)/schedule')}>
             <Text style={styles.emptyLink}>Przejdź do zapisów →</Text>
@@ -253,9 +259,9 @@ function MemberHomeView() {
     <>
       <Text style={styles.sectionLabel}>Szybkie akcje</Text>
       <View style={styles.actionsRow}>
-        <QuickAction icon="calendar-outline" color="#534AB7" label="Zapisy" onPress={() => router.push('/(tabs)/schedule')} />
-        <QuickAction icon="megaphone-outline" color="#2980b9" label="Ogłoszenia" onPress={() => router.push('/(tabs)/announcements')} />
-        <QuickAction icon="trophy-outline" color="#f0a500" label="Punkty" onPress={() => router.push('/(tabs)/points')} />
+        <QuickAction icon="calendar-outline" color={c.primary} label="Zapisy" onPress={() => router.push('/(tabs)/schedule')} styles={styles} />
+        <QuickAction icon="megaphone-outline" color="#2563EB" label="Ogłoszenia" onPress={() => router.push('/(tabs)/announcements')} styles={styles} />
+        <QuickAction icon="trophy-outline" color={c.gold} label="Punkty" onPress={() => router.push('/(tabs)/points')} styles={styles} />
       </View>
     </>
   )
@@ -288,11 +294,11 @@ function MemberHomeView() {
 
       {/* Stats */}
       {loading ? (
-        <ActivityIndicator color="#534AB7" style={{ marginVertical: 8 }} />
+        <ActivityIndicator color={c.primary} style={{ marginVertical: 8 }} />
       ) : (
         <View style={styles.statsRow}>
-          <StatBox icon="trophy" iconColor="#f0a500" value={summary?.total_points ?? 0} label="Punkty" />
-          <StatBox icon="checkmark-circle" iconColor="#27ae60" value={summary?.services_count ?? 0} label="Służby" />
+          <StatBox icon="trophy" iconColor={c.gold} value={summary?.total_points ?? 0} label="Punkty" styles={styles} />
+          <StatBox icon="checkmark-circle" iconColor={c.success} value={summary?.services_count ?? 0} label="Służby" styles={styles} />
         </View>
       )}
 
@@ -318,6 +324,13 @@ function MemberHomeView() {
   )
 }
 
+type ChildSummary = {
+  id: string
+  full_name: string
+  services_count: number
+  nextDuty: { title: string; date: string; time: string } | null
+}
+
 function ParentHomeView() {
   const { profile } = useAuthStore()
   const router = useRouter()
@@ -326,6 +339,51 @@ function ParentHomeView() {
   const todayLiturgy = getLiturgicalDay(today)
   const litAccent = todayLiturgy ? getLiturgicalAccentColor(todayLiturgy) : null
   const litBg = todayLiturgy ? getLiturgicalBgColor(todayLiturgy) : null
+
+  const [children, setChildren] = useState<ChildSummary[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
+
+  useEffect(() => {
+    if (!profile?.id) return
+    const fetch = async () => {
+      const { data: kids } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('parent_id', profile.id)
+
+      if (!kids || kids.length === 0) { setLoading(false); return }
+
+      const results = await Promise.all(
+        kids.map(async (k: any) => {
+          const [summaryRes, nextRes] = await Promise.all([
+            supabase.from('points_summary').select('services_count').eq('profile_id', k.id).maybeSingle(),
+            supabase.from('schedule_assignments')
+              .select('schedule:schedules(title, date, time)')
+              .eq('profile_id', k.id)
+              .gte('schedule.date', today)
+              .order('schedule(date)', { ascending: true })
+              .order('schedule(time)', { ascending: true })
+              .limit(1)
+              .maybeSingle(),
+          ])
+          const assignment = nextRes.data as any
+          const nextDuty = assignment?.schedule ?? null
+          return {
+            id: k.id,
+            full_name: k.full_name,
+            services_count: (summaryRes.data as any)?.services_count ?? 0,
+            nextDuty,
+          }
+        })
+      )
+      setChildren(results)
+      setLoading(false)
+    }
+    fetch()
+  }, [profile?.id])
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -344,16 +402,59 @@ function ParentHomeView() {
         </View>
       )}
 
+      <Text style={styles.sectionLabel}>Moje dzieci</Text>
+      {loading ? (
+        <ActivityIndicator color={c.primary} style={{ marginVertical: 8 }} />
+      ) : children.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Ionicons name="people-outline" size={28} color={c.iconMuted} />
+          <Text style={styles.emptyText}>Brak powiązanych kont dzieci</Text>
+          <Text style={[styles.emptyText, { fontSize: 12, marginTop: 4 }]}>Poproś administratora o przypisanie konta</Text>
+        </View>
+      ) : (
+        children.map(child => (
+          <View key={child.id} style={styles.childCard}>
+            <View style={styles.childCardTop}>
+              <View style={styles.childAvatarSmall}>
+                <Ionicons name="person" size={16} color={c.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.childCardName}>{child.full_name}</Text>
+                <Text style={styles.childCardMeta}>{child.services_count} służb</Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/schedule')} style={styles.childCardArrow}>
+                <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
+              </TouchableOpacity>
+            </View>
+            {child.nextDuty ? (
+              <View style={styles.childNextDuty}>
+                <Ionicons name="calendar-outline" size={13} color={c.primary} />
+                <Text style={styles.childNextDutyText} numberOfLines={1}>
+                  Najbliższy dyżur: {child.nextDuty.title} ·{' '}
+                  {new Date(child.nextDuty.date + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  {' '}{child.nextDuty.time?.slice(0, 5)}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.childNextDuty}>
+                <Ionicons name="calendar-outline" size={13} color={c.textTertiary} />
+                <Text style={[styles.childNextDutyText, { color: c.textTertiary }]}>Brak nadchodzących dyżurów</Text>
+              </View>
+            )}
+          </View>
+        ))
+      )}
+
       <Text style={styles.sectionLabel}>Szybkie akcje</Text>
       <View style={styles.actionsRow}>
-        <QuickAction icon="calendar-outline" color="#534AB7" label="Dyżury dzieci" onPress={() => router.push('/(tabs)/schedule')} />
-        <QuickAction icon="megaphone-outline" color="#2980b9" label="Ogłoszenia" onPress={() => router.push('/(tabs)/announcements')} />
+        <QuickAction icon="calendar-outline" color={c.primary} label="Dyżury dzieci" onPress={() => router.push('/(tabs)/schedule')} styles={styles} />
+        <QuickAction icon="megaphone-outline" color="#2563EB" label="Ogłoszenia" onPress={() => router.push('/(tabs)/announcements')} styles={styles} />
       </View>
     </ScrollView>
   )
 }
 
-function StatBox({ icon, iconColor, value, label }: { icon: any; iconColor: string; value: number; label: string }) {
+function StatBox({ icon, iconColor, value, label, styles }: { icon: any; iconColor: string; value: number; label: string; styles: any }) {
   return (
     <View style={styles.statBox}>
       <Ionicons name={icon} size={22} color={iconColor} />
@@ -363,7 +464,7 @@ function StatBox({ icon, iconColor, value, label }: { icon: any; iconColor: stri
   )
 }
 
-function QuickAction({ icon, color, label, onPress }: { icon: any; color: string; label: string; onPress: () => void }) {
+function QuickAction({ icon, color, label, onPress, styles }: { icon: any; color: string; label: string; onPress: () => void; styles: any }) {
   return (
     <TouchableOpacity style={styles.quickAction} onPress={onPress} activeOpacity={0.75}>
       <View style={[styles.quickIcon, { backgroundColor: color + '18' }]}>
@@ -374,116 +475,133 @@ function QuickAction({ icon, color, label, onPress }: { icon: any; color: string
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  content: { padding: 16, gap: 16 },
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    content: { padding: 16, gap: 16 },
 
-  greetingCard: {
-    backgroundColor: '#534AB7', borderRadius: 16, padding: 20, gap: 8,
-    ...shadow.brand,
-  },
-  greetingName: { fontSize: 24, fontWeight: '700', color: '#fff' },
-  greetingMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  greetingRole: { fontSize: 13, color: '#ffffffcc', fontWeight: '500' },
-  metaDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: '#ffffff55' },
-  greetingRank: { fontSize: 13, color: '#ffffffcc' },
+    greetingCard: {
+      backgroundColor: c.primary, borderRadius: 16, padding: 20, gap: 8,
+      ...shadow.brand,
+    },
+    greetingName: { fontSize: 24, fontWeight: '700', color: '#fff' },
+    greetingMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    greetingRole: { fontSize: 13, color: '#ffffffcc', fontWeight: '500' },
+    metaDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: '#ffffff55' },
+    greetingRank: { fontSize: 13, color: '#ffffffcc' },
 
-  liturgyRow: {
-    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap',
-    paddingHorizontal: 14, paddingVertical: 10, gap: 6,
-    backgroundColor: '#fffbf0', borderRadius: 12,
-    borderWidth: 1, borderColor: '#f0e8c8',
-  },
-  liturgyDot: { width: 8, height: 8, borderRadius: 4 },
-  liturgyTypeLabel: { fontSize: 12, color: '#a07800', fontWeight: '600' },
-  liturgyName: { fontSize: 13, color: '#5a4000', flex: 1 },
+    liturgyRow: {
+      flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap',
+      paddingHorizontal: 14, paddingVertical: 10, gap: 6,
+      backgroundColor: '#fffbf0', borderRadius: 12,
+      borderWidth: 1, borderColor: '#f0e8c8',
+    },
+    liturgyDot: { width: 8, height: 8, borderRadius: 4 },
+    liturgyTypeLabel: { fontSize: 12, color: '#a07800', fontWeight: '600' },
+    liturgyName: { fontSize: 13, color: '#5a4000', flex: 1 },
 
-  statsRow: { flexDirection: 'row', gap: 12 },
-  statBox: {
-    flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 16,
-    alignItems: 'center', gap: 4,
-    ...shadow.xs,
-  },
-  statValue: { fontSize: 26, fontWeight: '800', color: '#1a1a1a', marginTop: 4 },
-  statLabel: { fontSize: 11, color: '#888', textAlign: 'center' },
+    statsRow: { flexDirection: 'row', gap: 12 },
+    statBox: {
+      flex: 1, backgroundColor: c.surface, borderRadius: 12, padding: 16,
+      alignItems: 'center', gap: 4,
+      ...shadow.xs,
+    },
+    statValue: { fontSize: 26, fontWeight: '800', color: c.text, marginTop: 4 },
+    statLabel: { fontSize: 11, color: c.subtext, textAlign: 'center' },
 
-  // Responsive wide layout
-  wideRow: { flexDirection: 'row', gap: 20, alignItems: 'flex-start' },
-  wideLeft: { flex: 1 },
-  wideRight: { flex: 1, gap: 16 },
+    // Responsive wide layout
+    wideRow: { flexDirection: 'row', gap: 20, alignItems: 'flex-start' },
+    wideLeft: { flex: 1 },
+    wideRight: { flex: 1, gap: 16 },
 
-  section: { gap: 10 },
-  sectionLabel: {
-    fontSize: 12, fontWeight: '700', color: '#aaa',
-    textTransform: 'uppercase', letterSpacing: 0.8,
-  },
+    section: { gap: 10 },
+    sectionLabel: {
+      fontSize: 12, fontWeight: '700', color: c.textTertiary,
+      textTransform: 'uppercase', letterSpacing: 0.8,
+    },
 
-  // Day scroller
-  dayStripWrap: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
-  },
-  dayChip: {
-    alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 12, backgroundColor: '#fff', minWidth: 48,
-    ...shadow.xs,
-  },
-  dayChipFill: { flex: 1 },
-  dayChipSelected: { backgroundColor: '#534AB7' },
-  dayChipDow: { fontSize: 11, fontWeight: '600', color: '#888' },
-  dayChipNum: { fontSize: 17, fontWeight: '700', color: '#1a1a1a', marginTop: 2 },
-  dayChipTextSelected: { color: '#fff' },
+    // Day scroller
+    dayStripWrap: {
+      flexDirection: 'row', flexWrap: 'wrap', gap: 6,
+    },
+    dayChip: {
+      alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8,
+      borderRadius: 12, backgroundColor: c.surface, minWidth: 48,
+      ...shadow.xs,
+    },
+    dayChipFill: { flex: 1 },
+    dayChipSelected: { backgroundColor: c.primary },
+    dayChipDow: { fontSize: 11, fontWeight: '600', color: c.subtext },
+    dayChipNum: { fontSize: 17, fontWeight: '700', color: c.text, marginTop: 2 },
+    dayChipTextSelected: { color: '#fff' },
 
-  dayLiturgyRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 2,
-  },
-  dayLiturgyText: { fontSize: 12, color: '#a07800', fontStyle: 'italic', flex: 1 },
+    dayLiturgyRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingHorizontal: 2,
+    },
+    dayLiturgyText: { fontSize: 12, color: '#a07800', fontStyle: 'italic', flex: 1 },
 
-  emptyCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 20,
-    alignItems: 'center', gap: 6,
-    ...shadow.xs,
-  },
-  emptyText: { fontSize: 13, color: '#aaa' },
-  emptyLink: { fontSize: 13, color: '#534AB7', fontWeight: '600', marginTop: 2 },
+    emptyCard: {
+      backgroundColor: c.surface, borderRadius: 12, padding: 20,
+      alignItems: 'center', gap: 6,
+      ...shadow.xs,
+    },
+    emptyText: { fontSize: 13, color: c.textTertiary },
+    emptyLink: { fontSize: 13, color: c.primary, fontWeight: '600', marginTop: 2 },
 
-  eventRow: {
-    backgroundColor: '#fff', borderRadius: 10, borderLeftWidth: 3,
-    padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10,
-    ...shadow.xs,
-  },
-  eventTimeBadge: {
-    borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5,
-    minWidth: 46, alignItems: 'center',
-  },
-  eventTime: { fontSize: 13, fontWeight: '700' },
-  eventInfo: { flex: 1 },
-  eventTitle: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
-  eventCat: { fontSize: 11, fontWeight: '500', marginTop: 1 },
+    childCard: {
+      backgroundColor: c.surface, borderRadius: 12, padding: 14,
+      gap: 8, ...shadow.xs,
+    },
+    childCardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    childAvatarSmall: {
+      width: 32, height: 32, borderRadius: 16,
+      backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center',
+    },
+    childCardName: { fontSize: 15, fontWeight: '700', color: c.text },
+    childCardMeta: { fontSize: 12, color: c.subtext, marginTop: 1 },
+    childCardArrow: { padding: 4 },
+    childNextDuty: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.bg },
+    childNextDutyText: { flex: 1, fontSize: 12, color: c.primary, fontWeight: '500' },
 
-  dutyCard: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 12,
-    borderLeftWidth: 4,
-    ...shadow.xs,
-  },
-  dutyTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  timeBadge: {
-    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
-    minWidth: 48, alignItems: 'center',
-  },
-  timeText: { fontSize: 13, fontWeight: '700' },
-  dutyInfo: { flex: 1 },
-  dutyTitle: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
-  dutyDate: { fontSize: 12, color: '#888', marginTop: 2 },
-  catPill: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
-  catPillText: { fontSize: 11, fontWeight: '600' },
+    eventRow: {
+      backgroundColor: c.surface, borderRadius: 10, borderLeftWidth: 3,
+      padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10,
+      ...shadow.xs,
+    },
+    eventTimeBadge: {
+      borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5,
+      minWidth: 46, alignItems: 'center',
+    },
+    eventTime: { fontSize: 13, fontWeight: '700' },
+    eventInfo: { flex: 1 },
+    eventTitle: { fontSize: 14, fontWeight: '600', color: c.text },
+    eventCat: { fontSize: 11, fontWeight: '500', marginTop: 1 },
 
-  actionsRow: { flexDirection: 'row', gap: 10 },
-  quickAction: {
-    flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14,
-    alignItems: 'center', gap: 8,
-    ...shadow.md,
-  },
-  quickIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  quickLabel: { fontSize: 12, fontWeight: '600', color: '#1a1a1a', textAlign: 'center' },
-})
+    dutyCard: {
+      backgroundColor: c.surface, borderRadius: 12, padding: 12,
+      borderLeftWidth: 4,
+      ...shadow.xs,
+    },
+    dutyTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    timeBadge: {
+      borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
+      minWidth: 48, alignItems: 'center',
+    },
+    timeText: { fontSize: 13, fontWeight: '700' },
+    dutyInfo: { flex: 1 },
+    dutyTitle: { fontSize: 15, fontWeight: '600', color: c.text },
+    dutyDate: { fontSize: 12, color: c.subtext, marginTop: 2 },
+    catPill: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
+    catPillText: { fontSize: 11, fontWeight: '600' },
+
+    actionsRow: { flexDirection: 'row', gap: 10 },
+    quickAction: {
+      flex: 1, backgroundColor: c.surface, borderRadius: 14, padding: 14,
+      alignItems: 'center', gap: 8,
+      ...shadow.md,
+    },
+    quickIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+    quickLabel: { fontSize: 12, fontWeight: '600', color: c.text, textAlign: 'center' },
+  })
+}

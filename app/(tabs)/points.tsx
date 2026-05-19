@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, FlatList, StyleSheet,
   RefreshControl, ActivityIndicator, TouchableOpacity
@@ -9,6 +9,8 @@ import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { PointsSummary } from '../../types/database'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
+import { useTheme } from '../../lib/ThemeContext'
+import { Colors } from '../../lib/theme'
 
 type PointWithSchedule = {
   id: string
@@ -30,6 +32,7 @@ type RankingEntry = {
 
 export default function PointsScreen() {
   const { profile } = useAuthStore()
+  if (profile?.role === 'parent') return <ParentPointsView />
   const [summary, setSummary] = useState<PointsSummary | null>(null)
   const [points, setPoints] = useState<PointWithSchedule[]>([])
   const [ranking, setRanking] = useState<RankingEntry[]>([])
@@ -37,10 +40,13 @@ export default function PointsScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState<'history' | 'ranking'>('history')
 
-  const fetchData = async () => {
-    if (!profile?.id) return
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
 
-    const [mySummaryRes, pointsRes, rankingRes] = await Promise.all([
+  const fetchData = async () => {
+    if (!profile?.id || !profile?.parish_id) return
+
+    const [mySummaryRes, pointsRes, rankingRes, parishProfilesRes] = await Promise.all([
       supabase
         .from('points_summary')
         .select('profile_id, total_points, services_count')
@@ -54,18 +60,25 @@ export default function PointsScreen() {
       supabase
         .from('points_summary')
         .select('profile_id, full_name, total_points, services_count')
+        .eq('parish_id', profile.parish_id)
         .order('total_points', { ascending: false }),
+      supabase
+        .from('profiles')
+        .select('id')
+        .eq('parish_id', profile.parish_id)
+        .eq('is_active', true),
     ])
 
-    const allPoints: PointWithSchedule[] = pointsRes.data ?? []
+    const parishIds = new Set((parishProfilesRes.data ?? []).map((p: any) => p.id))
+    const parishRanking = (rankingRes.data ?? []).filter(r => parishIds.has(r.profile_id))
 
     if (mySummaryRes.data) {
       setSummary(mySummaryRes.data as any)
     } else {
       setSummary({ profile_id: profile.id, total_points: 0, services_count: 0 })
     }
-    setPoints(allPoints)
-    if (rankingRes.data) setRanking(rankingRes.data)
+    setPoints(pointsRes.data ?? [])
+    setRanking(parishRanking)
 
     setLoading(false)
     setRefreshing(false)
@@ -80,7 +93,7 @@ export default function PointsScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#534AB7" />
+        <ActivityIndicator size="large" color={c.primary} />
       </View>
     )
   }
@@ -130,11 +143,11 @@ export default function PointsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="star-outline" size={48} color="#ccc" />
+              <Ionicons name="star-outline" size={48} color={c.iconMuted} />
               <Text style={styles.emptyText}>Brak punktów</Text>
             </View>
           }
-          renderItem={({ item }) => <PointCard point={item} />}
+          renderItem={({ item }) => <PointCard point={item} styles={styles} colors={c} />}
           contentContainerStyle={{ padding: 16, gap: 10 }}
         />
       ) : (
@@ -144,7 +157,7 @@ export default function PointsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="podium-outline" size={48} color="#ccc" />
+              <Ionicons name="podium-outline" size={48} color={c.iconMuted} />
               <Text style={styles.emptyText}>Brak danych rankingowych</Text>
             </View>
           }
@@ -153,6 +166,8 @@ export default function PointsScreen() {
               entry={item}
               position={index + 1}
               isMe={item.profile_id === profile?.id}
+              styles={styles}
+              colors={c}
             />
           )}
           contentContainerStyle={{ padding: 16, gap: 8 }}
@@ -162,28 +177,28 @@ export default function PointsScreen() {
   )
 }
 
-function PointCard({ point }: { point: PointWithSchedule }) {
+function PointCard({ point, styles, colors: c }: { point: PointWithSchedule; styles: any; colors: Colors }) {
   const isPositive = point.amount > 0
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardReason} numberOfLines={1}>{point.reason}</Text>
-        <View style={[styles.amountBadge, { backgroundColor: isPositive ? '#27ae6022' : '#88888822' }]}>
-          <Text style={[styles.amountText, { color: isPositive ? '#27ae60' : '#888' }]}>
+        <View style={[styles.amountBadge, { backgroundColor: isPositive ? '#16A34A22' : c.subtext + '22' }]}>
+          <Text style={[styles.amountText, { color: isPositive ? '#16A34A' : c.subtext }]}>
             {isPositive ? '+' : ''}{point.amount} pkt
           </Text>
         </View>
       </View>
       {point.schedule && (
         <View style={styles.row}>
-          <Ionicons name="calendar-outline" size={13} color="#bbb" />
+          <Ionicons name="calendar-outline" size={13} color={c.textTertiary} />
           <Text style={styles.cardMeta}>
             {point.schedule.title} · {new Date(point.schedule.date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' })}
           </Text>
         </View>
       )}
       <View style={styles.row}>
-        <Ionicons name="time-outline" size={13} color="#bbb" />
+        <Ionicons name="time-outline" size={13} color={c.textTertiary} />
         <Text style={styles.cardMeta}>
           {new Date(point.created_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
         </Text>
@@ -194,7 +209,7 @@ function PointCard({ point }: { point: PointWithSchedule }) {
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
-function RankingRow({ entry, position, isMe }: { entry: RankingEntry; position: number; isMe: boolean }) {
+function RankingRow({ entry, position, isMe, styles, colors: c }: { entry: RankingEntry; position: number; isMe: boolean; styles: any; colors: Colors }) {
   return (
     <View style={[styles.rankRow, isMe && styles.rankRowMe]}>
       <Text style={styles.rankPosition}>
@@ -206,76 +221,196 @@ function RankingRow({ entry, position, isMe }: { entry: RankingEntry; position: 
         </Text>
         <Text style={styles.rankMeta}>{entry.services_count} służb</Text>
       </View>
-      <Text style={[styles.rankPoints, isMe && { color: '#534AB7' }]}>
+      <Text style={[styles.rankPoints, isMe && { color: c.primary }]}>
         {entry.total_points} pkt
       </Text>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+type ChildPoints = { id: string; full_name: string; total_points: number; services_count: number }
 
-  summaryCard: {
-    backgroundColor: '#534AB7',
-    margin: 16,
-    marginBottom: 0,
-    borderRadius: 16,
-    padding: 20,
-    gap: 6,
-  },
-  summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  summaryTitle: { color: '#ffffffcc', fontSize: 14, fontWeight: '500' },
-  summaryPoints: { color: '#fff', fontSize: 48, fontWeight: '700', lineHeight: 56 },
-  summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  summaryMeta: { color: '#ffffffaa', fontSize: 13 },
-  summaryDot: { color: '#ffffff55', marginHorizontal: 2 },
+function ParentPointsView() {
+  const { profile } = useAuthStore()
+  const [children, setChildren] = useState<ChildPoints[]>([])
+  const [ranking, setRanking] = useState<RankingEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [activeTab, setActiveTab] = useState<'children' | 'ranking'>('children')
 
-  tabs: {
-    flexDirection: 'row',
-    margin: 16,
-    marginBottom: 0,
-    backgroundColor: '#e8e8e8',
-    borderRadius: 10,
-    padding: 3,
-  },
-  tab: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  tabActive: { backgroundColor: '#fff', ...shadow.md },
-  tabText: { fontSize: 14, fontWeight: '500', color: '#888' },
-  tabTextActive: { color: '#1a1a1a' },
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
 
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    gap: 5,
-    ...shadow.xs,
-  },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-  cardReason: { fontSize: 14, fontWeight: '500', color: '#1a1a1a', flex: 1 },
-  amountBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  amountText: { fontSize: 13, fontWeight: '600' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  cardMeta: { fontSize: 12, color: '#999' },
+  const fetchData = async () => {
+    if (!profile?.id || !profile?.parish_id) return
 
-  rankRow: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    ...shadow.xs,
-  },
-  rankRowMe: { backgroundColor: '#534AB711', borderWidth: 1, borderColor: '#534AB733' },
-  rankPosition: { fontSize: 18, width: 36, textAlign: 'center' },
-  rankInfo: { flex: 1 },
-  rankName: { fontSize: 14, fontWeight: '500', color: '#1a1a1a' },
-  rankNameMe: { fontWeight: '700' },
-  rankMeta: { fontSize: 12, color: '#999', marginTop: 1 },
-  rankPoints: { fontSize: 15, fontWeight: '700', color: '#333' },
+    const [kidsRes, rankingRes, parishProfilesRes] = await Promise.all([
+      supabase.from('profiles').select('id, full_name').eq('parent_id', profile.id),
+      supabase.from('points_summary').select('profile_id, full_name, total_points, services_count').eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
+      supabase.from('profiles').select('id').eq('parish_id', profile.parish_id).eq('is_active', true),
+    ])
 
-  empty: { alignItems: 'center', marginTop: 60, gap: 12 },
-  emptyText: { color: '#aaa', fontSize: 15 },
-})
+    const parishIds = new Set((parishProfilesRes.data ?? []).map((p: any) => p.id))
+    setRanking((rankingRes.data ?? []).filter(r => parishIds.has(r.profile_id)))
+
+    const kids = kidsRes.data ?? []
+    if (kids.length > 0) {
+      const summaries = await Promise.all(
+        kids.map((k: any) =>
+          supabase.from('points_summary').select('total_points, services_count').eq('profile_id', k.id).maybeSingle()
+        )
+      )
+      setChildren(kids.map((k: any, i: number) => ({
+        id: k.id,
+        full_name: k.full_name,
+        total_points: (summaries[i].data as any)?.total_points ?? 0,
+        services_count: (summaries[i].data as any)?.services_count ?? 0,
+      })))
+    } else {
+      setChildren([])
+    }
+
+    setLoading(false)
+    setRefreshing(false)
+  }
+
+  useEffect(() => { fetchData() }, [profile?.id])
+
+  const onRefresh = () => { setRefreshing(true); fetchData() }
+
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'children' && styles.tabActive]}
+          onPress={() => setActiveTab('children')}
+        >
+          <Text style={[styles.tabText, activeTab === 'children' && styles.tabTextActive]}>Moje dzieci</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'ranking' && styles.tabActive]}
+          onPress={() => setActiveTab('ranking')}
+        >
+          <Text style={[styles.tabText, activeTab === 'ranking' && styles.tabTextActive]}>Ranking</Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeTab === 'children' ? (
+        <FlatList
+          data={children}
+          keyExtractor={item => item.id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="people-outline" size={48} color={c.iconMuted} />
+              <Text style={styles.emptyText}>Brak powiązanych kont dzieci</Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <View style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="person" size={20} color={c.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: c.text }}>{item.full_name}</Text>
+                <Text style={{ fontSize: 12, color: c.subtext, marginTop: 2 }}>{item.services_count} służb</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: c.primary }}>{item.total_points}</Text>
+                <Text style={{ fontSize: 11, color: c.textTertiary }}>pkt</Text>
+              </View>
+            </View>
+          )}
+          contentContainerStyle={{ padding: 16, gap: 10 }}
+        />
+      ) : (
+        <FlatList
+          data={ranking}
+          keyExtractor={item => item.profile_id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="podium-outline" size={48} color={c.iconMuted} />
+              <Text style={styles.emptyText}>Brak danych rankingowych</Text>
+            </View>
+          }
+          renderItem={({ item, index }) => (
+            <RankingRow entry={item} position={index + 1} isMe={false} styles={styles} colors={c} />
+          )}
+          contentContainerStyle={{ padding: 16, gap: 8 }}
+        />
+      )}
+    </View>
+  )
+}
+
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+    summaryCard: {
+      backgroundColor: c.primary,
+      margin: 16,
+      marginBottom: 0,
+      borderRadius: 16,
+      padding: 20,
+      gap: 6,
+    },
+    summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    summaryTitle: { color: '#ffffffcc', fontSize: 14, fontWeight: '500' },
+    summaryPoints: { color: '#fff', fontSize: 48, fontWeight: '700', lineHeight: 56 },
+    summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    summaryMeta: { color: '#ffffffaa', fontSize: 13 },
+    summaryDot: { color: '#ffffff55', marginHorizontal: 2 },
+
+    tabs: {
+      flexDirection: 'row',
+      margin: 16,
+      marginBottom: 0,
+      backgroundColor: c.border,
+      borderRadius: 10,
+      padding: 3,
+    },
+    tab: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
+    tabActive: { backgroundColor: c.surface, ...shadow.md },
+    tabText: { fontSize: 14, fontWeight: '500', color: c.subtext },
+    tabTextActive: { color: c.text },
+
+    card: {
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      padding: 14,
+      gap: 5,
+      ...shadow.xs,
+    },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+    cardReason: { fontSize: 14, fontWeight: '500', color: c.text, flex: 1 },
+    amountBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+    amountText: { fontSize: 13, fontWeight: '600' },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    cardMeta: { fontSize: 12, color: c.textTertiary },
+
+    rankRow: {
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      ...shadow.xs,
+    },
+    rankRowMe: { backgroundColor: c.primaryAlpha08, borderWidth: 1, borderColor: c.primaryAlpha20 },
+    rankPosition: { fontSize: 18, width: 36, textAlign: 'center' },
+    rankInfo: { flex: 1 },
+    rankName: { fontSize: 14, fontWeight: '500', color: c.text },
+    rankNameMe: { fontWeight: '700' },
+    rankMeta: { fontSize: 12, color: c.textTertiary, marginTop: 1 },
+    rankPoints: { fontSize: 15, fontWeight: '700', color: c.text },
+
+    empty: { alignItems: 'center', marginTop: 60, gap: 12 },
+    emptyText: { color: c.textTertiary, fontSize: 15 },
+  })
+}

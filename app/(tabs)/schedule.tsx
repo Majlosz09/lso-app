@@ -1,15 +1,19 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, FlatList, ScrollView, StyleSheet, RefreshControl,
   TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { CameraView, useCameraPermissions } from 'expo-camera'
 import { supabase } from '../../lib/supabase'
 import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { STATUS_COLORS, STATUS_LABELS } from '../../lib/status'
 import { CATEGORY_CONFIG, ScheduleCategory, AssignmentStatus } from '../../types/database'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
+import { validateGps, validateParishQr } from '../../lib/checkin'
+import { useTheme } from '../../lib/ThemeContext'
+import { Colors } from '../../lib/theme'
 
 function isCheckInWindowOpen(schedule: any): boolean {
   if (!schedule.time) return false
@@ -57,6 +61,9 @@ function ParentScheduleView() {
   const [refreshing, setRefreshing] = useState(false)
   const today = new Date().toISOString().split('T')[0]
 
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
+
   const fetchData = async () => {
     if (!profile?.id) return
     const { data: children } = await supabase
@@ -102,7 +109,7 @@ function ParentScheduleView() {
   useEffect(() => { fetchData() }, [profile?.id])
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
+    return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
   }
 
   return (
@@ -115,37 +122,36 @@ function ParentScheduleView() {
       }
       ListEmptyComponent={
         <View style={styles.empty}>
-          <Ionicons name="calendar-outline" size={48} color="#ccc" />
+          <Ionicons name="calendar-outline" size={48} color={c.iconMuted} />
           <Text style={styles.emptyText}>Brak nadchodzących dyżurów</Text>
         </View>
       }
-      renderItem={({ item }) => <ChildScheduleCard schedule={item} />}
+      renderItem={({ item }) => <ChildScheduleCard schedule={item} styles={styles} colors={c} />}
       contentContainerStyle={{ padding: 16, gap: 12 }}
     />
   )
 }
 
-function ChildScheduleCard({ schedule }: { schedule: any }) {
-
+function ChildScheduleCard({ schedule, styles, colors: c }: { schedule: any; styles: any; colors: Colors }) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardTitle}>{schedule.title}</Text>
-        <View style={[styles.pill, { backgroundColor: (STATUS_COLORS[schedule.myStatus] ?? '#888') + '22' }]}>
-          <Text style={[styles.pillText, { color: STATUS_COLORS[schedule.myStatus] ?? '#888' }]}>
+        <View style={[styles.pill, { backgroundColor: (STATUS_COLORS[schedule.myStatus] ?? c.subtext) + '22' }]}>
+          <Text style={[styles.pillText, { color: STATUS_COLORS[schedule.myStatus] ?? c.subtext }]}>
             {STATUS_LABELS[schedule.myStatus] ?? schedule.myStatus}
           </Text>
         </View>
       </View>
       <View style={[styles.row, { marginBottom: 2 }]}>
-        <Ionicons name="person-outline" size={14} color="#534AB7" />
-        <Text style={[styles.cardMeta, { color: '#534AB7', fontWeight: '600' }]}>{schedule.childName}</Text>
+        <Ionicons name="person-outline" size={14} color={c.primary} />
+        <Text style={[styles.cardMeta, { color: c.primary, fontWeight: '600' }]}>{schedule.childName}</Text>
       </View>
       <MetaRow icon="calendar-outline" text={
         new Date(schedule.date + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })
-      } />
-      <MetaRow icon="time-outline" text={schedule.time?.slice(0, 5)} />
-      {schedule.group && <MetaRow icon="people-outline" text={schedule.group.name} color="#534AB7" />}
+      } styles={styles} />
+      <MetaRow icon="time-outline" text={schedule.time?.slice(0, 5)} styles={styles} />
+      {schedule.group && <MetaRow icon="people-outline" text={schedule.group.name} color={c.primary} styles={styles} />}
     </View>
   )
 }
@@ -157,14 +163,16 @@ interface WeekStripProps {
   onPrev: () => void
   onNext: () => void
   eventDates: Set<string>
+  styles: any
+  colors: Colors
 }
 
-function WeekStrip({ weekDays, selectedDate, onSelect, onPrev, onNext, eventDates }: WeekStripProps) {
+function WeekStrip({ weekDays, selectedDate, onSelect, onPrev, onNext, eventDates, styles, colors: c }: WeekStripProps) {
   const today = new Date().toISOString().split('T')[0]
   return (
     <View style={styles.weekStripContainer}>
       <TouchableOpacity onPress={onPrev} style={styles.weekArrow} hitSlop={8}>
-        <Ionicons name="chevron-back" size={20} color="#534AB7" />
+        <Ionicons name="chevron-back" size={20} color={c.primary} />
       </TouchableOpacity>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.weekDaysScroll}>
@@ -176,7 +184,7 @@ function WeekStrip({ weekDays, selectedDate, onSelect, onPrev, onNext, eventDate
           return (
             <TouchableOpacity key={date} onPress={() => onSelect(date)}
               style={styles.dayPill} activeOpacity={0.7}>
-              <Text style={[styles.dayPillLabel, isSelected && { color: '#534AB7' }]}>
+              <Text style={[styles.dayPillLabel, isSelected && { color: c.primary }]}>
                 {DAY_SHORT[d.getDay()]}
               </Text>
               <View style={[
@@ -187,7 +195,7 @@ function WeekStrip({ weekDays, selectedDate, onSelect, onPrev, onNext, eventDate
                 <Text style={[
                   styles.dayPillNum,
                   isSelected && { color: '#fff', fontWeight: '800' },
-                  isToday && !isSelected && { color: '#534AB7', fontWeight: '700' },
+                  isToday && !isSelected && { color: c.primary, fontWeight: '700' },
                 ]}>
                   {d.getDate()}
                 </Text>
@@ -201,7 +209,7 @@ function WeekStrip({ weekDays, selectedDate, onSelect, onPrev, onNext, eventDate
         })}
       </ScrollView>
       <TouchableOpacity onPress={onNext} style={styles.weekArrow} hitSlop={8}>
-        <Ionicons name="chevron-forward" size={20} color="#534AB7" />
+        <Ionicons name="chevron-forward" size={20} color={c.primary} />
       </TouchableOpacity>
     </View>
   )
@@ -217,11 +225,14 @@ interface ScheduleTileProps {
   onSignUp: () => void
   onUnsign: () => void
   onReportAbsence: () => void
+  styles: any
+  colors: Colors
 }
 
 function ScheduleTile({
   schedule, checkingIn, signingUp, unsigning, reporting,
   onCheckIn, onSignUp, onUnsign, onReportAbsence,
+  styles, colors: c,
 }: ScheduleTileProps) {
   const assignment = schedule.assignment
   const alreadyCheckedIn = schedule.hasAttendance || assignment?.status === 'present'
@@ -232,9 +243,9 @@ function ScheduleTile({
   const status: AssignmentStatus | undefined = assignment?.status
 
   // Border color: colored border only when window is open and not yet checked in
-  let borderColor = '#eee'
+  let borderColor = c.border
   if (!isSun && windowOpen && !alreadyCheckedIn) {
-    borderColor = (cat === 'msza' && assignment) ? '#27ae60' : '#534AB7'
+    borderColor = (cat === 'msza' && assignment) ? '#16A34A' : c.primary
   }
 
   // Determine the primary action button
@@ -249,7 +260,7 @@ function ScheduleTile({
       const isAssigned = !!assignment
       actionButton = (
         <TouchableOpacity
-          style={[styles.tileBtn, { backgroundColor: isAssigned ? '#27ae60' : '#534AB7' }]}
+          style={[styles.tileBtn, { backgroundColor: isAssigned ? '#16A34A' : c.primary }]}
           onPress={onCheckIn}
           disabled={checkingIn}
         >
@@ -268,8 +279,8 @@ function ScheduleTile({
             disabled={unsigning}
           >
             {unsigning
-              ? <ActivityIndicator size="small" color="#e67e22" />
-              : <Text style={[styles.tileBtnText, { color: '#e67e22' }]}>Wypisz się</Text>
+              ? <ActivityIndicator size="small" color="#EA580C" />
+              : <Text style={[styles.tileBtnText, { color: '#EA580C' }]}>Wypisz się</Text>
             }
           </TouchableOpacity>
         )
@@ -281,8 +292,8 @@ function ScheduleTile({
             disabled={signingUp}
           >
             {signingUp
-              ? <ActivityIndicator size="small" color="#534AB7" />
-              : <Text style={[styles.tileBtnText, { color: '#534AB7' }]}>Zapisz się</Text>
+              ? <ActivityIndicator size="small" color={c.primary} />
+              : <Text style={[styles.tileBtnText, { color: c.primary }]}>Zapisz się</Text>
             }
           </TouchableOpacity>
         )
@@ -293,7 +304,7 @@ function ScheduleTile({
     if (windowOpen) {
       actionButton = (
         <TouchableOpacity
-          style={[styles.tileBtn, { backgroundColor: '#534AB7' }]}
+          style={[styles.tileBtn, { backgroundColor: c.primary }]}
           onPress={onCheckIn}
           disabled={checkingIn}
         >
@@ -318,34 +329,34 @@ function ScheduleTile({
           </View>
           <View style={styles.schedTileMeta}>
             {schedule.time && (
-              <MetaRow icon="time-outline" text={schedule.time.slice(0, 5)} />
+              <MetaRow icon="time-outline" text={schedule.time.slice(0, 5)} styles={styles} />
             )}
             {schedule.group?.name && (
-              <MetaRow icon="people-outline" text={schedule.group.name} color="#534AB7" />
+              <MetaRow icon="people-outline" text={schedule.group.name} color={c.primary} styles={styles} />
             )}
           </View>
           {/* Status badges */}
           <View style={styles.badgeRow}>
             {alreadyCheckedIn && (
-              <View style={[styles.pill, { backgroundColor: '#27ae6022' }]}>
-                <Text style={[styles.pillText, { color: '#27ae60' }]}>OBECNY</Text>
+              <View style={[styles.pill, { backgroundColor: '#16A34A22' }]}>
+                <Text style={[styles.pillText, { color: '#16A34A' }]}>OBECNY</Text>
               </View>
             )}
             {!alreadyCheckedIn && assignment && (
-              <View style={[styles.pill, { backgroundColor: '#27ae6022' }]}>
-                <Text style={[styles.pillText, { color: '#27ae60' }]}>DYŻUR</Text>
+              <View style={[styles.pill, { backgroundColor: '#16A34A22' }]}>
+                <Text style={[styles.pillText, { color: '#16A34A' }]}>DYŻUR</Text>
               </View>
             )}
             {status && !['assigned', 'present'].includes(status) && (
-              <View style={[styles.pill, { backgroundColor: (STATUS_COLORS[status] ?? '#888') + '22' }]}>
-                <Text style={[styles.pillText, { color: STATUS_COLORS[status] ?? '#888' }]}>
+              <View style={[styles.pill, { backgroundColor: (STATUS_COLORS[status] ?? c.subtext) + '22' }]}>
+                <Text style={[styles.pillText, { color: STATUS_COLORS[status] ?? c.subtext }]}>
                   {STATUS_LABELS[status] ?? status}
                 </Text>
               </View>
             )}
             {assignment?.admin_note && (
-              <View style={[styles.pill, { backgroundColor: '#e74c3c22' }]}>
-                <Text style={[styles.pillText, { color: '#e74c3c' }]}>
+              <View style={[styles.pill, { backgroundColor: c.danger + '22' }]}>
+                <Text style={[styles.pillText, { color: c.danger }]}>
                   {assignment.admin_note}
                 </Text>
               </View>
@@ -365,8 +376,11 @@ function ScheduleTile({
 }
 
 function MemberScheduleView() {
-  const { profile } = useAuthStore()
+  const { profile, parish } = useAuthStore()
   const today = new Date().toISOString().split('T')[0]
+
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
 
   // Week navigation
   const [weekOffset, setWeekOffset] = useState(0)
@@ -378,6 +392,12 @@ function MemberScheduleView() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
+  // QR scanner
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions()
+  const [qrScannerVisible, setQrScannerVisible] = useState(false)
+  const [qrPendingSchedule, setQrPendingSchedule] = useState<any | null>(null)
+  const qrScannedRef = useRef(false)
+
   // Action states
   const [checkingInId, setCheckingInId] = useState<string | null>(null)
   const [signingUpId, setSigningUpId] = useState<string | null>(null)
@@ -386,6 +406,8 @@ function MemberScheduleView() {
   const [absenceModal, setAbsenceModal] = useState<{
     visible: boolean; assignmentId: string; title: string; reason: string
   }>({ visible: false, assignmentId: '', title: '', reason: '' })
+  const [signUpModal, setSignUpModal] = useState<{ visible: boolean; schedule: any | null }>
+    ({ visible: false, schedule: null })
 
 
   useEffect(() => {
@@ -398,7 +420,7 @@ function MemberScheduleView() {
     if (!profile?.id || !profile?.parish_id || days.length === 0) return
     const [weekStart, weekEnd] = [days[0], days[days.length - 1]]
 
-    const [schedulesRes, assignmentsRes] = await Promise.all([
+    const [schedulesRes, assignmentsRes, templatesRes] = await Promise.all([
       supabase
         .from('schedules')
         .select('*, group:groups(name)')
@@ -410,9 +432,16 @@ function MemberScheduleView() {
         .from('schedule_assignments')
         .select('id, schedule_id, status, absence_reason, admin_note')
         .eq('profile_id', profile.id),
+      supabase
+        .from('mass_templates')
+        .select('*')
+        .eq('parish_id', profile.parish_id)
+        .order('day_of_week').order('time'),
     ])
 
-    const scheduleIds = (schedulesRes.data ?? []).map((s: any) => s.id)
+    let schedules = schedulesRes.data ?? []
+
+    const scheduleIds = schedules.map((s: any) => s.id)
     let attendanceSet = new Set<string>()
     if (scheduleIds.length > 0) {
       const { data: attData } = await supabase
@@ -427,8 +456,32 @@ function MemberScheduleView() {
       (assignmentsRes.data ?? []).map((a: any) => [a.schedule_id, a])
     )
 
+    // Fill in template virtual slots for any day/time not covered by real schedules
+    const allTemplates: any[] = templatesRes.data ?? []
+    if (allTemplates.length > 0) {
+      const scheduledKeys = new Set(schedules.map((s: any) => `${s.date}_${s.time?.slice(0, 5)}`))
+      for (const day of days) {
+        const dow = new Date(day + 'T12:00:00').getDay()
+        for (const t of allTemplates.filter((t: any) => t.day_of_week === dow)) {
+          const key = `${day}_${t.time.slice(0, 5)}`
+          if (!scheduledKeys.has(key)) {
+            schedules.push({
+              id: `tpl-${day}-${t.id}`,
+              title: t.label ?? 'Msza Święta',
+              date: day,
+              time: t.time,
+              category: 'msza',
+              group: null,
+              isTemplate: true,
+            })
+          }
+        }
+      }
+      schedules.sort((a: any, b: any) => a.date.localeCompare(b.date) || (a.time ?? '').localeCompare(b.time ?? ''))
+    }
+
     setWeekSchedules(
-      (schedulesRes.data ?? []).map((s: any) => ({
+      schedules.map((s: any) => ({
         ...s,
         assignment: assignmentMap.get(s.id) ?? null,
         hasAttendance: attendanceSet.has(s.id),
@@ -452,12 +505,41 @@ function MemberScheduleView() {
 
   // --- Handlers ---
 
-  const handleCheckIn = async (schedule: any) => {
+  const doCheckIn = async (schedule: any) => {
     setCheckingInId(schedule.id)
-    const assignmentId = schedule.assignment?.id ?? null
+    let scheduleId = schedule.id
+    let assignmentId = schedule.assignment?.id ?? null
+
+    if (schedule.isTemplate) {
+      const { data: signUpData, error: signUpErr } = await supabase.rpc('sign_up_for_slot', {
+        p_date: schedule.date,
+        p_time_label: schedule.time.slice(0, 5),
+        p_mode: 'once',
+      })
+      if (signUpErr && !signUpErr.message.includes('Już jesteś zapisany')) {
+        setCheckingInId(null)
+        Alert.alert('Błąd', signUpErr.message)
+        return
+      }
+      if (signUpData) {
+        scheduleId = (signUpData as any).schedule_id
+      } else {
+        const { data: sch } = await supabase
+          .from('schedules').select('id')
+          .eq('parish_id', profile!.parish_id)
+          .eq('date', schedule.date)
+          .gte('time', schedule.time.slice(0, 5) + ':00')
+          .lt('time', schedule.time.slice(0, 5) + ':59')
+          .maybeSingle()
+        if (!sch) { setCheckingInId(null); Alert.alert('Błąd', 'Nie znaleziono służby.'); return }
+        scheduleId = sch.id
+      }
+    }
+
     const { data, error } = await supabase.rpc('check_in_and_award_points', {
-      p_schedule_id: schedule.id,
-      p_assignment_id: assignmentId,
+      p_schedule_id: scheduleId,
+      p_profile_id: profile!.id,
+      p_parish_id: profile!.parish_id,
     })
     setCheckingInId(null)
     if (error) { Alert.alert('Błąd', error.message); return }
@@ -472,16 +554,42 @@ function MemberScheduleView() {
     fetchWeekSchedules(weekDays)
   }
 
+  const handleCheckIn = async (schedule: any) => {
+    const mode = parish?.attendance_mode ?? 'button'
+
+    if (mode === 'gps') {
+      if (!parish?.lat || !parish?.lng) {
+        Alert.alert('Błąd konfiguracji', 'Admin nie skonfigurował lokalizacji kościoła w ustawieniach parafii.')
+        return
+      }
+      setCheckingInId(schedule.id)
+      const result = await validateGps({
+        parishLat: parish.lat,
+        parishLng: parish.lng,
+        parishRadius: parish.gps_radius ?? 200,
+      })
+      setCheckingInId(null)
+      if (!result.success) { Alert.alert('Nie można zameldować', (result as any).message); return }
+      await doCheckIn(schedule)
+      return
+    }
+
+    if (mode === 'qr') {
+      if (!cameraPermission?.granted) {
+        const { granted } = await requestCameraPermission()
+        if (!granted) { Alert.alert('Brak dostępu', 'Zezwól aplikacji na dostęp do kamery.'); return }
+      }
+      qrScannedRef.current = false
+      setQrPendingSchedule(schedule)
+      setQrScannerVisible(true)
+      return
+    }
+
+    await doCheckIn(schedule)
+  }
+
   const handleSignUp = (schedule: any) => {
-    Alert.alert(
-      'Zapisz się',
-      `${schedule.title}\n${formatDateHeader(schedule.date)}, ${schedule.time?.slice(0, 5)}`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        { text: 'Jednorazowo', onPress: () => doSignUp(schedule.id, schedule.date, schedule.time?.slice(0, 5), 'once') },
-        { text: 'Cyklicznie', onPress: () => doSignUp(schedule.id, schedule.date, schedule.time?.slice(0, 5), 'recurring') },
-      ]
-    )
+    setSignUpModal({ visible: true, schedule })
   }
 
   const doSignUp = async (scheduleId: string, date: string, timeSlot: string, mode: 'once' | 'recurring') => {
@@ -506,20 +614,26 @@ function MemberScheduleView() {
 
   const unsignOne = async (assignmentId: string) => {
     setUnsigningId(assignmentId)
-    await supabase.from('schedule_assignments').delete().eq('id', assignmentId)
+    const { error } = await supabase.from('schedule_assignments').delete().eq('id', assignmentId)
     setUnsigningId(null)
+    if (error) { Alert.alert('Błąd', error.message); return }
     fetchWeekSchedules(weekDays)
   }
 
   const unsignCycle = async (assignmentId: string, commitmentId: string) => {
     setUnsigningId(assignmentId)
-    await Promise.all([
+    const [r1, r2] = await Promise.all([
       supabase.from('schedule_assignments').delete().eq('id', assignmentId),
       supabase.from('recurring_commitments').delete().eq('id', commitmentId),
     ])
     setUnsigningId(null)
+    if (r1.error || r2.error) { Alert.alert('Błąd', (r1.error ?? r2.error)!.message); return }
     fetchWeekSchedules(weekDays)
   }
+
+  const [unsignModal, setUnsignModal] = useState<{
+    visible: boolean; assignmentId: string; commitmentId: string | null; title: string
+  }>({ visible: false, assignmentId: '', commitmentId: null, title: '' })
 
   const handleUnsign = async (schedule: any) => {
     const a = schedule.assignment
@@ -533,18 +647,12 @@ function MemberScheduleView() {
       .eq('day_of_week', dow)
       .eq('time_slot', timeSlot)
       .maybeSingle()
-    if (commitment) {
-      Alert.alert('Wypisz się', `Ten dyżur jest częścią cyklu. Co chcesz zrobić?`, [
-        { text: 'Anuluj', style: 'cancel' },
-        { text: 'Tylko tę służbę', onPress: () => unsignOne(a.id) },
-        { text: 'Cały cykl', style: 'destructive', onPress: () => unsignCycle(a.id, commitment.id) },
-      ])
-    } else {
-      Alert.alert('Wypisz się', `Wypisać się ze służby "${schedule.title}"?`, [
-        { text: 'Anuluj', style: 'cancel' },
-        { text: 'Wypisz', style: 'destructive', onPress: () => unsignOne(a.id) },
-      ])
-    }
+    setUnsignModal({
+      visible: true,
+      assignmentId: a.id,
+      commitmentId: commitment?.id ?? null,
+      title: schedule.title,
+    })
   }
 
   const reportAbsence = async (assignmentId: string, reason: string) => {
@@ -582,8 +690,10 @@ function MemberScheduleView() {
           onPrev={() => setWeekOffset(o => o - 1)}
           onNext={() => setWeekOffset(o => o + 1)}
           eventDates={eventDates}
+          styles={styles}
+          colors={c}
         />
-        <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
+        <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
       </View>
     )
   }
@@ -596,6 +706,8 @@ function MemberScheduleView() {
         onPrev={() => setWeekOffset(o => o - 1)}
         onNext={() => setWeekOffset(o => o + 1)}
         eventDates={eventDates}
+        styles={styles}
+        colors={c}
       />
       <ScrollView
         style={{ flex: 1 }}
@@ -611,7 +723,7 @@ function MemberScheduleView() {
 
         {daySchedules.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="calendar-outline" size={40} color="#ccc" />
+            <Ionicons name="calendar-outline" size={40} color={c.iconMuted} />
             <Text style={styles.emptyText}>Brak służb w tym dniu</Text>
           </View>
         ) : (
@@ -632,11 +744,149 @@ function MemberScheduleView() {
                 title: schedule.title,
                 reason: '',
               })}
+              styles={styles}
+              colors={c}
             />
           ))
         )}
 
       </ScrollView>
+
+      {/* Unsign modal */}
+      <Modal visible={unsignModal.visible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Wypisz się</Text>
+            {unsignModal.commitmentId ? (
+              <>
+                <Text style={styles.modalSubtitle}>Ten dyżur jest częścią cyklu. Co chcesz zrobić?</Text>
+                <View style={styles.modalBtns}>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalBtnCancel]}
+                    onPress={() => setUnsignModal(m => ({ ...m, visible: false }))}
+                  >
+                    <Text style={styles.modalBtnCancelText}>Anuluj</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, { backgroundColor: '#EA580C' }]}
+                    onPress={() => {
+                      const id = unsignModal.assignmentId
+                      setUnsignModal(m => ({ ...m, visible: false }))
+                      unsignOne(id)
+                    }}
+                  >
+                    <Text style={styles.modalBtnSubmitText}>Tylko tę</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, { backgroundColor: c.danger }]}
+                    onPress={() => {
+                      const { assignmentId, commitmentId } = unsignModal
+                      setUnsignModal(m => ({ ...m, visible: false }))
+                      unsignCycle(assignmentId, commitmentId!)
+                    }}
+                  >
+                    <Text style={styles.modalBtnSubmitText}>Cały cykl</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalSubtitle}>Wypisać się ze służby „{unsignModal.title}"?</Text>
+                <View style={styles.modalBtns}>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalBtnCancel]}
+                    onPress={() => setUnsignModal(m => ({ ...m, visible: false }))}
+                  >
+                    <Text style={styles.modalBtnCancelText}>Anuluj</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalBtnSubmit]}
+                    onPress={() => {
+                      const id = unsignModal.assignmentId
+                      setUnsignModal(m => ({ ...m, visible: false }))
+                      unsignOne(id)
+                    }}
+                  >
+                    <Text style={styles.modalBtnSubmitText}>Wypisz</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Sign-up modal */}
+      <Modal visible={signUpModal.visible} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Zapisz się</Text>
+            <Text style={styles.modalSubtitle}>
+              {signUpModal.schedule?.title}{'\n'}
+              {signUpModal.schedule ? formatDateHeader(signUpModal.schedule.date) : ''}, {signUpModal.schedule?.time?.slice(0, 5)}
+            </Text>
+            <View style={styles.modalBtns}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setSignUpModal({ visible: false, schedule: null })}
+              >
+                <Text style={styles.modalBtnCancelText}>Anuluj</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: c.primary }]}
+                onPress={() => {
+                  const s = signUpModal.schedule
+                  setSignUpModal({ visible: false, schedule: null })
+                  doSignUp(s.id, s.date, s.time?.slice(0, 5), 'once')
+                }}
+              >
+                <Text style={styles.modalBtnSubmitText}>Jednorazowo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: '#16A34A' }]}
+                onPress={() => {
+                  const s = signUpModal.schedule
+                  setSignUpModal({ visible: false, schedule: null })
+                  doSignUp(s.id, s.date, s.time?.slice(0, 5), 'recurring')
+                }}
+              >
+                <Text style={styles.modalBtnSubmitText}>Cyklicznie</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* QR Scanner modal */}
+      <Modal visible={qrScannerVisible} animationType="slide" onRequestClose={() => setQrScannerVisible(false)}>
+        <View style={styles.qrScannerContainer}>
+          <CameraView
+            style={styles.qrCamera}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+            onBarcodeScanned={(e) => {
+              if (qrScannedRef.current) return
+              const value = e.data
+              if (!validateParishQr(value, profile!.parish_id!)) {
+                Alert.alert('Nieprawidłowy kod', 'Ten kod QR nie należy do Twojej parafii.')
+                return
+              }
+              qrScannedRef.current = true
+              setQrScannerVisible(false)
+              const pending = qrPendingSchedule
+              setQrPendingSchedule(null)
+              if (pending) doCheckIn(pending)
+            }}
+          />
+          <View style={styles.qrScannerOverlay}>
+            <View style={styles.qrScannerFrame} />
+            <Text style={styles.qrScannerHint}>Skieruj kamerę na kod QR w zakrystii</Text>
+          </View>
+          <TouchableOpacity style={styles.qrScannerClose} onPress={() => setQrScannerVisible(false)}>
+            <Ionicons name="close-circle" size={44} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </Modal>
 
       {/* Absence modal */}
       <Modal visible={absenceModal.visible} transparent animationType="slide">
@@ -647,7 +897,7 @@ function MemberScheduleView() {
             <TextInput
               style={styles.modalInput}
               placeholder="Powód nieobecności..."
-              placeholderTextColor="#aaa"
+              placeholderTextColor={c.textTertiary}
               multiline
               value={absenceModal.reason}
               onChangeText={r => setAbsenceModal(m => ({ ...m, reason: r }))}
@@ -677,272 +927,283 @@ function MemberScheduleView() {
   )
 }
 
-function MetaRow({ icon, text, color = '#666' }: { icon: any; text: string; color?: string }) {
+function MetaRow({ icon, text, color, styles }: { icon: any; text: string; color?: string; styles: any }) {
+  const { colors: c } = useTheme()
+  const effectiveColor = color ?? c.subtext
   return (
     <View style={styles.row}>
-      <Ionicons name={icon} size={14} color={color} />
-      <Text style={[styles.cardMeta, { color }]}>{text}</Text>
+      <Ionicons name={icon} size={14} color={effectiveColor} />
+      <Text style={[styles.cardMeta, { color: effectiveColor }]}>{text}</Text>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  segmentBar: {
-    flexDirection: 'row', margin: 16, marginBottom: 0,
-    backgroundColor: '#e8e8e8', borderRadius: 10, padding: 3,
-  },
-  segment: {
-    flex: 1, paddingVertical: 8, borderRadius: 8,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  segmentActive: {
-    backgroundColor: '#fff',
-    ...shadow.md,
-  },
-  segmentText: { fontSize: 14, fontWeight: '500', color: '#888' },
-  segmentTextActive: { color: '#1a1a1a' },
+    segmentBar: {
+      flexDirection: 'row', margin: 16, marginBottom: 0,
+      backgroundColor: c.border, borderRadius: 10, padding: 3,
+    },
+    segment: {
+      flex: 1, paddingVertical: 8, borderRadius: 8,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    segmentActive: {
+      backgroundColor: c.surface,
+      ...shadow.md,
+    },
+    segmentText: { fontSize: 14, fontWeight: '500', color: c.subtext },
+    segmentTextActive: { color: c.text },
 
-  empty: { alignItems: 'center', marginTop: 80, gap: 10 },
-  emptyText: { color: '#aaa', fontSize: 16 },
-  emptyLink: { color: '#534AB7', fontSize: 14, fontWeight: '500' },
+    empty: { alignItems: 'center', marginTop: 80, gap: 10 },
+    emptyText: { color: c.textTertiary, fontSize: 16 },
+    emptyLink: { color: c.primary, fontSize: 14, fontWeight: '500' },
 
-  card: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 12, gap: 4,
-    ...shadow.md,
-  },
-  cardSigned: { borderLeftWidth: 3, borderLeftColor: '#f0a500' },
-  cardHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 2,
-  },
-  cardTitle: { fontSize: 16, fontWeight: '600', color: '#1a1a1a', flex: 1 },
-  pill: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
-  },
-  pillText: { fontSize: 12, fontWeight: '500' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cardMeta: { fontSize: 13 },
+    card: {
+      backgroundColor: c.surface, borderRadius: 12, padding: 12, gap: 4,
+      ...shadow.md,
+    },
+    cardSigned: { borderLeftWidth: 3, borderLeftColor: c.gold },
+    cardHeader: {
+      flexDirection: 'row', justifyContent: 'space-between',
+      alignItems: 'center', marginBottom: 2,
+    },
+    cardTitle: { fontSize: 16, fontWeight: '600', color: c.text, flex: 1 },
+    pill: {
+      flexDirection: 'row', alignItems: 'center', gap: 3,
+      borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
+    },
+    pillText: { fontSize: 12, fontWeight: '500' },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    cardMeta: { fontSize: 13 },
 
-  unsignBtn: { alignSelf: 'flex-end', marginTop: 6 },
-  unsignText: { fontSize: 13, color: '#e74c3c', fontWeight: '500' },
+    unsignBtn: { alignSelf: 'flex-end', marginTop: 6 },
+    unsignText: { fontSize: 13, color: c.danger, fontWeight: '500' },
 
-  signupRow: { marginTop: 10, gap: 8 },
-  modeToggle: {
-    flexDirection: 'row', gap: 6,
-    backgroundColor: '#f0f0f0', borderRadius: 8, padding: 3,
-  },
-  modeBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 5, paddingVertical: 7, borderRadius: 6,
-  },
-  modeBtnActive: { backgroundColor: '#534AB7' },
-  modeBtnText: { fontSize: 13, fontWeight: '500', color: '#888' },
-  modeBtnTextActive: { color: '#fff' },
-  signupBtn: {
-    backgroundColor: '#534AB7', borderRadius: 8, padding: 12,
-    alignItems: 'center',
-  },
-  signupBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+    signupRow: { marginTop: 10, gap: 8 },
+    modeToggle: {
+      flexDirection: 'row', gap: 6,
+      backgroundColor: c.primarySurface, borderRadius: 8, padding: 3,
+    },
+    modeBtn: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 5, paddingVertical: 7, borderRadius: 6,
+    },
+    modeBtnActive: { backgroundColor: c.primary },
+    modeBtnText: { fontSize: 13, fontWeight: '500', color: c.subtext },
+    modeBtnTextActive: { color: '#fff' },
+    signupBtn: {
+      backgroundColor: c.primary, borderRadius: 8, padding: 12,
+      alignItems: 'center',
+    },
+    signupBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 
-  calendar: { borderBottomWidth: 1, borderBottomColor: '#e8e8e8' },
-  calendarPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 60 },
-  calendarPlaceholderText: { color: '#aaa', fontSize: 15 },
+    calendar: { borderBottomWidth: 1, borderBottomColor: c.border },
+    calendarPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 60 },
+    calendarPlaceholderText: { color: c.textTertiary, fontSize: 15 },
 
-  massTimesRow: {
-    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap',
-    paddingHorizontal: 16, paddingVertical: 10, gap: 6,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#e8e8e8',
-  },
-  massTimesLabel: { fontSize: 13, color: '#888' },
-  massTimePill: { backgroundColor: '#f0eef9', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  massTimePillText: { fontSize: 13, color: '#534AB7', fontWeight: '500' },
+    massTimesRow: {
+      flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap',
+      paddingHorizontal: 16, paddingVertical: 10, gap: 6,
+      backgroundColor: c.surface, borderBottomWidth: 1, borderBottomColor: c.border,
+    },
+    massTimesLabel: { fontSize: 13, color: c.subtext },
+    massTimePill: { backgroundColor: c.primarySurface, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+    massTimePillText: { fontSize: 13, color: c.primary, fontWeight: '500' },
 
-  liturgyRow: {
-    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap',
-    paddingHorizontal: 16, paddingVertical: 8, gap: 6,
-    backgroundColor: '#fffbf0', borderBottomWidth: 1, borderBottomColor: '#f0e8c8',
-  },
-  liturgyDot: { width: 8, height: 8, borderRadius: 4 },
-  liturgyTypeLabel: { fontSize: 12, color: '#a07800', fontWeight: '600' },
-  liturgyName: { fontSize: 13, color: '#5a4000', flex: 1 },
+    liturgyRow: {
+      flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap',
+      paddingHorizontal: 16, paddingVertical: 8, gap: 6,
+      backgroundColor: '#fffbf0', borderBottomWidth: 1, borderBottomColor: '#f0e8c8',
+    },
+    liturgyDot: { width: 8, height: 8, borderRadius: 4 },
+    liturgyTypeLabel: { fontSize: 12, color: '#a07800', fontWeight: '600' },
+    liturgyName: { fontSize: 13, color: '#5a4000', flex: 1 },
 
-  parentHeader: { fontSize: 17, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
+    parentHeader: { fontSize: 17, fontWeight: '700', color: c.text, marginBottom: 4 },
 
-  todaySection: {
-    backgroundColor: '#f0eef9', borderRadius: 12,
-    borderLeftWidth: 3, borderLeftColor: '#534AB7',
-    padding: 12, marginBottom: 8, gap: 10,
-  },
-  todayBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
-    backgroundColor: '#534AB7', borderRadius: 6,
-    paddingHorizontal: 8, paddingVertical: 3,
-  },
-  todayBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
+    todaySection: {
+      backgroundColor: c.primarySurface, borderRadius: 12,
+      borderLeftWidth: 3, borderLeftColor: c.primary,
+      padding: 12, marginBottom: 8, gap: 10,
+    },
+    todayBadge: {
+      flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start',
+      backgroundColor: c.primary, borderRadius: 6,
+      paddingHorizontal: 8, paddingVertical: 3,
+    },
+    todayBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
 
-  attBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#eafaf2', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 6, marginTop: 6,
-  },
-  attBadgeText: { fontSize: 13, color: '#27ae60', fontWeight: '500' },
+    attBadge: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: c.successSurface, borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 6, marginTop: 6,
+    },
+    attBadgeText: { fontSize: 13, color: '#16A34A', fontWeight: '500' },
 
-  absentBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#f5f5f5', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 6, marginTop: 6,
-  },
-  absentText: { fontSize: 13, color: '#bbb' },
+    absentBadge: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: c.bg, borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 6, marginTop: 6,
+    },
+    absentText: { fontSize: 13, color: c.textTertiary },
 
-  checkBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#534AB7', borderRadius: 8,
-    paddingVertical: 10, marginTop: 8,
-  },
-  checkBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+    checkBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+      backgroundColor: c.primary, borderRadius: 8,
+      paddingVertical: 10, marginTop: 8,
+    },
+    checkBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 
-  extraAttendanceBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#F0EEFF', borderRadius: 10, padding: 14, marginTop: 4,
-  },
-  extraAttendanceBannerText: { flex: 1, color: '#534AB7', fontWeight: '600', fontSize: 14 },
+    extraAttendanceBanner: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: c.primarySurface, borderRadius: 10, padding: 14, marginTop: 4,
+    },
+    extraAttendanceBannerText: { flex: 1, color: c.primary, fontWeight: '600', fontSize: 14 },
 
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: 24, gap: 12,
-  },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
-  modalSubtitle: { fontSize: 14, color: '#888', marginBottom: 4 },
-  slotRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 12, borderRadius: 10, backgroundColor: '#f5f5f5',
-  },
-  slotRowSelected: { backgroundColor: '#F0EEFF' },
-  slotText: { fontSize: 15, color: '#1a1a1a', fontWeight: '500' },
-  radio: {
-    width: 20, height: 20, borderRadius: 10,
-    borderWidth: 2, borderColor: '#ccc',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  radioSelected: { borderColor: '#534AB7' },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#534AB7' },
-  modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  cancelBtn: {
-    flex: 1, padding: 14, borderRadius: 10,
-    backgroundColor: '#f0f0f0', alignItems: 'center',
-  },
-  cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#666' },
-  confirmBtn: {
-    flex: 1, padding: 14, borderRadius: 10,
-    backgroundColor: '#534AB7', alignItems: 'center',
-  },
-  confirmBtnText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+    modalOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end',
+    },
+    modalSheet: {
+      backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      padding: 24, gap: 12,
+    },
+    modalTitle: { fontSize: 18, fontWeight: '700', color: c.text },
+    modalSubtitle: { fontSize: 14, color: c.subtext, marginBottom: 4 },
+    slotRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      padding: 12, borderRadius: 10, backgroundColor: c.bg,
+    },
+    slotRowSelected: { backgroundColor: c.primarySurface },
+    slotText: { fontSize: 15, color: c.text, fontWeight: '500' },
+    radio: {
+      width: 20, height: 20, borderRadius: 10,
+      borderWidth: 2, borderColor: c.iconMuted,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    radioSelected: { borderColor: c.primary },
+    radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: c.primary },
+    modalActions: { flexDirection: 'row', gap: 10, marginTop: 8 },
+    cancelBtn: {
+      flex: 1, padding: 14, borderRadius: 10,
+      backgroundColor: c.primarySurface, alignItems: 'center',
+    },
+    cancelBtnText: { fontSize: 15, fontWeight: '600', color: c.subtext },
+    confirmBtn: {
+      flex: 1, padding: 14, borderRadius: 10,
+      backgroundColor: c.primary, alignItems: 'center',
+    },
+    confirmBtnText: { fontSize: 15, fontWeight: '600', color: '#fff' },
 
-  modalEmpty: { alignItems: 'center', paddingVertical: 16, gap: 8 },
-  modalEmptyText: { fontSize: 15, color: '#555', fontWeight: '500', textAlign: 'center' },
-  modalEmptySubtext: { fontSize: 13, color: '#aaa', textAlign: 'center', lineHeight: 18 },
+    modalEmpty: { alignItems: 'center', paddingVertical: 16, gap: 8 },
+    modalEmptyText: { fontSize: 15, color: c.subtext, fontWeight: '500', textAlign: 'center' },
+    modalEmptySubtext: { fontSize: 13, color: c.textTertiary, textAlign: 'center', lineHeight: 18 },
 
-  reportAbsenceBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 5,
-  },
-  reportAbsenceText: { fontSize: 13, color: '#f0a500', fontWeight: '500' },
+    reportAbsenceBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 5,
+    },
+    reportAbsenceText: { fontSize: 13, color: c.gold, fontWeight: '500' },
 
-  absenceReasonBadge: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
-    backgroundColor: '#fdf0ee', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 7, marginTop: 2,
-  },
-  absenceReasonText: { fontSize: 12, color: '#e74c3c', flex: 1, fontStyle: 'italic' },
+    absenceReasonBadge: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+      backgroundColor: c.dangerSurface, borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 7, marginTop: 2,
+    },
+    absenceReasonText: { fontSize: 12, color: c.danger, flex: 1, fontStyle: 'italic' },
 
-  confirmedBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#eaf4fb', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 6, marginTop: 2,
-  },
-  confirmedText: { fontSize: 12, color: '#2980b9', fontWeight: '500' },
+    confirmedBadge: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      backgroundColor: '#eaf4fb', borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 6, marginTop: 2,
+    },
+    confirmedText: { fontSize: 12, color: '#2563EB', fontWeight: '500' },
 
-  rejectionBadge: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
-    backgroundColor: '#fff3f3', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 7, marginTop: 2,
-  },
-  rejectionText: { fontSize: 12, color: '#e74c3c', flex: 1, lineHeight: 17 },
+    rejectionBadge: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+      backgroundColor: c.dangerSurface, borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 7, marginTop: 2,
+    },
+    rejectionText: { fontSize: 12, color: c.danger, flex: 1, lineHeight: 17 },
 
-  absenceInput: {
-    borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10,
-    padding: 12, fontSize: 14, color: '#1a1a1a',
-    minHeight: 80, textAlignVertical: 'top', marginBottom: 4,
-  },
+    absenceInput: {
+      borderWidth: 1, borderColor: c.border, borderRadius: 10,
+      padding: 12, fontSize: 14, color: c.text,
+      minHeight: 80, textAlignVertical: 'top', marginBottom: 4,
+    },
 
-  dayHeader: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
-  historiaToggle: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginTop: 8, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 10,
-  },
-  historiaTitleText: { fontSize: 13, fontWeight: '700', color: '#888' },
-  modalInput: {
-    backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12,
-    fontSize: 14, color: '#1a1a1a', minHeight: 80, textAlignVertical: 'top',
-  },
-  modalBtns: { flexDirection: 'row', gap: 10 },
-  modalBtn: { flex: 1, borderRadius: 10, padding: 13, alignItems: 'center' },
-  modalBtnCancel: { backgroundColor: '#f0f0f0' },
-  modalBtnCancelText: { fontSize: 14, fontWeight: '600', color: '#888' },
-  modalBtnSubmit: { backgroundColor: '#e74c3c' },
-  modalBtnSubmitText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+    dayHeader: { fontSize: 16, fontWeight: '700', color: c.text, marginBottom: 4 },
+    historiaToggle: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      marginTop: 8, padding: 12, backgroundColor: c.bg, borderRadius: 10,
+    },
+    historiaTitleText: { fontSize: 13, fontWeight: '700', color: c.subtext },
+    modalInput: {
+      backgroundColor: c.bg, borderRadius: 10, padding: 12,
+      fontSize: 14, color: c.text, minHeight: 80, textAlignVertical: 'top',
+    },
+    modalBtns: { flexDirection: 'row', gap: 10 },
+    modalBtn: { flex: 1, borderRadius: 10, padding: 13, alignItems: 'center' },
+    modalBtnCancel: { backgroundColor: c.primarySurface },
+    modalBtnCancelText: { fontSize: 14, fontWeight: '600', color: c.subtext },
+    modalBtnSubmit: { backgroundColor: c.danger },
+    modalBtnSubmitText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 
-  dayWrapper: { alignItems: 'center', paddingVertical: 2, width: 32 },
-  dayCircle: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-  dayTodayCircle: { borderWidth: 2, borderColor: '#534AB7' },
-  daySelectedCircle: { backgroundColor: '#534AB7' },
-  dayNum: { fontSize: 13, fontWeight: '400' },
-  dayTodayNum: { fontWeight: '700' },
-  dayDots: { flexDirection: 'row', gap: 2, marginTop: 1, minHeight: 5 },
-  dayDot: { width: 4, height: 4, borderRadius: 2 },
+    dayWrapper: { alignItems: 'center', paddingVertical: 2, width: 32 },
+    dayCircle: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+    dayTodayCircle: { borderWidth: 2, borderColor: c.primary },
+    daySelectedCircle: { backgroundColor: c.primary },
+    dayNum: { fontSize: 13, fontWeight: '400' },
+    dayTodayNum: { fontWeight: '700' },
+    dayDots: { flexDirection: 'row', gap: 2, marginTop: 1, minHeight: 5 },
+    dayDot: { width: 4, height: 4, borderRadius: 2 },
 
-  weekStripContainer: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-  },
-  weekArrow: { paddingHorizontal: 8 },
-  weekDaysScroll: { paddingHorizontal: 4, gap: 2 },
-  dayPill: { alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2, minWidth: 38 },
-  dayPillLabel: { fontSize: 10, fontWeight: '700', color: '#aaa', marginBottom: 2 },
-  dayPillCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  dayPillSelected: { backgroundColor: '#534AB7' },
-  dayPillToday: { backgroundColor: '#534AB714' },
-  dayPillNum: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
-  dayPillDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#534AB7', marginTop: 2 },
-  dayPillDotEmpty: { width: 4, height: 4, marginTop: 2 },
+    weekStripContainer: {
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: c.surface, paddingVertical: 10,
+      borderBottomWidth: 1, borderBottomColor: c.primarySurface,
+    },
+    weekArrow: { paddingHorizontal: 8 },
+    weekDaysScroll: { paddingHorizontal: 4, gap: 2 },
+    dayPill: { alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2, minWidth: 38 },
+    dayPillLabel: { fontSize: 10, fontWeight: '700', color: c.textTertiary, marginBottom: 2 },
+    dayPillCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+    dayPillSelected: { backgroundColor: c.primary },
+    dayPillToday: { backgroundColor: c.primaryAlpha08 },
+    dayPillNum: { fontSize: 14, fontWeight: '600', color: c.text },
+    dayPillDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: c.primary, marginTop: 2 },
+    dayPillDotEmpty: { width: 4, height: 4, marginTop: 2 },
 
-  schedTile: {
-    backgroundColor: '#fff', borderRadius: 12, borderWidth: 1.5,
-    padding: 12, ...shadow.xs,
-  },
-  schedTileTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  schedTileLeft: { flex: 1 },
-  schedTileAction: { justifyContent: 'center' },
-  schedTileTitleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
-  schedTileTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
-  schedTileMeta: { gap: 1, marginBottom: 4 },
-  catBadge: { borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 },
-  catBadgeText: { fontSize: 9, fontWeight: '700' },
-  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
-  tileBtn: {
-    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7,
-    minWidth: 80, alignItems: 'center',
-  },
-  tileBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  tileBtnOutline: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#e67e22' },
-  tileBtnSecondary: { backgroundColor: '#f0f0f0' },
-  absenceLink: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f5f5f5' },
-  absenceLinkText: { fontSize: 12, color: '#e74c3c', fontWeight: '600' },
-})
+    schedTile: {
+      backgroundColor: c.surface, borderRadius: 12, borderWidth: 1.5,
+      padding: 12, ...shadow.xs,
+    },
+    schedTileTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+    schedTileLeft: { flex: 1 },
+    schedTileAction: { justifyContent: 'center' },
+    schedTileTitleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
+    schedTileTitle: { fontSize: 14, fontWeight: '700', color: c.text },
+    schedTileMeta: { gap: 1, marginBottom: 4 },
+    catBadge: { borderRadius: 5, paddingHorizontal: 6, paddingVertical: 2 },
+    catBadgeText: { fontSize: 9, fontWeight: '700' },
+    badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
+    tileBtn: {
+      borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7,
+      minWidth: 80, alignItems: 'center',
+    },
+    tileBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+    tileBtnOutline: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#EA580C' },
+    tileBtnSecondary: { backgroundColor: c.primarySurface },
+    absenceLink: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.bg },
+    absenceLinkText: { fontSize: 12, color: c.danger, fontWeight: '600' },
+
+    qrScannerContainer: { flex: 1, backgroundColor: '#000' },
+    qrCamera: { flex: 1 },
+    qrScannerOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
+    qrScannerFrame: { width: 240, height: 240, borderWidth: 2, borderColor: '#fff', borderRadius: 12 },
+    qrScannerHint: { color: '#fff', marginTop: 20, fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
+    qrScannerClose: { position: 'absolute', top: 52, right: 20 },
+  })
+}

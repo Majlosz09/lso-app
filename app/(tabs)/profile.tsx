@@ -85,7 +85,7 @@ function AvatarCard() {
         {displayUrl
           ? <Image source={{ uri: displayUrl }} style={styles.avatarImage} />
           : <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={40} color="#534AB7" />
+              <Ionicons name="person" size={40} color="#1A237E" />
             </View>
         }
         <View style={styles.avatarEditBadge}>
@@ -107,7 +107,7 @@ function AvatarCard() {
 // ─── Member Profile ───────────────────────────────────────────────────────────
 
 function MemberProfile() {
-  const { profile, session, signOut } = useAuthStore()
+  const { profile, session, signOut, parish } = useAuthStore()
   const [summary, setSummary] = useState<{ total_points: number; services_count: number } | null>(null)
   const [rank, setRank] = useState<number>(0)
   const [rankName, setRankName] = useState<string | null>(null)
@@ -118,7 +118,7 @@ function MemberProfile() {
     if (!profile?.id) return
     const queries: PromiseLike<any>[] = [
       supabase.from('points_summary').select('total_points, services_count').eq('profile_id', profile.id).maybeSingle(),
-      supabase.from('points_summary').select('profile_id').order('total_points', { ascending: false }),
+      supabase.from('points_summary').select('profile_id').eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
     ]
     if (profile.rank_id) {
       queries.push(supabase.from('ranks').select('name').eq('id', profile.rank_id).single())
@@ -150,12 +150,12 @@ function MemberProfile() {
       <AvatarCard />
 
       {loading ? (
-        <ActivityIndicator color="#534AB7" style={{ marginVertical: 8 }} />
+        <ActivityIndicator color="#1A237E" style={{ marginVertical: 8 }} />
       ) : (
         <View style={styles.statsRow}>
-          <StatCard icon="trophy" iconColor="#f0a500" value={summary?.total_points ?? 0} label="Punkty" />
-          <StatCard icon="checkmark-circle" iconColor="#27ae60" value={summary?.services_count ?? 0} label="Służby" />
-          {rank > 0 && <StatCard icon="podium" iconColor="#534AB7" value={`#${rank}`} label="Ranking" />}
+          <StatCard icon="trophy" iconColor="#FFC107" value={summary?.total_points ?? 0} label="Punkty" />
+          <StatCard icon="checkmark-circle" iconColor="#16A34A" value={summary?.services_count ?? 0} label="Służby" />
+          {rank > 0 && <StatCard icon="podium" iconColor="#1A237E" value={`#${rank}`} label="Ranking" />}
         </View>
       )}
 
@@ -164,7 +164,8 @@ function MemberProfile() {
         <InfoRow icon="mail-outline" label="Email" value={session?.user.email ?? '—'} />
         <InfoRow icon="call-outline" label="Telefon" value={profile?.phone ?? 'Nie podano'} />
         <InfoRow icon="calendar-outline" label="Rocznik" value={profile?.rocznik ? String(profile.rocznik) : 'Nie podano'} />
-        <InfoRow icon="ribbon-outline" label="Ranga" value={rankName ?? 'Brak rangi'} last />
+        <InfoRow icon="ribbon-outline" label="Ranga" value={rankName ?? 'Brak rangi'} />
+        <InfoRow icon="business-outline" label="Parafia" value={parish ? `${parish.name}${parish.city ? `, ${parish.city}` : ''}` : '—'} last />
       </InfoSection>
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={true} />
@@ -176,7 +177,7 @@ function MemberProfile() {
 // ─── Admin Profile ────────────────────────────────────────────────────────────
 
 function AdminProfile() {
-  const { profile, session, signOut } = useAuthStore()
+  const { profile, session, signOut, parish } = useAuthStore()
   const [stats, setStats] = useState({ members: 0, upcoming: 0 })
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -184,8 +185,8 @@ function AdminProfile() {
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0]
     Promise.all([
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'member').eq('is_active', true),
-      supabase.from('schedules').select('id', { count: 'exact', head: true }).gte('date', today),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('parish_id', profile?.parish_id).eq('role', 'member').eq('is_active', true),
+      supabase.from('schedules').select('id', { count: 'exact', head: true }).eq('parish_id', profile?.parish_id).gte('date', today),
     ]).then(([membersRes, schedulesRes]) => {
       setStats({ members: membersRes.count ?? 0, upcoming: schedulesRes.count ?? 0 })
       setLoading(false)
@@ -208,18 +209,19 @@ function AdminProfile() {
       <AvatarCard />
 
       {loading ? (
-        <ActivityIndicator color="#534AB7" style={{ marginVertical: 8 }} />
+        <ActivityIndicator color="#1A237E" style={{ marginVertical: 8 }} />
       ) : (
         <View style={styles.statsRow}>
-          <StatCard icon="people" iconColor="#534AB7" value={stats.members} label="Ministranci parafii" />
-          <StatCard icon="calendar" iconColor="#27ae60" value={stats.upcoming} label="Nadchodzące służby" />
+          <StatCard icon="people" iconColor="#1A237E" value={stats.members} label="Ministranci parafii" />
+          <StatCard icon="calendar" iconColor="#16A34A" value={stats.upcoming} label="Nadchodzące służby" />
         </View>
       )}
 
       <InfoSection title="Informacje" onEdit={() => setEditing(true)}>
         <InfoRow icon="person-outline" label="Imię i nazwisko" value={profile?.full_name ?? '—'} />
         <InfoRow icon="mail-outline" label="Email" value={session?.user.email ?? '—'} />
-        <InfoRow icon="call-outline" label="Telefon" value={profile?.phone ?? 'Nie podano'} last />
+        <InfoRow icon="call-outline" label="Telefon" value={profile?.phone ?? 'Nie podano'} />
+        <InfoRow icon="business-outline" label="Parafia" value={parish ? `${parish.name}${parish.city ? `, ${parish.city}` : ''}` : '—'} last />
       </InfoSection>
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
@@ -233,7 +235,7 @@ function AdminProfile() {
 type Child = { id: string; full_name: string; services_count: number }
 
 function ParentProfile() {
-  const { profile, session, signOut } = useAuthStore()
+  const { profile, session, signOut, parish } = useAuthStore()
   const [children, setChildren] = useState<Child[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -274,21 +276,21 @@ function ParentProfile() {
 
       <InfoSection title="Powiązane dzieci">
         {loading ? (
-          <ActivityIndicator color="#534AB7" style={{ margin: 16 }} />
+          <ActivityIndicator color="#1A237E" style={{ margin: 16 }} />
         ) : children.length === 0 ? (
           <View style={styles.emptyChildren}>
-            <Ionicons name="people-outline" size={32} color="#ccc" />
+            <Ionicons name="people-outline" size={32} color="#D1D5DB" />
             <Text style={styles.emptyChildrenText}>Brak powiązanych kont dzieci</Text>
           </View>
         ) : (
           children.map((child, i) => (
             <View key={child.id} style={[styles.childRow, i < children.length - 1 && styles.childRowBorder]}>
               <View style={styles.childAvatar}>
-                <Ionicons name="person" size={16} color="#534AB7" />
+                <Ionicons name="person" size={16} color="#1A237E" />
               </View>
               <Text style={styles.childName}>{child.full_name}</Text>
               <View style={styles.childBadge}>
-                <Ionicons name="checkmark-circle-outline" size={13} color="#27ae60" />
+                <Ionicons name="checkmark-circle-outline" size={13} color="#16A34A" />
                 <Text style={styles.childBadgeText}>{child.services_count} służb</Text>
               </View>
             </View>
@@ -299,7 +301,8 @@ function ParentProfile() {
       <InfoSection title="Informacje" onEdit={() => setEditing(true)}>
         <InfoRow icon="person-outline" label="Imię i nazwisko" value={profile?.full_name ?? '—'} />
         <InfoRow icon="mail-outline" label="Email" value={session?.user.email ?? '—'} />
-        <InfoRow icon="call-outline" label="Telefon" value={profile?.phone ?? 'Nie podano'} last />
+        <InfoRow icon="call-outline" label="Telefon" value={profile?.phone ?? 'Nie podano'} />
+        <InfoRow icon="business-outline" label="Parafia" value={parish ? `${parish.name}${parish.city ? `, ${parish.city}` : ''}` : '—'} last />
       </InfoSection>
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
@@ -445,7 +448,7 @@ function InfoSection({ title, children, onEdit }: { title: string; children: Rea
 function InfoRow({ icon, label, value, last }: { icon: any; label: string; value: string; last?: boolean }) {
   return (
     <View style={[styles.infoRow, !last && styles.infoRowBorder]}>
-      <Ionicons name={icon} size={16} color="#888" style={{ width: 20 }} />
+      <Ionicons name={icon} size={16} color="#6B7280" style={{ width: 20 }} />
       <View style={styles.infoContent}>
         <Text style={styles.infoLabel}>{label}</Text>
         <Text style={styles.infoValue}>{value}</Text>
@@ -457,7 +460,7 @@ function InfoRow({ icon, label, value, last }: { icon: any; label: string; value
 function SignOutButton({ onPress }: { onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.signOutButton} onPress={onPress}>
-      <Ionicons name="log-out-outline" size={20} color="#e74c3c" />
+      <Ionicons name="log-out-outline" size={20} color="#DC2626" />
       <Text style={styles.signOutText}>Wyloguj się</Text>
     </TouchableOpacity>
   )
@@ -466,7 +469,7 @@ function SignOutButton({ onPress }: { onPress: () => void }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   content: { padding: 16, gap: 16 },
 
   avatarCard: {
@@ -478,21 +481,21 @@ const styles = StyleSheet.create({
   avatarImage: { width: 80, height: 80, borderRadius: 40 },
   avatarPlaceholder: {
     width: 80, height: 80, borderRadius: 40,
-    backgroundColor: '#534AB711', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#1A237E11', justifyContent: 'center', alignItems: 'center',
   },
   avatarEditBadge: {
     position: 'absolute', bottom: 0, right: 0,
     width: 26, height: 26, borderRadius: 13,
-    backgroundColor: '#534AB7', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#1A237E', justifyContent: 'center', alignItems: 'center',
     borderWidth: 2, borderColor: '#fff',
   },
-  name: { fontSize: 20, fontWeight: '700', color: '#1a1a1a' },
+  name: { fontSize: 20, fontWeight: '700', color: '#0D1B2A' },
   roleBadge: {
-    backgroundColor: '#534AB722', borderRadius: 12,
+    backgroundColor: '#1A237E22', borderRadius: 12,
     paddingHorizontal: 12, paddingVertical: 4,
   },
-  roleText: { fontSize: 13, color: '#534AB7', fontWeight: '600' },
-  email: { fontSize: 13, color: '#aaa' },
+  roleText: { fontSize: 13, color: '#1A237E', fontWeight: '600' },
+  email: { fontSize: 13, color: '#9CA3AF' },
 
   statsRow: { flexDirection: 'row', gap: 12 },
   statCard: {
@@ -500,12 +503,12 @@ const styles = StyleSheet.create({
     alignItems: 'center', gap: 4,
     ...shadow.xs,
   },
-  statNumber: { fontSize: 22, fontWeight: '700', color: '#1a1a1a' },
-  statLabel: { fontSize: 11, color: '#888', textAlign: 'center' },
+  statNumber: { fontSize: 22, fontWeight: '700', color: '#0D1B2A' },
+  statLabel: { fontSize: 11, color: '#6B7280', textAlign: 'center' },
 
   section: { gap: 8 },
   sectionTitle: {
-    fontSize: 13, fontWeight: '600', color: '#888',
+    fontSize: 13, fontWeight: '600', color: '#6B7280',
     textTransform: 'uppercase', letterSpacing: 0.5,
   },
   infoCard: {
@@ -513,34 +516,34 @@ const styles = StyleSheet.create({
     ...shadow.xs,
   },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  infoRowBorder: { borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  infoRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F0F0FF' },
   infoContent: { flex: 1 },
-  infoLabel: { fontSize: 12, color: '#aaa' },
-  infoValue: { fontSize: 15, color: '#1a1a1a', marginTop: 1 },
+  infoLabel: { fontSize: 12, color: '#9CA3AF' },
+  infoValue: { fontSize: 15, color: '#0D1B2A', marginTop: 1 },
 
   childRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  childRowBorder: { borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  childRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F0F0FF' },
   childAvatar: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: '#534AB711', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#1A237E11', justifyContent: 'center', alignItems: 'center',
   },
-  childName: { flex: 1, fontSize: 15, fontWeight: '500', color: '#1a1a1a' },
+  childName: { flex: 1, fontSize: 15, fontWeight: '500', color: '#0D1B2A' },
   childBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  childBadgeText: { fontSize: 13, color: '#27ae60', fontWeight: '500' },
+  childBadgeText: { fontSize: 13, color: '#16A34A', fontWeight: '500' },
 
   emptyChildren: { alignItems: 'center', padding: 24, gap: 8 },
-  emptyChildrenText: { fontSize: 14, color: '#aaa', textAlign: 'center' },
+  emptyChildrenText: { fontSize: 14, color: '#9CA3AF', textAlign: 'center' },
 
   signOutButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: '#fff', borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: '#e74c3c22',
+    borderWidth: 1, borderColor: '#DC262622',
     ...shadow.xs,
   },
-  signOutText: { fontSize: 15, fontWeight: '600', color: '#e74c3c' },
+  signOutText: { fontSize: 15, fontWeight: '600', color: '#DC2626' },
 
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  editLink: { fontSize: 13, fontWeight: '600', color: '#534AB7' },
+  editLink: { fontSize: 13, fontWeight: '600', color: '#1A237E' },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   editSheet: {
@@ -548,21 +551,21 @@ const styles = StyleSheet.create({
     padding: 24, gap: 12,
   },
   editSheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  editSheetTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
+  editSheetTitle: { fontSize: 18, fontWeight: '700', color: '#0D1B2A' },
   editNameRow: { flexDirection: 'row', gap: 10 },
   editInput: {
-    backgroundColor: '#f5f5f5', borderRadius: 10, padding: 13,
-    fontSize: 15, color: '#1a1a1a', borderWidth: 1, borderColor: '#e8e8e8',
+    backgroundColor: '#F8F9FA', borderRadius: 10, padding: 13,
+    fontSize: 15, color: '#0D1B2A', borderWidth: 1, borderColor: '#E5E7EB',
   },
   editActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   editCancelBtn: {
     flex: 1, padding: 14, borderRadius: 10,
-    backgroundColor: '#f0f0f0', alignItems: 'center',
+    backgroundColor: '#F0F0FF', alignItems: 'center',
   },
-  editCancelText: { fontSize: 15, fontWeight: '600', color: '#666' },
+  editCancelText: { fontSize: 15, fontWeight: '600', color: '#6B7280' },
   editSaveBtn: {
     flex: 1, padding: 14, borderRadius: 10,
-    backgroundColor: '#534AB7', alignItems: 'center',
+    backgroundColor: '#1A237E', alignItems: 'center',
   },
   editSaveText: { fontSize: 15, fontWeight: '600', color: '#fff' },
 })

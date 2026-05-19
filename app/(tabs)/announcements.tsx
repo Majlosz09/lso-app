@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, FlatList, StyleSheet, RefreshControl,
   ActivityIndicator, TouchableOpacity, Modal, TextInput,
@@ -10,6 +10,8 @@ import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { Announcement } from '../../types/database'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
+import { useTheme } from '../../lib/ThemeContext'
+import { Colors } from '../../lib/theme'
 
 export default function AnnouncementsScreen() {
   const { profile } = useAuthStore()
@@ -25,10 +27,14 @@ export default function AnnouncementsScreen() {
   const [isPinned, setIsPinned] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
+
   const fetchAnnouncements = async () => {
     let query = supabase
       .from('announcements')
       .select('*, author:profiles(full_name)')
+      .eq('parish_id', profile?.parish_id)
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -85,7 +91,8 @@ export default function AnnouncementsScreen() {
         {
           text: 'Usuń', style: 'destructive',
           onPress: async () => {
-            await supabase.from('announcements').delete().eq('id', item.id)
+            const { error } = await supabase.from('announcements').delete().eq('id', item.id)
+            if (error) { Alert.alert('Błąd', error.message); return }
             fetchAnnouncements()
           },
         },
@@ -94,7 +101,7 @@ export default function AnnouncementsScreen() {
   }
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
+    return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
   }
 
   return (
@@ -105,7 +112,7 @@ export default function AnnouncementsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="megaphone-outline" size={48} color="#ccc" />
+            <Ionicons name="megaphone-outline" size={48} color={c.iconMuted} />
             <Text style={styles.emptyText}>Brak ogłoszeń</Text>
           </View>
         }
@@ -114,6 +121,8 @@ export default function AnnouncementsScreen() {
             item={item}
             isAdmin={isAdmin}
             onDelete={() => handleDelete(item)}
+            styles={styles}
+            colors={c}
           />
         )}
         contentContainerStyle={{ padding: 16, gap: 12 }}
@@ -137,7 +146,7 @@ export default function AnnouncementsScreen() {
             <Text style={styles.modalTitle}>Nowe ogłoszenie</Text>
             <TouchableOpacity onPress={handleCreate} disabled={submitting}>
               {submitting
-                ? <ActivityIndicator color="#534AB7" />
+                ? <ActivityIndicator color={c.primary} />
                 : <Text style={styles.modalSave}>Dodaj</Text>
               }
             </TouchableOpacity>
@@ -170,7 +179,7 @@ export default function AnnouncementsScreen() {
               <Switch
                 value={isPinned}
                 onValueChange={setIsPinned}
-                trackColor={{ true: '#534AB7' }}
+                trackColor={{ true: c.primary }}
               />
             </View>
           </ScrollView>
@@ -181,9 +190,9 @@ export default function AnnouncementsScreen() {
 }
 
 function AnnouncementCard({
-  item, isAdmin, onDelete
+  item, isAdmin, onDelete, styles, colors: c
 }: {
-  item: Announcement; isAdmin: boolean; onDelete: () => void
+  item: Announcement; isAdmin: boolean; onDelete: () => void; styles: any; colors: Colors
 }) {
   const [expanded, setExpanded] = useState(false)
   const isLong = item.content.length > 150
@@ -197,7 +206,7 @@ function AnnouncementCard({
       <View style={styles.cardHeader}>
         <View style={styles.cardTitleRow}>
           {item.is_pinned && (
-            <Ionicons name="pin" size={14} color="#534AB7" style={{ marginRight: 4 }} />
+            <Ionicons name="pin" size={14} color={c.primary} style={{ marginRight: 4 }} />
           )}
           <Text style={styles.cardTitle}>{item.title}</Text>
         </View>
@@ -217,7 +226,7 @@ function AnnouncementCard({
       )}
 
       <View style={styles.cardFooter}>
-        <Ionicons name="person-outline" size={12} color="#bbb" />
+        <Ionicons name="person-outline" size={12} color={c.textTertiary} />
         <Text style={styles.cardMeta}>{(item.author as any)?.full_name ?? 'Administrator'}</Text>
         <Text style={styles.cardDot}>·</Text>
         <Text style={styles.cardMeta}>
@@ -228,56 +237,58 @@ function AnnouncementCard({
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  empty: { alignItems: 'center', marginTop: 80, gap: 12 },
-  emptyText: { color: '#aaa', fontSize: 16 },
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    empty: { alignItems: 'center', marginTop: 80, gap: 12 },
+    emptyText: { color: c.textTertiary, fontSize: 16 },
 
-  card: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 16, gap: 8,
-    ...shadow.md,
-  },
-  cardPinned: {
-    borderLeftWidth: 3, borderLeftColor: '#534AB7',
-  },
-  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
-  cardTitleRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', flex: 1 },
-  cardContent: { fontSize: 14, color: '#444', lineHeight: 21 },
-  expandText: { fontSize: 13, color: '#534AB7', fontWeight: '500' },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  cardMeta: { fontSize: 12, color: '#bbb' },
-  cardDot: { color: '#ddd', fontSize: 12 },
+    card: {
+      backgroundColor: c.surface, borderRadius: 12, padding: 16, gap: 8,
+      ...shadow.md,
+    },
+    cardPinned: {
+      borderLeftWidth: 3, borderLeftColor: c.primary,
+    },
+    cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
+    cardTitleRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    cardTitle: { fontSize: 15, fontWeight: '700', color: c.text, flex: 1 },
+    cardContent: { fontSize: 14, color: c.subtext, lineHeight: 21 },
+    expandText: { fontSize: 13, color: c.primary, fontWeight: '500' },
+    cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+    cardMeta: { fontSize: 12, color: c.textTertiary },
+    cardDot: { color: c.border, fontSize: 12 },
 
-  fab: {
-    position: 'absolute', right: 20, bottom: 20,
-    width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#534AB7', justifyContent: 'center', alignItems: 'center',
-    ...shadow.brand,
-  },
+    fab: {
+      position: 'absolute', right: 20, bottom: 20,
+      width: 56, height: 56, borderRadius: 28,
+      backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center',
+      ...shadow.brand,
+    },
 
-  modalHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
-  },
-  modalTitle: { fontSize: 16, fontWeight: '600', color: '#1a1a1a' },
-  modalCancel: { fontSize: 15, color: '#888' },
-  modalSave: { fontSize: 15, color: '#534AB7', fontWeight: '600' },
-  modalBody: { flex: 1, backgroundColor: '#f5f5f5', padding: 16 },
+    modalHeader: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      padding: 16, borderBottomWidth: 1, borderBottomColor: c.primarySurface,
+      backgroundColor: c.surface,
+    },
+    modalTitle: { fontSize: 16, fontWeight: '600', color: c.text },
+    modalCancel: { fontSize: 15, color: c.subtext },
+    modalSave: { fontSize: 15, color: c.primary, fontWeight: '600' },
+    modalBody: { flex: 1, backgroundColor: c.bg, padding: 16 },
 
-  label: { fontSize: 13, fontWeight: '600', color: '#555', marginBottom: 4, marginTop: 12 },
-  input: {
-    backgroundColor: '#fff', borderRadius: 10, padding: 13,
-    fontSize: 15, color: '#1a1a1a', borderWidth: 1, borderColor: '#e8e8e8',
-  },
-  inputMultiline: { minHeight: 120, textAlignVertical: 'top' },
+    label: { fontSize: 13, fontWeight: '600', color: c.subtext, marginBottom: 4, marginTop: 12 },
+    input: {
+      backgroundColor: c.surface, borderRadius: 10, padding: 13,
+      fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
+    },
+    inputMultiline: { minHeight: 120, textAlignVertical: 'top' },
 
-  pinRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: 12, padding: 14, marginTop: 16,
-  },
-  pinLabel: { fontSize: 15, fontWeight: '500', color: '#1a1a1a' },
-  pinSub: { fontSize: 12, color: '#aaa', marginTop: 2 },
-})
+    pinRow: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      backgroundColor: c.surface, borderRadius: 12, padding: 14, marginTop: 16,
+    },
+    pinLabel: { fontSize: 15, fontWeight: '500', color: c.text },
+    pinSub: { fontSize: 12, color: c.textTertiary, marginTop: 2 },
+  })
+}
