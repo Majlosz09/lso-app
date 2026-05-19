@@ -1,15 +1,39 @@
 import { useEffect } from 'react'
+import { Platform } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import * as Notifications from 'expo-notifications'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
+import { ThemeProvider } from '../lib/ThemeContext'
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+})
+
+if (Platform.OS === 'web') {
+  const originalWarn = console.warn
+  console.warn = (...args) => {
+    const msg = args[0]?.toString() ?? ''
+    if (msg.includes('pointerEvents') || msg.includes('tintColor')) return
+    originalWarn(...args)
+  }
+}
 
 const queryClient = new QueryClient()
 
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthGate />
+      <ThemeProvider>
+        <AuthGate />
+      </ThemeProvider>
     </QueryClientProvider>
   )
 }
