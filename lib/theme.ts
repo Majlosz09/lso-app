@@ -56,4 +56,4 @@ export const darkColors: Record<keyof typeof lightColors, string> = {
   iconMuted:        '#4B5563',
 }
 
-export type Colors = typeof lightColors
+export type Colors = Record<keyof typeof lightColors, string>
