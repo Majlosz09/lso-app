@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
   Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
@@ -10,13 +10,15 @@ import { supabase } from '../../../lib/supabase'
 import { useAuthStore } from '../../../stores/authStore'
 import { Announcement, Rank } from '../../../types/database'
 import { shadow } from '../../../lib/shadows'
+import { useTheme } from '../../../lib/ThemeContext'
+import { Colors } from '../../../lib/theme'
 
 type AudienceOption = { key: string; label: string; color: string }
 
 const FIXED_AUDIENCES: AudienceOption[] = [
-  { key: 'all', label: 'Wszyscy', color: '#534AB7' },
-  { key: 'members', label: 'Wszyscy ministranci', color: '#2980b9' },
-  { key: 'parents', label: 'Wszyscy rodzice', color: '#27ae60' },
+  { key: 'all', label: 'Wszyscy', color: '#1A237E' },
+  { key: 'members', label: 'Wszyscy ministranci', color: '#2563EB' },
+  { key: 'parents', label: 'Wszyscy rodzice', color: '#16A34A' },
 ]
 
 export default function AnnouncementsTab() {
@@ -33,10 +35,14 @@ export default function AnnouncementsTab() {
   const [ranks, setRanks] = useState<Rank[]>([])
   const [submitting, setSubmitting] = useState(false)
 
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
+
   const fetchAnnouncements = async () => {
     const { data, error } = await supabase
       .from('announcements')
       .select('*, author:profiles(full_name)')
+      .eq('parish_id', profile?.parish_id)
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
 
@@ -100,7 +106,7 @@ export default function AnnouncementsTab() {
       </TouchableOpacity>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
+        <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
       ) : (
         <FlatList
           data={announcements}
@@ -108,7 +114,7 @@ export default function AnnouncementsTab() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="megaphone-outline" size={48} color="#ccc" />
+              <Ionicons name="megaphone-outline" size={48} color={c.iconMuted} />
               <Text style={styles.emptyText}>Brak ogłoszeń</Text>
             </View>
           }
@@ -123,7 +129,7 @@ export default function AnnouncementsTab() {
                 <View style={styles.cardHeaderLeft}>
                   {item.is_pinned && (
                     <View style={styles.pinnedBadge}>
-                      <Ionicons name="pin" size={10} color="#534AB7" />
+                      <Ionicons name="pin" size={10} color={c.primary} />
                       <Text style={styles.pinnedText}>Przypięte</Text>
                     </View>
                   )}
@@ -131,10 +137,10 @@ export default function AnnouncementsTab() {
                     <Text style={styles.cardTitle}>{item.title}</Text>
                     {item.target_audience !== 'all' && (
                       <View style={[styles.audienceBadge, {
-                        backgroundColor: (fixedAud?.color ?? '#888') + '22',
+                        backgroundColor: (fixedAud?.color ?? c.subtext) + '22',
                       }]}>
                         <Text style={[styles.audienceBadgeText, {
-                          color: fixedAud?.color ?? '#888',
+                          color: fixedAud?.color ?? c.subtext,
                         }]}>
                           {fixedAud?.label ?? rankAud?.name ?? item.target_audience}
                         </Text>
@@ -143,7 +149,7 @@ export default function AnnouncementsTab() {
                   </View>
                 </View>
                 <TouchableOpacity onPress={() => handleDelete(item.id, item.title)} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+                  <Ionicons name="trash-outline" size={18} color={c.danger} />
                 </TouchableOpacity>
               </View>
               <Text style={styles.cardContent}>{item.content}</Text>
@@ -171,7 +177,7 @@ export default function AnnouncementsTab() {
         >
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => { setModalVisible(false); setTitle(''); setContent(''); setPinned(false) }}>
-              <Ionicons name="close" size={24} color="#1a1a1a" />
+              <Ionicons name="close" size={24} color={c.text} />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>Nowe ogłoszenie</Text>
             <TouchableOpacity
@@ -195,7 +201,7 @@ export default function AnnouncementsTab() {
             <TextInput
               style={styles.textInput}
               placeholder="Tytuł ogłoszenia"
-              placeholderTextColor="#aaa"
+              placeholderTextColor={c.textTertiary}
               value={title}
               onChangeText={setTitle}
             />
@@ -204,7 +210,7 @@ export default function AnnouncementsTab() {
             <TextInput
               style={[styles.textInput, styles.textArea]}
               placeholder="Treść ogłoszenia..."
-              placeholderTextColor="#aaa"
+              placeholderTextColor={c.textTertiary}
               value={content}
               onChangeText={setContent}
               multiline
@@ -215,7 +221,7 @@ export default function AnnouncementsTab() {
             <Text style={styles.inputLabel}>Odbiorcy</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
               <View style={styles.audienceRow}>
-                {[...FIXED_AUDIENCES, ...ranks.map(r => ({ key: r.id, label: r.name, color: '#888' }))].map(opt => (
+                {[...FIXED_AUDIENCES, ...ranks.map(r => ({ key: r.id, label: r.name, color: c.subtext }))].map(opt => (
                   <TouchableOpacity
                     key={opt.key}
                     style={[styles.audienceChip, audience === opt.key && { borderColor: opt.color, backgroundColor: opt.color + '18' }]}
@@ -236,7 +242,7 @@ export default function AnnouncementsTab() {
               <Ionicons
                 name={pinned ? 'checkbox' : 'square-outline'}
                 size={22}
-                color="#534AB7"
+                color={c.primary}
               />
               <Text style={styles.pinnedToggleText}>Przypiąć ogłoszenie na górze</Text>
             </TouchableOpacity>
@@ -247,74 +253,76 @@ export default function AnnouncementsTab() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  addButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center',
-    backgroundColor: '#534AB7', margin: 16, marginBottom: 0,
-    borderRadius: 12, padding: 12,
-  },
-  addButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+    addButton: {
+      flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center',
+      backgroundColor: c.primary, margin: 16, marginBottom: 0,
+      borderRadius: 12, padding: 12,
+    },
+    addButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 
-  card: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 14, gap: 8,
-    ...shadow.xs,
-  },
-  cardPinned: { borderLeftWidth: 3, borderLeftColor: '#534AB7' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  cardHeaderLeft: { flex: 1, gap: 4, marginRight: 8 },
-  pinnedBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#534AB711', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
-    alignSelf: 'flex-start',
-  },
-  pinnedText: { fontSize: 10, fontWeight: '600', color: '#534AB7' },
-  titleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a' },
-  audienceBadge: { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-  audienceBadgeText: { fontSize: 10, fontWeight: '700' },
-  cardContent: { fontSize: 14, color: '#444', lineHeight: 20 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-  cardMeta: { fontSize: 12, color: '#aaa' },
+    card: {
+      backgroundColor: c.surface, borderRadius: 12, padding: 14, gap: 8,
+      ...shadow.xs,
+    },
+    cardPinned: { borderLeftWidth: 3, borderLeftColor: c.primary },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    cardHeaderLeft: { flex: 1, gap: 4, marginRight: 8 },
+    pinnedBadge: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      backgroundColor: c.primaryAlpha08, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
+      alignSelf: 'flex-start',
+    },
+    pinnedText: { fontSize: 10, fontWeight: '600', color: c.primary },
+    titleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+    cardTitle: { fontSize: 16, fontWeight: '700', color: c.text },
+    audienceBadge: { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+    audienceBadgeText: { fontSize: 10, fontWeight: '700' },
+    cardContent: { fontSize: 14, color: c.subtext, lineHeight: 20 },
+    cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
+    cardMeta: { fontSize: 12, color: c.textTertiary },
 
-  empty: { alignItems: 'center', marginTop: 60, gap: 12 },
-  emptyText: { color: '#aaa', fontSize: 15 },
+    empty: { alignItems: 'center', marginTop: 60, gap: 12 },
+    emptyText: { color: c.textTertiary, fontSize: 15 },
 
-  modalHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
-  },
-  modalTitle: { fontSize: 17, fontWeight: '600', color: '#1a1a1a' },
-  modalSave: {
-    backgroundColor: '#534AB7', borderRadius: 8,
-    paddingHorizontal: 14, paddingVertical: 7,
-  },
-  modalSaveText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+    modalHeader: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: c.primarySurface,
+      backgroundColor: c.surface,
+    },
+    modalTitle: { fontSize: 17, fontWeight: '600', color: c.text },
+    modalSave: {
+      backgroundColor: c.primary, borderRadius: 8,
+      paddingHorizontal: 14, paddingVertical: 7,
+    },
+    modalSaveText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 
-  modalBody: { flex: 1, backgroundColor: '#f5f5f5' },
-  modalContent: { padding: 16, gap: 6 },
+    modalBody: { flex: 1, backgroundColor: c.bg },
+    modalContent: { padding: 16, gap: 6 },
 
-  inputLabel: { fontSize: 13, fontWeight: '600', color: '#555', marginTop: 8 },
-  textInput: {
-    backgroundColor: '#fff', borderRadius: 10, padding: 13,
-    fontSize: 15, color: '#1a1a1a', borderWidth: 1, borderColor: '#e8e8e8',
-  },
-  textArea: { minHeight: 120, textAlignVertical: 'top' },
+    inputLabel: { fontSize: 13, fontWeight: '600', color: c.subtext, marginTop: 8 },
+    textInput: {
+      backgroundColor: c.surface, borderRadius: 10, padding: 13,
+      fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
+    },
+    textArea: { minHeight: 120, textAlignVertical: 'top' },
 
-  pinnedToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingVertical: 12, marginTop: 4,
-  },
-  pinnedToggleText: { fontSize: 15, color: '#1a1a1a' },
+    pinnedToggle: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      paddingVertical: 12, marginTop: 4,
+    },
+    pinnedToggleText: { fontSize: 15, color: c.text },
 
-  audienceRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
-  audienceChip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    borderWidth: 1, borderColor: '#ddd', backgroundColor: '#f9f9f9',
-  },
-  audienceChipText: { fontSize: 13, color: '#888', fontWeight: '500' },
-})
+    audienceRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
+    audienceChip: {
+      paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+      borderWidth: 1, borderColor: c.border, backgroundColor: c.surface,
+    },
+    audienceChipText: { fontSize: 13, color: c.subtext, fontWeight: '500' },
+  })
+}

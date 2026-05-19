@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../../lib/supabase'
 import { useAuthStore } from '../../../stores/authStore'
 import { shadow } from '../../../lib/shadows'
+import { useTheme } from '../../../lib/ThemeContext'
+import { Colors } from '../../../lib/theme'
 
 type Member = {
   id: string
@@ -22,11 +24,14 @@ type Filter = 'member' | 'parent'
 
 export default function MembersTab() {
   const router = useRouter()
-  const { parish } = useAuthStore()
+  const { parish, profile: adminProfile } = useAuthStore()
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('member')
+
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -34,10 +39,11 @@ export default function MembersTab() {
         supabase
           .from('profiles')
           .select('id, full_name, role, phone, rocznik')
+          .eq('parish_id', adminProfile!.parish_id)
           .in('role', ['member', 'parent'])
           .eq('is_active', true)
           .order('full_name'),
-        supabase.from('points_summary').select('profile_id, total_points'),
+        supabase.from('points_summary').select('profile_id, total_points').eq('parish_id', adminProfile!.parish_id),
       ])
 
       const pointsMap: Record<string, number> = {}
@@ -67,17 +73,17 @@ export default function MembersTab() {
     <View style={styles.container}>
       <View style={styles.topBar}>
         <View style={styles.searchBox}>
-          <Ionicons name="search-outline" size={16} color="#aaa" />
+          <Ionicons name="search-outline" size={16} color={c.textTertiary} />
           <TextInput
             style={styles.searchInput}
             placeholder="Szukaj po imieniu..."
-            placeholderTextColor="#aaa"
+            placeholderTextColor={c.textTertiary}
             value={search}
             onChangeText={setSearch}
           />
           {search !== '' && (
             <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
-              <Ionicons name="close-circle" size={16} color="#ccc" />
+              <Ionicons name="close-circle" size={16} color={c.iconMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -97,14 +103,14 @@ export default function MembersTab() {
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
+        <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
       ) : (
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="people-outline" size={48} color="#ccc" />
+              <Ionicons name="people-outline" size={48} color={c.iconMuted} />
               <Text style={styles.emptyText}>
                 {search !== '' ? 'Brak wyników wyszukiwania' : 'Brak użytkowników'}
               </Text>
@@ -131,7 +137,7 @@ export default function MembersTab() {
               activeOpacity={0.75}
             >
               <View style={styles.avatar}>
-                <Ionicons name="person" size={18} color="#534AB7" />
+                <Ionicons name="person" size={18} color={c.primary} />
               </View>
               <View style={styles.rowInfo}>
                 <Text style={styles.name}>{item.full_name}</Text>
@@ -142,11 +148,11 @@ export default function MembersTab() {
               </View>
               {item.role === 'member' && (
                 <View style={styles.pointsBadge}>
-                  <Ionicons name="trophy-outline" size={12} color="#f0a500" />
+                  <Ionicons name="trophy-outline" size={12} color={c.gold} />
                   <Text style={styles.pointsText}>{item.total_points ?? 0}</Text>
                 </View>
               )}
-              <Ionicons name="chevron-forward" size={16} color="#ddd" />
+              <Ionicons name="chevron-forward" size={16} color={c.border} />
             </TouchableOpacity>
           )}
           contentContainerStyle={{ padding: 16, gap: 8 }}
@@ -156,47 +162,49 @@ export default function MembersTab() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  topBar: {
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12,
-    paddingBottom: 10, gap: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-  },
-  searchBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#f5f5f5', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9,
-  },
-  searchInput: { flex: 1, fontSize: 15, color: '#1a1a1a' },
-  chipRow: { flexDirection: 'row', gap: 8 },
-  chip: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, backgroundColor: '#f0f0f0' },
-  chipActive: { backgroundColor: '#534AB7' },
-  chipText: { fontSize: 13, fontWeight: '600', color: '#666' },
-  chipTextActive: { color: '#fff' },
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', borderRadius: 12, padding: 12,
-    ...shadow.xs,
-  },
-  avatar: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: '#534AB711', justifyContent: 'center', alignItems: 'center',
-  },
-  rowInfo: { flex: 1 },
-  name: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
-  sub: { fontSize: 12, color: '#888', marginTop: 2 },
-  pointsBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#f0a50018', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3,
-  },
-  pointsText: { fontSize: 12, fontWeight: '700', color: '#f0a500' },
-  empty: { alignItems: 'center', marginTop: 60, gap: 12, paddingHorizontal: 32 },
-  emptyText: { color: '#aaa', fontSize: 15 },
-  emptyHint: { fontSize: 13, color: '#aaa', textAlign: 'center' },
-  emptyCode: { fontWeight: '700', color: '#534AB7' },
-  emptyBtn: {
-    marginTop: 4, paddingHorizontal: 20, paddingVertical: 10,
-    backgroundColor: '#534AB711', borderRadius: 10, borderWidth: 1, borderColor: '#534AB733',
-  },
-  emptyBtnText: { fontSize: 14, color: '#534AB7', fontWeight: '600' },
-})
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    topBar: {
+      backgroundColor: c.surface, paddingHorizontal: 16, paddingTop: 12,
+      paddingBottom: 10, gap: 10, borderBottomWidth: 1, borderBottomColor: c.primarySurface,
+    },
+    searchBox: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: c.bg, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9,
+    },
+    searchInput: { flex: 1, fontSize: 15, color: c.text },
+    chipRow: { flexDirection: 'row', gap: 8 },
+    chip: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, backgroundColor: c.primarySurface },
+    chipActive: { backgroundColor: c.primary },
+    chipText: { fontSize: 13, fontWeight: '600', color: c.subtext },
+    chipTextActive: { color: '#fff' },
+    row: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      backgroundColor: c.surface, borderRadius: 12, padding: 12,
+      ...shadow.xs,
+    },
+    avatar: {
+      width: 38, height: 38, borderRadius: 19,
+      backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center',
+    },
+    rowInfo: { flex: 1 },
+    name: { fontSize: 15, fontWeight: '600', color: c.text },
+    sub: { fontSize: 12, color: c.subtext, marginTop: 2 },
+    pointsBadge: {
+      flexDirection: 'row', alignItems: 'center', gap: 3,
+      backgroundColor: c.gold + '15', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3,
+    },
+    pointsText: { fontSize: 12, fontWeight: '700', color: c.gold },
+    empty: { alignItems: 'center', marginTop: 60, gap: 12, paddingHorizontal: 32 },
+    emptyText: { color: c.textTertiary, fontSize: 15 },
+    emptyHint: { fontSize: 13, color: c.textTertiary, textAlign: 'center' },
+    emptyCode: { fontWeight: '700', color: c.primary },
+    emptyBtn: {
+      marginTop: 4, paddingHorizontal: 20, paddingVertical: 10,
+      backgroundColor: c.primaryAlpha08, borderRadius: 10, borderWidth: 1, borderColor: c.primaryAlpha20,
+    },
+    emptyBtnText: { fontSize: 14, color: c.primary, fontWeight: '600' },
+  })
+}

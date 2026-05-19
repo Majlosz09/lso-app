@@ -9,6 +9,8 @@ import { supabase } from '../../../lib/supabase'
 import { useAuthStore } from '../../../stores/authStore'
 import { MassTemplate, CATEGORY_CONFIG, ScheduleCategory } from '../../../types/database'
 import { shadow } from '../../../lib/shadows'
+import { useTheme } from '../../../lib/ThemeContext'
+import { Colors } from '../../../lib/theme'
 
 type AssignedProfile = { full_name: string }
 type Assignment = { profile: AssignedProfile | null }
@@ -63,6 +65,9 @@ export default function SchedulesTab() {
   const [loading, setLoading] = useState(true)
   const [creatingSlotKey, setCreatingSlotKey] = useState<string | null>(null)
 
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
+
   const { start, end, label } = useMemo(() => getWeekBounds(weekOffset), [weekOffset])
 
   useEffect(() => {
@@ -83,6 +88,7 @@ export default function SchedulesTab() {
     supabase
       .from('schedules')
       .select('id, title, date, time, category, schedule_assignments(profile:profiles(full_name))')
+      .eq('parish_id', profile?.parish_id)
       .gte('date', startStr)
       .lte('date', endStr)
       .order('date')
@@ -163,11 +169,11 @@ export default function SchedulesTab() {
     <View style={styles.container}>
       <View style={styles.weekNav}>
         <TouchableOpacity onPress={() => setWeekOffset(w => w - 1)} hitSlop={12}>
-          <Ionicons name="chevron-back" size={22} color="#534AB7" />
+          <Ionicons name="chevron-back" size={22} color={c.primary} />
         </TouchableOpacity>
         <Text style={styles.weekLabel}>{label}</Text>
         <TouchableOpacity onPress={() => setWeekOffset(w => w + 1)} hitSlop={12}>
-          <Ionicons name="chevron-forward" size={22} color="#534AB7" />
+          <Ionicons name="chevron-forward" size={22} color={c.primary} />
         </TouchableOpacity>
       </View>
 
@@ -176,25 +182,25 @@ export default function SchedulesTab() {
           style={[styles.addButton, { flex: 1 }]}
           onPress={() => router.push('/(admin)/schedule-form')}
         >
-          <Ionicons name="add" size={18} color="#534AB7" />
+          <Ionicons name="add" size={18} color={c.primary} />
           <Text style={styles.addButtonText}>Jednorazowa służba</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.addButton, { flex: 1 }]}
           onPress={() => router.push('/(admin)/schedule-series')}
         >
-          <Ionicons name="calendar-outline" size={18} color="#534AB7" />
+          <Ionicons name="calendar-outline" size={18} color={c.primary} />
           <Text style={styles.addButtonText}>Cykliczne służby</Text>
         </TouchableOpacity>
       </View>
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#534AB7" />
+          <ActivityIndicator size="large" color={c.primary} />
         </View>
       ) : grouped.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name="calendar-outline" size={52} color="#ccc" />
+          <Ionicons name="calendar-outline" size={52} color={c.iconMuted} />
           <Text style={styles.emptyText}>Brak służb w tym tygodniu</Text>
           <TouchableOpacity onPress={() => setWeekOffset(0)}>
             <Text style={styles.emptyLink}>Wróć do bieżącego tygodnia</Text>
@@ -243,7 +249,7 @@ export default function SchedulesTab() {
                         </View>
                         {isCreating
                           ? <ActivityIndicator size="small" color={cat.color} />
-                          : <Ionicons name="chevron-forward" size={16} color="#ccc" />
+                          : <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />
                         }
                       </View>
 
@@ -257,8 +263,8 @@ export default function SchedulesTab() {
                         </View>
                       ) : (
                         <View style={styles.assigneesRow}>
-                          <Ionicons name="person-outline" size={13} color="#bbb" />
-                          <Text style={[styles.assigneesText, { color: '#bbb' }]}>
+                          <Ionicons name="person-outline" size={13} color={c.textTertiary} />
+                          <Text style={[styles.assigneesText, { color: c.textTertiary }]}>
                             Brak zapisanych ministrantów
                           </Text>
                         </View>
@@ -275,59 +281,61 @@ export default function SchedulesTab() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  weekNav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 13,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-  },
-  weekLabel: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
+    weekNav: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      backgroundColor: c.surface, paddingHorizontal: 20, paddingVertical: 13,
+      borderBottomWidth: 1, borderBottomColor: c.primarySurface,
+    },
+    weekLabel: { fontSize: 14, fontWeight: '600', color: c.text },
 
-  addRow: {
-    flexDirection: 'row', gap: 10, marginHorizontal: 16, marginTop: 16, marginBottom: 8,
-  },
-  addButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center',
-    backgroundColor: '#534AB711', borderRadius: 12, padding: 12,
-    borderWidth: 1, borderColor: '#534AB740',
-  },
-  addButtonSeries: {},
-  addButtonText: { color: '#534AB7', fontSize: 14, fontWeight: '600' },
+    addRow: {
+      flexDirection: 'row', gap: 10, marginHorizontal: 16, marginTop: 16, marginBottom: 8,
+    },
+    addButton: {
+      flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center',
+      backgroundColor: c.primaryAlpha08, borderRadius: 12, padding: 12,
+      borderWidth: 1, borderColor: c.primaryAlpha20,
+    },
+    addButtonSeries: {},
+    addButtonText: { color: c.primary, fontSize: 14, fontWeight: '600' },
 
-  listContent: { padding: 16, gap: 4 },
+    listContent: { padding: 16, gap: 4 },
 
-  dayGroup: { marginBottom: 16 },
-  dayHeader: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 8 },
-  dayName: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
-  dayDate: { fontSize: 12, color: '#888' },
+    dayGroup: { marginBottom: 16 },
+    dayHeader: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 8 },
+    dayName: { fontSize: 14, fontWeight: '700', color: c.text },
+    dayDate: { fontSize: 12, color: c.subtext },
 
-  card: {
-    backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8,
-    ...shadow.xs, gap: 8,
-    borderLeftWidth: 4,
-  },
-  categoryLabel: { fontSize: 11, fontWeight: '600', marginTop: 1 },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  timeBadge: {
-    backgroundColor: '#534AB711', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
-    minWidth: 48, alignItems: 'center',
-  },
-  timeText: { fontSize: 13, fontWeight: '700', color: '#534AB7' },
-  cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '600', color: '#1a1a1a', flexShrink: 1 },
+    card: {
+      backgroundColor: c.surface, borderRadius: 12, padding: 12, marginBottom: 8,
+      ...shadow.xs, gap: 8,
+      borderLeftWidth: 4,
+    },
+    categoryLabel: { fontSize: 11, fontWeight: '600', marginTop: 1 },
+    cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    timeBadge: {
+      borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
+      minWidth: 48, alignItems: 'center',
+    },
+    timeText: { fontSize: 13, fontWeight: '700' },
+    cardInfo: { flex: 1 },
+    cardTitle: { fontSize: 15, fontWeight: '600', color: c.text, flexShrink: 1 },
 
-  assigneesRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  assigneesText: { flex: 1, fontSize: 12, color: '#534AB7', lineHeight: 16 },
-  countBadge: {
-    fontSize: 12, fontWeight: '700', color: '#534AB7',
-    backgroundColor: '#534AB711', borderRadius: 10,
-    paddingHorizontal: 7, paddingVertical: 2,
-  },
+    assigneesRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    assigneesText: { flex: 1, fontSize: 12, lineHeight: 16 },
+    countBadge: {
+      fontSize: 12, fontWeight: '700',
+      borderRadius: 10,
+      paddingHorizontal: 7, paddingVertical: 2,
+    },
 
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  emptyText: { color: '#aaa', fontSize: 15 },
-  emptyLink: { color: '#534AB7', fontSize: 13, fontWeight: '600', marginTop: 4 },
-})
+    empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+    emptyText: { color: c.textTertiary, fontSize: 15 },
+    emptyLink: { color: c.primary, fontSize: 13, fontWeight: '600', marginTop: 4 },
+  })
+}
