@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Alert, ActivityIndicator, Platform, Image,
@@ -9,6 +9,9 @@ import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '../../lib/supabase'
 import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
+import { useTheme } from '../../lib/ThemeContext'
+import { Colors } from '../../lib/theme'
+import { useThemeStore, ThemeOverride } from '../../stores/themeStore'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrator',
@@ -26,6 +29,8 @@ export default function ProfileScreen() {
 // ─── Shared: Avatar Card ──────────────────────────────────────────────────────
 
 function AvatarCard() {
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
   const { profile, fetchProfile } = useAuthStore()
   const [uploading, setUploading] = useState(false)
   const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(profile?.avatar_url ?? null)
@@ -85,7 +90,7 @@ function AvatarCard() {
         {displayUrl
           ? <Image source={{ uri: displayUrl }} style={styles.avatarImage} />
           : <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={40} color="#1A237E" />
+              <Ionicons name="person" size={40} color={c.primary} />
             </View>
         }
         <View style={styles.avatarEditBadge}>
@@ -107,6 +112,9 @@ function AvatarCard() {
 // ─── Member Profile ───────────────────────────────────────────────────────────
 
 function MemberProfile() {
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
+  const { themeOverride, setThemeOverride } = useThemeStore()
   const { profile, session, signOut, parish } = useAuthStore()
   const [summary, setSummary] = useState<{ total_points: number; services_count: number } | null>(null)
   const [rank, setRank] = useState<number>(0)
@@ -150,12 +158,12 @@ function MemberProfile() {
       <AvatarCard />
 
       {loading ? (
-        <ActivityIndicator color="#1A237E" style={{ marginVertical: 8 }} />
+        <ActivityIndicator color={c.primary} style={{ marginVertical: 8 }} />
       ) : (
         <View style={styles.statsRow}>
           <StatCard icon="trophy" iconColor="#FFC107" value={summary?.total_points ?? 0} label="Punkty" />
-          <StatCard icon="checkmark-circle" iconColor="#16A34A" value={summary?.services_count ?? 0} label="Służby" />
-          {rank > 0 && <StatCard icon="podium" iconColor="#1A237E" value={`#${rank}`} label="Ranking" />}
+          <StatCard icon="checkmark-circle" iconColor={c.success} value={summary?.services_count ?? 0} label="Służby" />
+          {rank > 0 && <StatCard icon="podium" iconColor={c.primary} value={`#${rank}`} label="Ranking" />}
         </View>
       )}
 
@@ -168,6 +176,42 @@ function MemberProfile() {
         <InfoRow icon="business-outline" label="Parafia" value={parish ? `${parish.name}${parish.city ? `, ${parish.city}` : ''}` : '—'} last />
       </InfoSection>
 
+      {/* Wygląd */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>WYGLĄD</Text>
+        </View>
+        <View style={styles.themeRow}>
+          {([
+            { value: 'light',  label: 'Jasny',  icon: 'sunny-outline' },
+            { value: 'dark',   label: 'Ciemny', icon: 'moon-outline' },
+            { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
+          ] as { value: ThemeOverride; label: string; icon: string }[]).map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              style={[
+                styles.themeBtn,
+                themeOverride === opt.value && styles.themeBtnActive,
+              ]}
+              onPress={() => setThemeOverride(opt.value)}
+              activeOpacity={0.75}
+            >
+              <Ionicons
+                name={opt.icon as any}
+                size={18}
+                color={themeOverride === opt.value ? '#fff' : c.subtext}
+              />
+              <Text style={[
+                styles.themeBtnText,
+                themeOverride === opt.value && styles.themeBtnTextActive,
+              ]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={true} />
       <SignOutButton onPress={handleSignOut} />
     </ScrollView>
@@ -177,6 +221,9 @@ function MemberProfile() {
 // ─── Admin Profile ────────────────────────────────────────────────────────────
 
 function AdminProfile() {
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
+  const { themeOverride, setThemeOverride } = useThemeStore()
   const { profile, session, signOut, parish } = useAuthStore()
   const [stats, setStats] = useState({ members: 0, upcoming: 0 })
   const [loading, setLoading] = useState(true)
@@ -209,11 +256,11 @@ function AdminProfile() {
       <AvatarCard />
 
       {loading ? (
-        <ActivityIndicator color="#1A237E" style={{ marginVertical: 8 }} />
+        <ActivityIndicator color={c.primary} style={{ marginVertical: 8 }} />
       ) : (
         <View style={styles.statsRow}>
-          <StatCard icon="people" iconColor="#1A237E" value={stats.members} label="Ministranci parafii" />
-          <StatCard icon="calendar" iconColor="#16A34A" value={stats.upcoming} label="Nadchodzące służby" />
+          <StatCard icon="people" iconColor={c.primary} value={stats.members} label="Ministranci parafii" />
+          <StatCard icon="calendar" iconColor={c.success} value={stats.upcoming} label="Nadchodzące służby" />
         </View>
       )}
 
@@ -223,6 +270,42 @@ function AdminProfile() {
         <InfoRow icon="call-outline" label="Telefon" value={profile?.phone ?? 'Nie podano'} />
         <InfoRow icon="business-outline" label="Parafia" value={parish ? `${parish.name}${parish.city ? `, ${parish.city}` : ''}` : '—'} last />
       </InfoSection>
+
+      {/* Wygląd */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>WYGLĄD</Text>
+        </View>
+        <View style={styles.themeRow}>
+          {([
+            { value: 'light',  label: 'Jasny',  icon: 'sunny-outline' },
+            { value: 'dark',   label: 'Ciemny', icon: 'moon-outline' },
+            { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
+          ] as { value: ThemeOverride; label: string; icon: string }[]).map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              style={[
+                styles.themeBtn,
+                themeOverride === opt.value && styles.themeBtnActive,
+              ]}
+              onPress={() => setThemeOverride(opt.value)}
+              activeOpacity={0.75}
+            >
+              <Ionicons
+                name={opt.icon as any}
+                size={18}
+                color={themeOverride === opt.value ? '#fff' : c.subtext}
+              />
+              <Text style={[
+                styles.themeBtnText,
+                themeOverride === opt.value && styles.themeBtnTextActive,
+              ]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
       <SignOutButton onPress={handleSignOut} />
@@ -235,6 +318,9 @@ function AdminProfile() {
 type Child = { id: string; full_name: string; services_count: number }
 
 function ParentProfile() {
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
+  const { themeOverride, setThemeOverride } = useThemeStore()
   const { profile, session, signOut, parish } = useAuthStore()
   const [children, setChildren] = useState<Child[]>([])
   const [loading, setLoading] = useState(true)
@@ -276,21 +362,21 @@ function ParentProfile() {
 
       <InfoSection title="Powiązane dzieci">
         {loading ? (
-          <ActivityIndicator color="#1A237E" style={{ margin: 16 }} />
+          <ActivityIndicator color={c.primary} style={{ margin: 16 }} />
         ) : children.length === 0 ? (
           <View style={styles.emptyChildren}>
-            <Ionicons name="people-outline" size={32} color="#D1D5DB" />
+            <Ionicons name="people-outline" size={32} color={c.iconMuted} />
             <Text style={styles.emptyChildrenText}>Brak powiązanych kont dzieci</Text>
           </View>
         ) : (
           children.map((child, i) => (
             <View key={child.id} style={[styles.childRow, i < children.length - 1 && styles.childRowBorder]}>
               <View style={styles.childAvatar}>
-                <Ionicons name="person" size={16} color="#1A237E" />
+                <Ionicons name="person" size={16} color={c.primary} />
               </View>
               <Text style={styles.childName}>{child.full_name}</Text>
               <View style={styles.childBadge}>
-                <Ionicons name="checkmark-circle-outline" size={13} color="#16A34A" />
+                <Ionicons name="checkmark-circle-outline" size={13} color={c.success} />
                 <Text style={styles.childBadgeText}>{child.services_count} służb</Text>
               </View>
             </View>
@@ -305,6 +391,42 @@ function ParentProfile() {
         <InfoRow icon="business-outline" label="Parafia" value={parish ? `${parish.name}${parish.city ? `, ${parish.city}` : ''}` : '—'} last />
       </InfoSection>
 
+      {/* Wygląd */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>WYGLĄD</Text>
+        </View>
+        <View style={styles.themeRow}>
+          {([
+            { value: 'light',  label: 'Jasny',  icon: 'sunny-outline' },
+            { value: 'dark',   label: 'Ciemny', icon: 'moon-outline' },
+            { value: 'system', label: 'System', icon: 'phone-portrait-outline' },
+          ] as { value: ThemeOverride; label: string; icon: string }[]).map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              style={[
+                styles.themeBtn,
+                themeOverride === opt.value && styles.themeBtnActive,
+              ]}
+              onPress={() => setThemeOverride(opt.value)}
+              activeOpacity={0.75}
+            >
+              <Ionicons
+                name={opt.icon as any}
+                size={18}
+                color={themeOverride === opt.value ? '#fff' : c.subtext}
+              />
+              <Text style={[
+                styles.themeBtnText,
+                themeOverride === opt.value && styles.themeBtnTextActive,
+              ]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
       <SignOutButton onPress={handleSignOut} />
     </ScrollView>
@@ -316,6 +438,8 @@ function ParentProfile() {
 function EditProfileModal({ visible, onClose, showRocznik }: {
   visible: boolean; onClose: () => void; showRocznik: boolean
 }) {
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
   const { profile, fetchProfile } = useAuthStore()
   const nameParts = (profile?.full_name ?? '').split(' ')
   const [firstName, setFirstName] = useState(nameParts[0] ?? '')
@@ -363,7 +487,7 @@ function EditProfileModal({ visible, onClose, showRocznik }: {
             <View style={styles.editSheetHeader}>
               <Text style={styles.editSheetTitle}>Edytuj profil</Text>
               <TouchableOpacity onPress={onClose} hitSlop={8}>
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={c.subtext} />
               </TouchableOpacity>
             </View>
 
@@ -424,6 +548,8 @@ function EditProfileModal({ visible, onClose, showRocznik }: {
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
 function StatCard({ icon, iconColor, value, label }: { icon: any; iconColor: string; value: number | string; label: string }) {
+  const { colors: c } = useTheme()
+  const styles = createStyles(c)
   return (
     <View style={styles.statCard}>
       <Ionicons name={icon} size={22} color={iconColor} />
@@ -434,6 +560,8 @@ function StatCard({ icon, iconColor, value, label }: { icon: any; iconColor: str
 }
 
 function InfoSection({ title, children, onEdit }: { title: string; children: React.ReactNode; onEdit?: () => void }) {
+  const { colors: c } = useTheme()
+  const styles = createStyles(c)
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -446,9 +574,11 @@ function InfoSection({ title, children, onEdit }: { title: string; children: Rea
 }
 
 function InfoRow({ icon, label, value, last }: { icon: any; label: string; value: string; last?: boolean }) {
+  const { colors: c } = useTheme()
+  const styles = createStyles(c)
   return (
     <View style={[styles.infoRow, !last && styles.infoRowBorder]}>
-      <Ionicons name={icon} size={16} color="#6B7280" style={{ width: 20 }} />
+      <Ionicons name={icon} size={16} color={c.subtext} style={{ width: 20 }} />
       <View style={styles.infoContent}>
         <Text style={styles.infoLabel}>{label}</Text>
         <Text style={styles.infoValue}>{value}</Text>
@@ -458,9 +588,11 @@ function InfoRow({ icon, label, value, last }: { icon: any; label: string; value
 }
 
 function SignOutButton({ onPress }: { onPress: () => void }) {
+  const { colors: c } = useTheme()
+  const styles = createStyles(c)
   return (
     <TouchableOpacity style={styles.signOutButton} onPress={onPress}>
-      <Ionicons name="log-out-outline" size={20} color="#DC2626" />
+      <Ionicons name="log-out-outline" size={20} color={c.danger} />
       <Text style={styles.signOutText}>Wyloguj się</Text>
     </TouchableOpacity>
   )
@@ -468,104 +600,119 @@ function SignOutButton({ onPress }: { onPress: () => void }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
-  content: { padding: 16, gap: 16 },
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    content: { padding: 16, gap: 16 },
 
-  avatarCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 24,
-    alignItems: 'center', gap: 8,
-    ...shadow.md,
-  },
-  avatarWrapper: { position: 'relative', marginBottom: 4 },
-  avatarImage: { width: 80, height: 80, borderRadius: 40 },
-  avatarPlaceholder: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: '#1A237E11', justifyContent: 'center', alignItems: 'center',
-  },
-  avatarEditBadge: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: '#1A237E', justifyContent: 'center', alignItems: 'center',
-    borderWidth: 2, borderColor: '#fff',
-  },
-  name: { fontSize: 20, fontWeight: '700', color: '#0D1B2A' },
-  roleBadge: {
-    backgroundColor: '#1A237E22', borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 4,
-  },
-  roleText: { fontSize: 13, color: '#1A237E', fontWeight: '600' },
-  email: { fontSize: 13, color: '#9CA3AF' },
+    avatarCard: {
+      backgroundColor: c.surface, borderRadius: 16, padding: 24,
+      alignItems: 'center', gap: 8,
+      ...shadow.md,
+    },
+    avatarWrapper: { position: 'relative', marginBottom: 4 },
+    avatarImage: { width: 80, height: 80, borderRadius: 40 },
+    avatarPlaceholder: {
+      width: 80, height: 80, borderRadius: 40,
+      backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center',
+    },
+    avatarEditBadge: {
+      position: 'absolute', bottom: 0, right: 0,
+      width: 26, height: 26, borderRadius: 13,
+      backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center',
+      borderWidth: 2, borderColor: '#fff',
+    },
+    name: { fontSize: 20, fontWeight: '700', color: c.text },
+    roleBadge: {
+      backgroundColor: c.primaryAlpha12, borderRadius: 12,
+      paddingHorizontal: 12, paddingVertical: 4,
+    },
+    roleText: { fontSize: 13, color: c.primary, fontWeight: '600' },
+    email: { fontSize: 13, color: c.textTertiary },
 
-  statsRow: { flexDirection: 'row', gap: 12 },
-  statCard: {
-    flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 14,
-    alignItems: 'center', gap: 4,
-    ...shadow.xs,
-  },
-  statNumber: { fontSize: 22, fontWeight: '700', color: '#0D1B2A' },
-  statLabel: { fontSize: 11, color: '#6B7280', textAlign: 'center' },
+    statsRow: { flexDirection: 'row', gap: 12 },
+    statCard: {
+      flex: 1, backgroundColor: c.surface, borderRadius: 12, padding: 14,
+      alignItems: 'center', gap: 4,
+      ...shadow.xs,
+    },
+    statNumber: { fontSize: 22, fontWeight: '700', color: c.text },
+    statLabel: { fontSize: 11, color: c.subtext, textAlign: 'center' },
 
-  section: { gap: 8 },
-  sectionTitle: {
-    fontSize: 13, fontWeight: '600', color: '#6B7280',
-    textTransform: 'uppercase', letterSpacing: 0.5,
-  },
-  infoCard: {
-    backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden',
-    ...shadow.xs,
-  },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  infoRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F0F0FF' },
-  infoContent: { flex: 1 },
-  infoLabel: { fontSize: 12, color: '#9CA3AF' },
-  infoValue: { fontSize: 15, color: '#0D1B2A', marginTop: 1 },
+    section: { gap: 8 },
+    sectionTitle: {
+      fontSize: 13, fontWeight: '600', color: c.subtext,
+      textTransform: 'uppercase', letterSpacing: 0.5,
+    },
+    infoCard: {
+      backgroundColor: c.surface, borderRadius: 12, overflow: 'hidden',
+      ...shadow.xs,
+    },
+    infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+    infoRowBorder: { borderBottomWidth: 1, borderBottomColor: c.primarySurface },
+    infoContent: { flex: 1 },
+    infoLabel: { fontSize: 12, color: c.textTertiary },
+    infoValue: { fontSize: 15, color: c.text, marginTop: 1 },
 
-  childRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  childRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F0F0FF' },
-  childAvatar: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: '#1A237E11', justifyContent: 'center', alignItems: 'center',
-  },
-  childName: { flex: 1, fontSize: 15, fontWeight: '500', color: '#0D1B2A' },
-  childBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  childBadgeText: { fontSize: 13, color: '#16A34A', fontWeight: '500' },
+    childRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+    childRowBorder: { borderBottomWidth: 1, borderBottomColor: c.primarySurface },
+    childAvatar: {
+      width: 32, height: 32, borderRadius: 16,
+      backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center',
+    },
+    childName: { flex: 1, fontSize: 15, fontWeight: '500', color: c.text },
+    childBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    childBadgeText: { fontSize: 13, color: c.success, fontWeight: '500' },
 
-  emptyChildren: { alignItems: 'center', padding: 24, gap: 8 },
-  emptyChildrenText: { fontSize: 14, color: '#9CA3AF', textAlign: 'center' },
+    emptyChildren: { alignItems: 'center', padding: 24, gap: 8 },
+    emptyChildrenText: { fontSize: 14, color: c.textTertiary, textAlign: 'center' },
 
-  signOutButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#fff', borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: '#DC262622',
-    ...shadow.xs,
-  },
-  signOutText: { fontSize: 15, fontWeight: '600', color: '#DC2626' },
+    signOutButton: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: c.surface, borderRadius: 12, padding: 16,
+      borderWidth: 1, borderColor: c.danger + '22',
+      ...shadow.xs,
+    },
+    signOutText: { fontSize: 15, fontWeight: '600', color: c.danger },
 
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  editLink: { fontSize: 13, fontWeight: '600', color: '#1A237E' },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    editLink: { fontSize: 13, fontWeight: '600', color: c.primary },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  editSheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: 24, gap: 12,
-  },
-  editSheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  editSheetTitle: { fontSize: 18, fontWeight: '700', color: '#0D1B2A' },
-  editNameRow: { flexDirection: 'row', gap: 10 },
-  editInput: {
-    backgroundColor: '#F8F9FA', borderRadius: 10, padding: 13,
-    fontSize: 15, color: '#0D1B2A', borderWidth: 1, borderColor: '#E5E7EB',
-  },
-  editActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  editCancelBtn: {
-    flex: 1, padding: 14, borderRadius: 10,
-    backgroundColor: '#F0F0FF', alignItems: 'center',
-  },
-  editCancelText: { fontSize: 15, fontWeight: '600', color: '#6B7280' },
-  editSaveBtn: {
-    flex: 1, padding: 14, borderRadius: 10,
-    backgroundColor: '#1A237E', alignItems: 'center',
-  },
-  editSaveText: { fontSize: 15, fontWeight: '600', color: '#fff' },
-})
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+    editSheet: {
+      backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      padding: 24, gap: 12,
+    },
+    editSheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+    editSheetTitle: { fontSize: 18, fontWeight: '700', color: c.text },
+    editNameRow: { flexDirection: 'row', gap: 10 },
+    editInput: {
+      backgroundColor: c.inputBg, borderRadius: 10, padding: 13,
+      fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
+    },
+    editActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
+    editCancelBtn: {
+      flex: 1, padding: 14, borderRadius: 10,
+      backgroundColor: c.primarySurface, alignItems: 'center',
+    },
+    editCancelText: { fontSize: 15, fontWeight: '600', color: c.subtext },
+    editSaveBtn: {
+      flex: 1, padding: 14, borderRadius: 10,
+      backgroundColor: c.primary, alignItems: 'center',
+    },
+    editSaveText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+
+    themeRow: {
+      flexDirection: 'row', gap: 8,
+      backgroundColor: c.surface, borderRadius: 14,
+      padding: 8, borderWidth: 1, borderColor: c.border,
+    },
+    themeBtn: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 6, paddingVertical: 10, borderRadius: 10,
+    },
+    themeBtnActive: { backgroundColor: c.primary },
+    themeBtnText: { fontSize: 13, fontWeight: '600', color: c.subtext },
+    themeBtnTextActive: { color: '#fff' },
+  })
+}
