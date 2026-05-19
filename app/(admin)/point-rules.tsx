@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, ActivityIndicator
@@ -8,12 +8,16 @@ import { supabase } from '../../lib/supabase'
 import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { ServiceType, SERVICE_TYPE_LABELS } from '../../types/database'
+import { useTheme } from '../../lib/ThemeContext'
+import { Colors } from '../../lib/theme'
 
 const SERVICE_TYPES: ServiceType[] = ['msza_assigned', 'msza_extra', 'nabozenstwo', 'zbiorka']
 
 export default function PointRulesScreen() {
   const { profile } = useAuthStore()
   const insets = useSafeAreaInsets()
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
   const [values, setValues] = useState<Record<ServiceType, string>>({
     msza_assigned: '5', msza_extra: '3', nabozenstwo: '3', zbiorka: '5',
   })
@@ -62,7 +66,7 @@ export default function PointRulesScreen() {
   }
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
+    return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
   }
 
   return (
@@ -99,28 +103,30 @@ export default function PointRulesScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 16, gap: 10 },
-  sectionTitle: { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  row: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#fff', borderRadius: 12, padding: 14,
-    ...shadow.xs,
-  },
-  label: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
-  inputGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  input: {
-    backgroundColor: '#f0f0f0', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 7,
-    fontSize: 18, fontWeight: '800', color: '#534AB7',
-    minWidth: 48, textAlign: 'center',
-  },
-  unit: { fontSize: 12, color: '#888', fontWeight: '600' },
-  saveBtn: {
-    backgroundColor: '#534AB7', borderRadius: 12,
-    padding: 14, alignItems: 'center', marginTop: 8,
-  },
-  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-})
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    content: { padding: 16, gap: 10 },
+    sectionTitle: { fontSize: 12, fontWeight: '700', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+    row: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      backgroundColor: c.surface, borderRadius: 12, padding: 14,
+      ...shadow.xs,
+    },
+    label: { flex: 1, fontSize: 14, fontWeight: '600', color: c.text },
+    inputGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    input: {
+      backgroundColor: c.primarySurface, borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 7,
+      fontSize: 18, fontWeight: '800', color: c.primary,
+      minWidth: 48, textAlign: 'center',
+    },
+    unit: { fontSize: 12, color: c.subtext, fontWeight: '600' },
+    saveBtn: {
+      backgroundColor: c.primary, borderRadius: 12,
+      padding: 14, alignItems: 'center', marginTop: 8,
+    },
+    saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  })
+}

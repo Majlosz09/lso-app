@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, Image,
   ActivityIndicator, TouchableOpacity, Modal, Alert
@@ -9,6 +9,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { STATUS_COLORS, STATUS_LABELS } from '../../lib/status'
 import { shadow } from '../../lib/shadows'
+import { useAuthStore } from '../../stores/authStore'
+import { useTheme } from '../../lib/ThemeContext'
+import { Colors } from '../../lib/theme'
 
 type MemberProfile = {
   id: string
@@ -18,7 +21,10 @@ type MemberProfile = {
   rocznik: number | null
   avatar_url: string | null
   rank_id: string | null
+  parent_id: string | null
 }
+
+type ParentEntry = { id: string; full_name: string }
 
 type RankRow = { id: string; name: string; order: number; is_system: boolean }
 
@@ -45,6 +51,9 @@ export default function MemberDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const { profile: adminProfile } = useAuthStore()
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
 
   const [profile, setProfile] = useState<MemberProfile | null>(null)
   const [summary, setSummary] = useState<{ total_points: number; services_count: number } | null>(null)
@@ -55,6 +64,9 @@ export default function MemberDetailScreen() {
   const [loading, setLoading] = useState(true)
   const [ranksList, setRanksList] = useState<RankRow[]>([])
   const [rankModalVisible, setRankModalVisible] = useState(false)
+  const [parentName, setParentName] = useState<string | null>(null)
+  const [parentsList, setParentsList] = useState<ParentEntry[]>([])
+  const [parentModalVisible, setParentModalVisible] = useState(false)
 
   useEffect(() => {
     supabase.from('ranks').select('*').order('order').then(({ data }) => {
@@ -67,7 +79,7 @@ export default function MemberDetailScreen() {
     const today = new Date().toISOString().split('T')[0]
 
     const queries: PromiseLike<any>[] = [
-      supabase.from('profiles').select('id, full_name, role, phone, rocznik, avatar_url, rank_id').eq('id', id).single(),
+      supabase.from('profiles').select('id, full_name, role, phone, rocznik, avatar_url, rank_id, parent_id').eq('id', id).single(),
       supabase.from('schedule_assignments')
         .select('id, status, schedule:schedules(id, title, date, time)')
         .eq('profile_id', id)
@@ -104,7 +116,7 @@ export default function MemberDetailScreen() {
     if (!profile || profile.role !== 'member') return
     Promise.all([
       supabase.from('points_summary').select('total_points, services_count').eq('profile_id', id).maybeSingle(),
-      supabase.from('points_summary').select('profile_id').order('total_points', { ascending: false }),
+      supabase.from('points_summary').select('profile_id').eq('parish_id', adminProfile?.parish_id).order('total_points', { ascending: false }),
     ]).then(([sumRes, rankRes]) => {
       if (sumRes.data) setSummary(sumRes.data as any)
       if (rankRes.data) {
@@ -113,6 +125,13 @@ export default function MemberDetailScreen() {
       }
     })
   }, [profile])
+
+  useEffect(() => {
+    if (!profile?.parent_id) { setParentName(null); return }
+    supabase.from('profiles').select('full_name').eq('id', profile.parent_id).single().then(({ data }) => {
+      setParentName(data?.full_name ?? null)
+    })
+  }, [profile?.parent_id])
 
   const handleChangeRank = async (rankId: string | null) => {
     const { error } = await supabase
@@ -127,8 +146,35 @@ export default function MemberDetailScreen() {
     setRankModalVisible(false)
   }
 
+  const openParentPicker = async () => {
+    if (parentsList.length === 0) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('parish_id', adminProfile!.parish_id)
+        .eq('role', 'parent')
+        .order('full_name')
+      setParentsList(data ?? [])
+    }
+    setParentModalVisible(true)
+  }
+
+  const handleChangeParent = async (parentId: string | null) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ parent_id: parentId })
+      .eq('id', id)
+    if (error) {
+      Alert.alert('Błąd', error.message)
+    } else {
+      setProfile(prev => prev ? { ...prev, parent_id: parentId } : prev)
+      setParentName(parentId ? (parentsList.find(p => p.id === parentId)?.full_name ?? null) : null)
+    }
+    setParentModalVisible(false)
+  }
+
   if (loading || !profile) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
+    return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
   }
 
   const isMember = profile.role === 'member'
@@ -142,7 +188,7 @@ export default function MemberDetailScreen() {
           <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
         ) : (
           <View style={styles.avatarCircle}>
-            <Ionicons name="person" size={36} color="#534AB7" />
+            <Ionicons name="person" size={36} color={c.primary} />
           </View>
         )}
         <Text style={styles.name}>{profile.full_name}</Text>
@@ -151,13 +197,13 @@ export default function MemberDetailScreen() {
         </View>
         {profile.phone && (
           <View style={styles.infoRow}>
-            <Ionicons name="call-outline" size={14} color="#888" />
+            <Ionicons name="call-outline" size={14} color={c.subtext} />
             <Text style={styles.infoText}>{profile.phone}</Text>
           </View>
         )}
         {isMember && profile.rocznik && (
           <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={14} color="#888" />
+            <Ionicons name="calendar-outline" size={14} color={c.subtext} />
             <Text style={styles.infoText}>Rocznik {profile.rocznik}</Text>
           </View>
         )}
@@ -166,13 +212,73 @@ export default function MemberDetailScreen() {
             style={memberRankObj ? styles.rankPill : styles.rankPillEmpty}
             onPress={() => setRankModalVisible(true)}
           >
-            <Ionicons name="ribbon-outline" size={13} color={memberRankObj ? '#e67e22' : '#aaa'} />
+            <Ionicons name="ribbon-outline" size={13} color={memberRankObj ? '#EA580C' : c.textTertiary} />
             <Text style={memberRankObj ? styles.rankText : styles.rankTextEmpty}>
               {memberRankObj ? memberRankObj.name : 'Przypisz rangę'}
             </Text>
           </TouchableOpacity>
         )}
+        {isMember && (
+          <TouchableOpacity
+            style={profile.parent_id ? styles.parentPill : styles.rankPillEmpty}
+            onPress={openParentPicker}
+          >
+            <Ionicons name="people-outline" size={13} color={profile.parent_id ? '#0EA5E9' : c.textTertiary} />
+            <Text style={profile.parent_id ? styles.parentText : styles.rankTextEmpty}>
+              {parentName ?? 'Przypisz rodzica'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      <Modal
+        visible={parentModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setParentModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setParentModalVisible(false)}
+        >
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Wybierz rodzica</Text>
+              <TouchableOpacity onPress={() => setParentModalVisible(false)} hitSlop={8}>
+                <Ionicons name="close" size={24} color={c.subtext} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.rankOption} onPress={() => handleChangeParent(null)}>
+              <Ionicons name="remove-circle-outline" size={20} color={c.textTertiary} />
+              <Text style={[styles.rankOptionText, { color: c.textTertiary }]}>Brak rodzica</Text>
+              {!profile?.parent_id && <Ionicons name="checkmark" size={18} color={c.primary} />}
+            </TouchableOpacity>
+            {parentsList.length === 0 ? (
+              <View style={styles.emptyRow}>
+                <Text style={styles.emptyText}>Brak kont rodziców w parafii</Text>
+              </View>
+            ) : (
+              parentsList.map(p => (
+                <TouchableOpacity
+                  key={p.id}
+                  style={styles.rankOption}
+                  onPress={() => handleChangeParent(p.id)}
+                >
+                  <Ionicons name="person-outline" size={20} color="#0EA5E9" />
+                  <Text style={[
+                    styles.rankOptionText,
+                    profile?.parent_id === p.id && { fontWeight: '700', color: '#0EA5E9' },
+                  ]}>
+                    {p.full_name}
+                  </Text>
+                  {profile?.parent_id === p.id && <Ionicons name="checkmark" size={18} color="#0EA5E9" />}
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <Modal
         visible={rankModalVisible}
@@ -189,7 +295,7 @@ export default function MemberDetailScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Wybierz rangę</Text>
               <TouchableOpacity onPress={() => setRankModalVisible(false)} hitSlop={8}>
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={c.subtext} />
               </TouchableOpacity>
             </View>
 
@@ -197,9 +303,9 @@ export default function MemberDetailScreen() {
               style={styles.rankOption}
               onPress={() => handleChangeRank(null)}
             >
-              <Ionicons name="remove-circle-outline" size={20} color="#aaa" />
-              <Text style={[styles.rankOptionText, { color: '#aaa' }]}>Brak rangi</Text>
-              {!profile.rank_id && <Ionicons name="checkmark" size={18} color="#534AB7" />}
+              <Ionicons name="remove-circle-outline" size={20} color={c.textTertiary} />
+              <Text style={[styles.rankOptionText, { color: c.textTertiary }]}>Brak rangi</Text>
+              {!profile.rank_id && <Ionicons name="checkmark" size={18} color={c.primary} />}
             </TouchableOpacity>
 
             {ranksList.map(r => (
@@ -208,14 +314,14 @@ export default function MemberDetailScreen() {
                 style={styles.rankOption}
                 onPress={() => handleChangeRank(r.id)}
               >
-                <Ionicons name="ribbon" size={20} color="#e67e22" />
+                <Ionicons name="ribbon" size={20} color="#EA580C" />
                 <Text style={[
                   styles.rankOptionText,
-                  profile.rank_id === r.id && { fontWeight: '700', color: '#e67e22' },
+                  profile.rank_id === r.id && { fontWeight: '700', color: '#EA580C' },
                 ]}>
                   {r.name}
                 </Text>
-                {profile.rank_id === r.id && <Ionicons name="checkmark" size={18} color="#e67e22" />}
+                {profile.rank_id === r.id && <Ionicons name="checkmark" size={18} color="#EA580C" />}
               </TouchableOpacity>
             ))}
           </View>
@@ -225,9 +331,9 @@ export default function MemberDetailScreen() {
       {/* Statystyki — tylko dla ministrancóin */}
       {isMember && (
         <View style={styles.statsRow}>
-          <StatCard icon="trophy" color="#f0a500" value={summary?.total_points ?? 0} label="Punkty" />
-          <StatCard icon="checkmark-circle" color="#27ae60" value={summary?.services_count ?? 0} label="Służby" />
-          {rank && <StatCard icon="podium" color="#534AB7" value={`#${rank}`} label="Ranking" />}
+          <StatCard icon="trophy" color="#FFC107" value={summary?.total_points ?? 0} label="Punkty" styles={styles} />
+          <StatCard icon="checkmark-circle" color="#16A34A" value={summary?.services_count ?? 0} label="Służby" styles={styles} />
+          {rank && <StatCard icon="podium" color={c.primary} value={`#${rank}`} label="Ranking" styles={styles} />}
         </View>
       )}
 
@@ -243,37 +349,37 @@ export default function MemberDetailScreen() {
       )}
 
       {/* Nadchodzące dyżury */}
-      <Section title="Nadchodzące dyżury">
+      <Section title="Nadchodzące dyżury" styles={styles}>
         {upcoming.length === 0 ? (
-          <EmptyRow text="Brak nadchodzących dyżurów" />
+          <EmptyRow text="Brak nadchodzących dyżurów" styles={styles} />
         ) : (
           upcoming.map(a => (
-            <ServiceRow key={a.id} assignment={a} />
+            <ServiceRow key={a.id} assignment={a} styles={styles} />
           ))
         )}
       </Section>
 
       {/* Historia służb */}
-      <Section title="Historia służb (ostatnie 10)">
+      <Section title="Historia służb (ostatnie 10)" styles={styles}>
         {history.length === 0 ? (
-          <EmptyRow text="Brak historii służb" />
+          <EmptyRow text="Brak historii służb" styles={styles} />
         ) : (
           history.map(a => (
-            <ServiceRow key={a.id} assignment={a} />
+            <ServiceRow key={a.id} assignment={a} styles={styles} />
           ))
         )}
       </Section>
 
       {/* Historia punktów — tylko dla ministrancóin */}
       {isMember && (
-        <Section title="Historia punktów (ostatnie 10)">
+        <Section title="Historia punktów (ostatnie 10)" styles={styles}>
           {points.length === 0 ? (
-            <EmptyRow text="Brak przyznanych punktów" />
+            <EmptyRow text="Brak przyznanych punktów" styles={styles} />
           ) : (
             points.map((p, i) => (
               <View key={p.id} style={[styles.pointRow, i < points.length - 1 && styles.rowBorder]}>
-                <View style={[styles.pointAmount, { backgroundColor: (p.amount >= 0 ? '#27ae60' : '#e74c3c') + '18' }]}>
-                  <Text style={[styles.pointAmountText, { color: p.amount >= 0 ? '#27ae60' : '#e74c3c' }]}>
+                <View style={[styles.pointAmount, { backgroundColor: (p.amount >= 0 ? '#16A34A' : '#DC2626') + '18' }]}>
+                  <Text style={[styles.pointAmountText, { color: p.amount >= 0 ? '#16A34A' : '#DC2626' }]}>
                     {p.amount >= 0 ? '+' : ''}{p.amount}
                   </Text>
                 </View>
@@ -292,7 +398,7 @@ export default function MemberDetailScreen() {
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, styles }: { title: string; children: React.ReactNode; styles: any }) {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -301,7 +407,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function EmptyRow({ text }: { text: string }) {
+function EmptyRow({ text, styles }: { text: string; styles: any }) {
   return (
     <View style={styles.emptyRow}>
       <Text style={styles.emptyText}>{text}</Text>
@@ -309,9 +415,9 @@ function EmptyRow({ text }: { text: string }) {
   )
 }
 
-function ServiceRow({ assignment }: { assignment: AssignmentRow }) {
+function ServiceRow({ assignment, styles }: { assignment: AssignmentRow; styles: any }) {
   const sc = assignment.schedule
-  const color = STATUS_COLORS[assignment.status] ?? '#888'
+  const color = STATUS_COLORS[assignment.status] ?? '#6B7280'
   return (
     <View style={[styles.serviceRow, styles.rowBorder]}>
       <View style={{ flex: 1 }}>
@@ -328,7 +434,7 @@ function ServiceRow({ assignment }: { assignment: AssignmentRow }) {
   )
 }
 
-function StatCard({ icon, color, value, label }: { icon: any; color: string; value: number | string; label: string }) {
+function StatCard({ icon, color, value, label, styles }: { icon: any; color: string; value: number | string; label: string; styles: any }) {
   return (
     <View style={styles.statCard}>
       <Ionicons name={icon} size={20} color={color} />
@@ -338,92 +444,100 @@ function StatCard({ icon, color, value, label }: { icon: any; color: string; val
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  content: { padding: 16, gap: 16 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    content: { padding: 16, gap: 16 },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  headerCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 20,
-    alignItems: 'center', gap: 6,
-    ...shadow.md,
-  },
-  avatarCircle: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: '#534AB711', justifyContent: 'center', alignItems: 'center',
-    marginBottom: 4,
-  },
-  avatarImage: {
-    width: 72, height: 72, borderRadius: 36, marginBottom: 4,
-  },
-  name: { fontSize: 20, fontWeight: '700', color: '#1a1a1a' },
-  roleBadge: { backgroundColor: '#534AB722', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
-  roleText: { fontSize: 12, color: '#534AB7', fontWeight: '600' },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  infoText: { fontSize: 13, color: '#666' },
-  rankPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#e67e2218', borderRadius: 10,
-    paddingHorizontal: 10, paddingVertical: 4,
-  },
-  rankPillEmpty: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#f0f0f0', borderRadius: 10,
-    paddingHorizontal: 10, paddingVertical: 4,
-  },
-  rankText: { fontSize: 12, color: '#e67e22', fontWeight: '600' },
-  rankTextEmpty: { fontSize: 12, color: '#aaa' },
+    headerCard: {
+      backgroundColor: c.surface, borderRadius: 16, padding: 20,
+      alignItems: 'center', gap: 6,
+      ...shadow.md,
+    },
+    avatarCircle: {
+      width: 72, height: 72, borderRadius: 36,
+      backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center',
+      marginBottom: 4,
+    },
+    avatarImage: {
+      width: 72, height: 72, borderRadius: 36, marginBottom: 4,
+    },
+    name: { fontSize: 20, fontWeight: '700', color: c.text },
+    roleBadge: { backgroundColor: c.primaryAlpha12, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
+    roleText: { fontSize: 12, color: c.primary, fontWeight: '600' },
+    infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    infoText: { fontSize: 13, color: c.subtext },
+    rankPill: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: '#EA580C18', borderRadius: 10,
+      paddingHorizontal: 10, paddingVertical: 4,
+    },
+    rankPillEmpty: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: c.primarySurface, borderRadius: 10,
+      paddingHorizontal: 10, paddingVertical: 4,
+    },
+    rankText: { fontSize: 12, color: '#EA580C', fontWeight: '600' },
+    rankTextEmpty: { fontSize: 12, color: c.textTertiary },
+    parentPill: {
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: '#0EA5E918', borderRadius: 10,
+      paddingHorizontal: 10, paddingVertical: 4,
+    },
+    parentText: { fontSize: 12, color: '#0EA5E9', fontWeight: '600' },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalSheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: 20, paddingBottom: 36,
-  },
-  modalHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12,
-  },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
-  rankOption: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-  },
-  rankOptionText: { flex: 1, fontSize: 15, color: '#1a1a1a' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+    modalSheet: {
+      backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      padding: 20, paddingBottom: 36,
+    },
+    modalHeader: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12,
+    },
+    modalTitle: { fontSize: 17, fontWeight: '700', color: c.text },
+    rankOption: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.primarySurface,
+    },
+    rankOptionText: { flex: 1, fontSize: 15, color: c.text },
 
-  statsRow: { flexDirection: 'row', gap: 10 },
-  statCard: {
-    flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 12,
-    alignItems: 'center', gap: 3,
-    ...shadow.xs,
-  },
-  statValue: { fontSize: 20, fontWeight: '700', color: '#1a1a1a' },
-  statLabel: { fontSize: 11, color: '#888', textAlign: 'center' },
+    statsRow: { flexDirection: 'row', gap: 10 },
+    statCard: {
+      flex: 1, backgroundColor: c.surface, borderRadius: 12, padding: 12,
+      alignItems: 'center', gap: 3,
+      ...shadow.xs,
+    },
+    statValue: { fontSize: 20, fontWeight: '700', color: c.text },
+    statLabel: { fontSize: 11, color: c.subtext, textAlign: 'center' },
 
-  awardButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#534AB7', borderRadius: 12, padding: 14,
-  },
-  awardButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+    awardButton: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: c.primary, borderRadius: 12, padding: 14,
+    },
+    awardButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
 
-  section: { gap: 8 },
-  sectionTitle: { fontSize: 13, fontWeight: '600', color: '#888', textTransform: 'uppercase', letterSpacing: 0.5 },
-  sectionCard: {
-    backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden',
-    ...shadow.xs,
-  },
+    section: { gap: 8 },
+    sectionTitle: { fontSize: 13, fontWeight: '600', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 },
+    sectionCard: {
+      backgroundColor: c.surface, borderRadius: 12, overflow: 'hidden',
+      ...shadow.xs,
+    },
 
-  emptyRow: { padding: 16, alignItems: 'center' },
-  emptyText: { fontSize: 14, color: '#aaa' },
+    emptyRow: { padding: 16, alignItems: 'center' },
+    emptyText: { fontSize: 14, color: c.textTertiary },
 
-  serviceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  serviceTitle: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
-  serviceDate: { fontSize: 12, color: '#888', marginTop: 2 },
-  statusPill: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
-  statusText: { fontSize: 11, fontWeight: '600' },
+    serviceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
+    rowBorder: { borderBottomWidth: 1, borderBottomColor: c.primarySurface },
+    serviceTitle: { fontSize: 14, fontWeight: '600', color: c.text },
+    serviceDate: { fontSize: 12, color: c.subtext, marginTop: 2 },
+    statusPill: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
+    statusText: { fontSize: 11, fontWeight: '600' },
 
-  pointRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
-  pointAmount: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 44, alignItems: 'center' },
-  pointAmountText: { fontSize: 14, fontWeight: '700' },
-  pointReason: { fontSize: 14, color: '#1a1a1a', fontWeight: '500' },
-  pointDate: { fontSize: 12, color: '#aaa', marginTop: 2 },
-})
+    pointRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
+    pointAmount: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 44, alignItems: 'center' },
+    pointAmountText: { fontSize: 14, fontWeight: '700' },
+    pointReason: { fontSize: 14, color: c.text, fontWeight: '500' },
+    pointDate: { fontSize: 12, color: c.textTertiary, marginTop: 2 },
+  })
+}

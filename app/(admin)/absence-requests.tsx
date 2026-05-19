@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, FlatList, StyleSheet,
   TouchableOpacity, ActivityIndicator, Alert,
@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { shadow } from '../../lib/shadows'
+import { useTheme } from '../../lib/ThemeContext'
+import { Colors } from '../../lib/theme'
 
 const REJECTION_NOTE =
   'Usprawiedliwienie nie zostało zatwierdzone. Skontaktuj się z księdzem, aby wyjaśnić sytuację.'
@@ -21,6 +23,8 @@ type AbsenceRequest = {
 
 export default function AbsenceRequestsScreen() {
   const { profile } = useAuthStore()
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
   const [requests, setRequests] = useState<AbsenceRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState<string | null>(null)
@@ -30,8 +34,9 @@ export default function AbsenceRequestsScreen() {
     try {
       const { data, error } = await supabase
         .from('schedule_assignments')
-        .select('id, absence_reason, profile:profiles(full_name), schedule:schedules(title, date, time)')
+        .select('id, absence_reason, profile:profiles(full_name), schedule:schedules!inner(title, date, time, parish_id)')
         .eq('status', 'excused')
+        .eq('schedule.parish_id', profile?.parish_id)
       if (error) { Alert.alert('Błąd', error.message); return }
       const sorted = ((data ?? []) as unknown as AbsenceRequest[]).sort((a, b) =>
         a.schedule.date.localeCompare(b.schedule.date)
@@ -100,7 +105,7 @@ export default function AbsenceRequestsScreen() {
   }
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color="#534AB7" /></View>
+    return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
   }
 
   return (
@@ -117,10 +122,10 @@ export default function AbsenceRequestsScreen() {
             disabled={processingAll}
           >
             {processingAll
-              ? <ActivityIndicator size="small" color="#534AB7" />
+              ? <ActivityIndicator size="small" color={c.primary} />
               : (
                 <>
-                  <Ionicons name="checkmark-done-outline" size={18} color="#534AB7" />
+                  <Ionicons name="checkmark-done-outline" size={18} color={c.primary} />
                   <Text style={styles.bulkBtnText}>Zatwierdź wszystkie ({requests.length})</Text>
                 </>
               )
@@ -129,7 +134,7 @@ export default function AbsenceRequestsScreen() {
         ) : null}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="checkmark-circle-outline" size={56} color="#ccc" />
+            <Ionicons name="checkmark-circle-outline" size={56} color={c.iconMuted} />
             <Text style={styles.emptyTitle}>Brak oczekujących zgłoszeń</Text>
             <Text style={styles.emptyText}>Wszystkie nieobecności zostały rozpatrzone</Text>
           </View>
@@ -140,6 +145,8 @@ export default function AbsenceRequestsScreen() {
             processing={processingId === item.id}
             onApprove={() => handleApprove(item.id)}
             onReject={() => handleReject(item.id)}
+            styles={styles}
+            colors={c}
           />
         )}
       />
@@ -147,11 +154,13 @@ export default function AbsenceRequestsScreen() {
   )
 }
 
-function AbsenceCard({ request, processing, onApprove, onReject }: {
+function AbsenceCard({ request, processing, onApprove, onReject, styles, colors: c }: {
   request: AbsenceRequest
   processing: boolean
   onApprove: () => void
   onReject: () => void
+  styles: any
+  colors: Colors
 }) {
   const dateStr = new Date(request.schedule.date + 'T12:00:00').toLocaleDateString('pl-PL', {
     weekday: 'short', day: 'numeric', month: 'long',
@@ -175,7 +184,7 @@ function AbsenceCard({ request, processing, onApprove, onReject }: {
       <View style={styles.actions}>
         {processing ? (
           <View style={styles.processingRow}>
-            <ActivityIndicator size="small" color="#534AB7" />
+            <ActivityIndicator size="small" color={c.primary} />
           </View>
         ) : (
           <>
@@ -193,38 +202,40 @@ function AbsenceCard({ request, processing, onApprove, onReject }: {
   )
 }
 
-const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  bulkBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#534AB711', borderRadius: 12, padding: 14,
-    borderWidth: 1, borderColor: '#534AB733', marginBottom: 4,
-  },
-  bulkBtnText: { fontSize: 15, fontWeight: '700', color: '#534AB7' },
+    bulkBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: c.primaryAlpha08, borderRadius: 12, padding: 14,
+      borderWidth: 1, borderColor: c.primaryAlpha20, marginBottom: 4,
+    },
+    bulkBtnText: { fontSize: 15, fontWeight: '700', color: c.primary },
 
-  card: {
-    backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden',
-    ...shadow.md,
-  },
-  cardBody: { padding: 14, gap: 5 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  name: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
-  pendingBadge: { backgroundColor: '#e67e2222', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-  pendingText: { fontSize: 10, fontWeight: '700', color: '#e67e22', letterSpacing: 0.3 },
-  scheduleInfo: { fontSize: 12, color: '#888' },
-  reasonBox: { backgroundColor: '#fff5f5', borderRadius: 8, padding: 8, marginTop: 2 },
-  reasonText: { fontSize: 13, color: '#e74c3c', fontStyle: 'italic' },
+    card: {
+      backgroundColor: c.surface, borderRadius: 14, overflow: 'hidden',
+      ...shadow.md,
+    },
+    cardBody: { padding: 14, gap: 5 },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    name: { fontSize: 15, fontWeight: '700', color: c.text },
+    pendingBadge: { backgroundColor: '#EA580C22', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
+    pendingText: { fontSize: 10, fontWeight: '700', color: '#EA580C', letterSpacing: 0.3 },
+    scheduleInfo: { fontSize: 12, color: c.subtext },
+    reasonBox: { backgroundColor: c.danger + '08', borderRadius: 8, padding: 8, marginTop: 2 },
+    reasonText: { fontSize: 13, color: c.danger, fontStyle: 'italic' },
 
-  actions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  processingRow: { flex: 1, padding: 14, alignItems: 'center' },
-  rejectBtn: { flex: 1, padding: 14, alignItems: 'center', backgroundColor: '#fff5f5' },
-  rejectText: { fontSize: 13, fontWeight: '600', color: '#e74c3c' },
-  divider: { width: 1, backgroundColor: '#f0f0f0' },
-  approveBtn: { flex: 1, padding: 14, alignItems: 'center', backgroundColor: '#f0fdf4' },
-  approveText: { fontSize: 13, fontWeight: '600', color: '#27ae60' },
+    actions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: c.primarySurface },
+    processingRow: { flex: 1, padding: 14, alignItems: 'center' },
+    rejectBtn: { flex: 1, padding: 14, alignItems: 'center', backgroundColor: c.danger + '08' },
+    rejectText: { fontSize: 13, fontWeight: '600', color: c.danger },
+    divider: { width: 1, backgroundColor: c.primarySurface },
+    approveBtn: { flex: 1, padding: 14, alignItems: 'center', backgroundColor: c.success + '10' },
+    approveText: { fontSize: 13, fontWeight: '600', color: c.success },
 
-  empty: { alignItems: 'center', marginTop: 80, gap: 10 },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#aaa' },
-  emptyText: { fontSize: 14, color: '#ccc', textAlign: 'center' },
-})
+    empty: { alignItems: 'center', marginTop: 80, gap: 10 },
+    emptyTitle: { fontSize: 17, fontWeight: '700', color: c.textTertiary },
+    emptyText: { fontSize: 14, color: c.iconMuted, textAlign: 'center' },
+  })
+}

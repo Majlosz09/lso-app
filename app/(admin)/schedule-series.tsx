@@ -12,6 +12,8 @@ import { useAuthStore } from '../../stores/authStore'
 import { ScheduleCategory, CATEGORY_CONFIG } from '../../types/database'
 import { DatePickerModal } from '../../components/DatePickerModal'
 import { TimePickerModal } from '../../components/TimePickerModal'
+import { useTheme } from '../../lib/ThemeContext'
+import { Colors } from '../../lib/theme'
 
 const DAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So']
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -33,6 +35,8 @@ export default function ScheduleSeriesScreen() {
   const router = useRouter()
   const { profile } = useAuthStore()
   const insets = useSafeAreaInsets()
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
 
   const [title, setTitle] = useState('')
   const [dateFrom, setDateFrom] = useState('')
@@ -154,7 +158,7 @@ export default function ScheduleSeriesScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.sublabel}>Od</Text>
             <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowFromPicker(true)}>
-              <Ionicons name="calendar-outline" size={16} color="#534AB7" />
+              <Ionicons name="calendar-outline" size={16} color={c.primary} />
               {dateFrom
                 ? <Text style={styles.pickerBtnText}>{formatDate(dateFrom)}</Text>
                 : <Text style={styles.pickerBtnPlaceholder}>Wybierz</Text>
@@ -164,7 +168,7 @@ export default function ScheduleSeriesScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.sublabel}>Do</Text>
             <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowToPicker(true)}>
-              <Ionicons name="calendar-outline" size={16} color="#534AB7" />
+              <Ionicons name="calendar-outline" size={16} color={c.primary} />
               {dateTo
                 ? <Text style={styles.pickerBtnText}>{formatDate(dateTo)}</Text>
                 : <Text style={styles.pickerBtnPlaceholder}>Wybierz</Text>
@@ -210,7 +214,7 @@ export default function ScheduleSeriesScreen() {
           </TouchableOpacity>
           {selectedDays.length > 0 && (
             <TouchableOpacity style={styles.presetBtn} onPress={() => setPreset([])}>
-              <Text style={[styles.presetBtnText, { color: '#e74c3c' }]}>Wyczyść</Text>
+              <Text style={[styles.presetBtnText, { color: c.danger }]}>Wyczyść</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -226,12 +230,12 @@ export default function ScheduleSeriesScreen() {
               >
                 <Text style={styles.dayLabel}>{DAYS[dow]}</Text>
                 <View style={[styles.pickerBtn, { flex: 1, paddingVertical: 10 }]}>
-                  <Ionicons name="time-outline" size={15} color="#534AB7" />
+                  <Ionicons name="time-outline" size={15} color={c.primary} />
                   {times[dow]
                     ? <Text style={styles.pickerBtnText}>{times[dow]}</Text>
                     : <Text style={styles.pickerBtnPlaceholder}>Wybierz</Text>
                   }
-                  <Ionicons name="chevron-down" size={14} color="#aaa" />
+                  <Ionicons name="chevron-down" size={14} color={c.textTertiary} />
                 </View>
               </TouchableOpacity>
             ))}
@@ -293,69 +297,71 @@ export default function ScheduleSeriesScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  content: { padding: 16, gap: 6 },
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    content: { padding: 16, gap: 6 },
 
-  label: { fontSize: 13, fontWeight: '600', color: '#555', marginTop: 10, marginBottom: 2 },
-  sublabel: { fontSize: 12, color: '#888', marginBottom: 4 },
-  input: {
-    backgroundColor: '#fff', borderRadius: 10, padding: 13,
-    fontSize: 15, color: '#1a1a1a', borderWidth: 1, borderColor: '#e8e8e8',
-  },
+    label: { fontSize: 13, fontWeight: '600', color: c.subtext, marginTop: 10, marginBottom: 2 },
+    sublabel: { fontSize: 12, color: c.subtext, marginBottom: 4 },
+    input: {
+      backgroundColor: c.surface, borderRadius: 10, padding: 13,
+      fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
+    },
 
-  pickerBtn: {
-    backgroundColor: '#fff', borderRadius: 10, padding: 13,
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderColor: '#e8e8e8',
-  },
-  pickerBtnText: { flex: 1, fontSize: 14, color: '#1a1a1a' },
-  pickerBtnPlaceholder: { flex: 1, fontSize: 14, color: '#aaa' },
+    pickerBtn: {
+      backgroundColor: c.surface, borderRadius: 10, padding: 13,
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      borderWidth: 1, borderColor: c.border,
+    },
+    pickerBtnText: { flex: 1, fontSize: 14, color: c.text },
+    pickerBtnPlaceholder: { flex: 1, fontSize: 14, color: c.textTertiary },
 
-  dateRow: { flexDirection: 'row', gap: 10 },
+    dateRow: { flexDirection: 'row', gap: 10 },
 
-  categoryRow: { flexDirection: 'row', gap: 8 },
-  categoryChip: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 10, paddingVertical: 10, borderRadius: 10,
-    backgroundColor: '#f5f5f5', borderWidth: 1.5, borderColor: '#e8e8e8',
-  },
-  categoryDot: { width: 8, height: 8, borderRadius: 4 },
-  categoryChipText: { fontSize: 12, color: '#555', fontWeight: '500', flexShrink: 1 },
+    categoryRow: { flexDirection: 'row', gap: 8 },
+    categoryChip: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingHorizontal: 10, paddingVertical: 10, borderRadius: 10,
+      backgroundColor: c.bg, borderWidth: 1.5, borderColor: c.border,
+    },
+    categoryDot: { width: 8, height: 8, borderRadius: 4 },
+    categoryChipText: { fontSize: 12, color: c.subtext, fontWeight: '500', flexShrink: 1 },
 
-  dayChips: { flexDirection: 'row', gap: 6, marginTop: 4 },
-  dayChip: {
-    flex: 1, paddingVertical: 9, borderRadius: 10,
-    backgroundColor: '#f0f0f0', alignItems: 'center',
-  },
-  dayChipActive: { backgroundColor: '#534AB7' },
-  dayChipText: { fontSize: 12, fontWeight: '600', color: '#888' },
-  dayChipTextActive: { color: '#fff' },
+    dayChips: { flexDirection: 'row', gap: 6, marginTop: 4 },
+    dayChip: {
+      flex: 1, paddingVertical: 9, borderRadius: 10,
+      backgroundColor: c.primarySurface, alignItems: 'center',
+    },
+    dayChipActive: { backgroundColor: c.primary },
+    dayChipText: { fontSize: 12, fontWeight: '600', color: c.subtext },
+    dayChipTextActive: { color: '#fff' },
 
-  presetsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  presetBtn: {
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#e0e0e0',
-  },
-  presetBtnText: { fontSize: 13, color: '#534AB7', fontWeight: '600' },
+    presetsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
+    presetBtn: {
+      paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
+      backgroundColor: c.surface, borderWidth: 1, borderColor: c.border,
+    },
+    presetBtnText: { fontSize: 13, color: c.primary, fontWeight: '600' },
 
-  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  dayLabel: { width: 26, fontSize: 14, fontWeight: '700', color: '#534AB7' },
+    timeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    dayLabel: { width: 26, fontSize: 14, fontWeight: '700', color: c.primary },
 
-  preview: {
-    backgroundColor: '#534AB711', borderRadius: 12, padding: 14, marginTop: 16,
-    borderWidth: 1, borderColor: '#534AB730', gap: 4,
-  },
-  previewEmpty: { backgroundColor: '#f0f0f0', borderColor: '#e0e0e0' },
-  previewEmptyText: { fontSize: 13, color: '#aaa', textAlign: 'center' },
-  previewCount: { fontSize: 15, fontWeight: '700', color: '#534AB7' },
-  previewSummary: { fontSize: 13, color: '#555' },
+    preview: {
+      backgroundColor: c.primaryAlpha08, borderRadius: 12, padding: 14, marginTop: 16,
+      borderWidth: 1, borderColor: c.primaryAlpha12, gap: 4,
+    },
+    previewEmpty: { backgroundColor: c.primarySurface, borderColor: c.border },
+    previewEmptyText: { fontSize: 13, color: c.textTertiary, textAlign: 'center' },
+    previewCount: { fontSize: 15, fontWeight: '700', color: c.primary },
+    previewSummary: { fontSize: 13, color: c.subtext },
 
-  submitBtn: {
-    backgroundColor: '#534AB7', borderRadius: 12, padding: 16,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, marginTop: 8,
-  },
-  submitBtnDisabled: { opacity: 0.45 },
-  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-})
+    submitBtn: {
+      backgroundColor: c.primary, borderRadius: 12, padding: 16,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 8, marginTop: 8,
+    },
+    submitBtnDisabled: { opacity: 0.45 },
+    submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  })
+}

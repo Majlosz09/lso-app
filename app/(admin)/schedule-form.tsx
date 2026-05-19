@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, TextInput, StyleSheet, ScrollView,
   TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform
@@ -11,11 +11,15 @@ import { useAuthStore } from '../../stores/authStore'
 import { MassTemplate, ScheduleCategory, CATEGORY_CONFIG } from '../../types/database'
 import { DatePickerModal } from '../../components/DatePickerModal'
 import { TimePickerModal } from '../../components/TimePickerModal'
+import { useTheme } from '../../lib/ThemeContext'
+import { Colors } from '../../lib/theme'
 
 export default function ScheduleForm() {
   const router = useRouter()
   const { profile } = useAuthStore()
   const insets = useSafeAreaInsets()
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
   const { date: initDate, time: initTime, title: initTitle } = useLocalSearchParams<{
     date?: string; time?: string; title?: string
   }>()
@@ -94,14 +98,14 @@ export default function ScheduleForm() {
 
         <Text style={styles.label}>Data *</Text>
         <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowDatePicker(true)}>
-          <Ionicons name="calendar-outline" size={18} color="#534AB7" />
+          <Ionicons name="calendar-outline" size={18} color={c.primary} />
           <View style={{ flex: 1 }}>
             {dateLabel
               ? <Text style={styles.pickerBtnText}>{dateLabel}</Text>
               : <Text style={styles.pickerBtnPlaceholder}>Wybierz datę</Text>
             }
           </View>
-          <Ionicons name="chevron-down" size={16} color="#aaa" />
+          <Ionicons name="chevron-down" size={16} color={c.textTertiary} />
         </TouchableOpacity>
 
         <Text style={styles.label}>Godzina *</Text>
@@ -119,12 +123,12 @@ export default function ScheduleForm() {
           </View>
         )}
         <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowTimePicker(true)}>
-          <Ionicons name="time-outline" size={18} color="#534AB7" />
+          <Ionicons name="time-outline" size={18} color={c.primary} />
           {time
             ? <Text style={[styles.pickerBtnText, { flex: 1 }]}>{time}</Text>
             : <Text style={[styles.pickerBtnPlaceholder, { flex: 1 }]}>Wybierz godzinę</Text>
           }
-          <Ionicons name="chevron-down" size={16} color="#aaa" />
+          <Ionicons name="chevron-down" size={16} color={c.textTertiary} />
         </TouchableOpacity>
 
         <Text style={styles.label}>Kategoria *</Text>
@@ -181,47 +185,49 @@ export default function ScheduleForm() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  content: { padding: 16, gap: 6 },
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.bg },
+    content: { padding: 16, gap: 6 },
 
-  label: { fontSize: 13, fontWeight: '600', color: '#555', marginTop: 8, marginBottom: 2 },
-  input: {
-    backgroundColor: '#fff', borderRadius: 10, padding: 13,
-    fontSize: 15, color: '#1a1a1a', borderWidth: 1, borderColor: '#e8e8e8',
-  },
-  inputMultiline: { minHeight: 80, textAlignVertical: 'top' },
+    label: { fontSize: 13, fontWeight: '600', color: c.subtext, marginTop: 8, marginBottom: 2 },
+    input: {
+      backgroundColor: c.surface, borderRadius: 10, padding: 13,
+      fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
+    },
+    inputMultiline: { minHeight: 80, textAlignVertical: 'top' },
 
-  pickerBtn: {
-    backgroundColor: '#fff', borderRadius: 10, padding: 13,
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderWidth: 1, borderColor: '#e8e8e8',
-  },
-  pickerBtnText: { fontSize: 15, color: '#1a1a1a', flex: 1 },
-  pickerBtnPlaceholder: { fontSize: 15, color: '#aaa', flex: 1 },
+    pickerBtn: {
+      backgroundColor: c.surface, borderRadius: 10, padding: 13,
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      borderWidth: 1, borderColor: c.border,
+    },
+    pickerBtnText: { fontSize: 15, color: c.text, flex: 1 },
+    pickerBtnPlaceholder: { fontSize: 15, color: c.textTertiary, flex: 1 },
 
-  categoryRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  categoryChip: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10,
-    backgroundColor: '#f5f5f5', borderWidth: 1.5, borderColor: '#e8e8e8',
-  },
-  categoryDot: { width: 8, height: 8, borderRadius: 4 },
-  categoryChipText: { fontSize: 13, color: '#555', fontWeight: '500' },
+    categoryRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+    categoryChip: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7,
+      paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10,
+      backgroundColor: c.bg, borderWidth: 1.5, borderColor: c.border,
+    },
+    categoryDot: { width: 8, height: 8, borderRadius: 4 },
+    categoryChipText: { fontSize: 13, color: c.subtext, fontWeight: '500' },
 
-  groupRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  groupChip: {
-    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#e0e0e0',
-  },
-  groupChipActive: { backgroundColor: '#534AB7', borderColor: '#534AB7' },
-  groupChipText: { fontSize: 14, color: '#555' },
-  groupChipTextActive: { color: '#fff', fontWeight: '600' },
+    groupRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    groupChip: {
+      borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8,
+      backgroundColor: c.surface, borderWidth: 1, borderColor: c.border,
+    },
+    groupChipActive: { backgroundColor: c.primary, borderColor: c.primary },
+    groupChipText: { fontSize: 14, color: c.subtext },
+    groupChipTextActive: { color: '#fff', fontWeight: '600' },
 
-  submitButton: {
-    backgroundColor: '#534AB7', borderRadius: 12, padding: 16,
-    alignItems: 'center', marginTop: 16,
-  },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-})
+    submitButton: {
+      backgroundColor: c.primary, borderRadius: 12, padding: 16,
+      alignItems: 'center', marginTop: 16,
+    },
+    submitButtonDisabled: { opacity: 0.6 },
+    submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  })
+}
