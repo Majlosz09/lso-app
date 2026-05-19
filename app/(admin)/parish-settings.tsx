@@ -15,18 +15,18 @@ import type { AttendanceMode } from '../../types/database'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 
-const ATTENDANCE_OPTIONS: { mode: AttendanceMode; label: string; sub: string; icon: string; color: string }[] = [
-  { mode: 'button', label: 'Przycisk',    sub: 'Zameldowanie jednym kliknięciem, bez weryfikacji', icon: 'hand-left-outline',   color: '#10B981' },
-  { mode: 'qr',     label: 'Kod QR',      sub: 'Ministrant skanuje kod QR wywiesony w zakrystii',  icon: 'qr-code-outline',     color: '#1A237E' },
-  { mode: 'gps',    label: 'Lokalizacja', sub: 'Weryfikacja przez GPS — ministrant musi być blisko kościoła', icon: 'location-outline', color: '#EA580C' },
-]
-
 export default function ParishSettingsScreen() {
   const { parish, fetchProfile } = useAuthStore()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
+
+  const ATTENDANCE_OPTIONS: { mode: AttendanceMode; label: string; sub: string; icon: string; color: string }[] = useMemo(() => [
+    { mode: 'button', label: 'Przycisk',    sub: 'Zameldowanie jednym kliknięciem, bez weryfikacji', icon: 'hand-left-outline',   color: '#10B981' },
+    { mode: 'qr',     label: 'Kod QR',      sub: 'Ministrant skanuje kod QR wywiesony w zakrystii',  icon: 'qr-code-outline',     color: c.primary },
+    { mode: 'gps',    label: 'Lokalizacja', sub: 'Weryfikacja przez GPS — ministrant musi być blisko kościoła', icon: 'location-outline', color: '#EA580C' },
+  ], [c.primary])
 
   const [name, setName] = useState(parish?.name ?? '')
   const [city, setCity] = useState(parish?.city ?? '')
@@ -295,8 +295,8 @@ export default function ParishSettingsScreen() {
               <QRCode
                 value={buildParishQrValue(parish.id)}
                 size={220}
-                color="#0D1B2A"
-                backgroundColor="#fff"
+                color="#000000"
+                backgroundColor="#FFFFFF"
               />
             </View>
             <Text style={styles.qrParishName}>{parish.name}</Text>

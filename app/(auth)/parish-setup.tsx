@@ -14,12 +14,6 @@ import type { AttendanceMode } from '../../types/database'
 
 type Tab = 'join' | 'create'
 
-const ATTENDANCE_OPTIONS: { mode: AttendanceMode; label: string; icon: string; color: string }[] = [
-  { mode: 'button', label: 'Przycisk (bez weryfikacji)', icon: 'hand-left-outline',   color: '#10B981' },
-  { mode: 'qr',     label: 'Kod QR w zakrystii',         icon: 'qr-code-outline',     color: '#1A237E' },
-  { mode: 'gps',    label: 'Lokalizacja GPS',             icon: 'location-outline',    color: '#EA580C' },
-]
-
 export default function ParishSetupScreen() {
   const router = useRouter()
   const { profile, fetchProfile } = useAuthStore()
@@ -36,6 +30,12 @@ export default function ParishSetupScreen() {
 
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
+
+  const ATTENDANCE_OPTIONS: { mode: AttendanceMode; label: string; icon: string; color: string }[] = useMemo(() => [
+    { mode: 'button', label: 'Przycisk (bez weryfikacji)', icon: 'hand-left-outline',   color: '#10B981' },
+    { mode: 'qr',     label: 'Kod QR w zakrystii',         icon: 'qr-code-outline',     color: c.primary },
+    { mode: 'gps',    label: 'Lokalizacja GPS',             icon: 'location-outline',    color: '#EA580C' },
+  ], [c.primary])
 
   const handleJoin = async () => {
     if (!inviteCode.trim() || inviteCode.trim().length !== 6) {

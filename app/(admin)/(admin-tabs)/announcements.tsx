@@ -15,12 +15,6 @@ import { Colors } from '../../../lib/theme'
 
 type AudienceOption = { key: string; label: string; color: string }
 
-const FIXED_AUDIENCES: AudienceOption[] = [
-  { key: 'all', label: 'Wszyscy', color: '#1A237E' },
-  { key: 'members', label: 'Wszyscy ministranci', color: '#2563EB' },
-  { key: 'parents', label: 'Wszyscy rodzice', color: '#16A34A' },
-]
-
 export default function AnnouncementsTab() {
   const { profile } = useAuthStore()
   const { openModal } = useLocalSearchParams<{ openModal?: string }>()
@@ -37,6 +31,12 @@ export default function AnnouncementsTab() {
 
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
+
+  const FIXED_AUDIENCES: AudienceOption[] = useMemo(() => [
+    { key: 'all', label: 'Wszyscy', color: c.primary },
+    { key: 'members', label: 'Wszyscy ministranci', color: '#2563EB' },
+    { key: 'parents', label: 'Wszyscy rodzice', color: '#16A34A' },
+  ], [c.primary])
 
   const fetchAnnouncements = async () => {
     const { data, error } = await supabase

@@ -46,7 +46,7 @@ export default function ScheduleDayScreen() {
     : ''
 
   const lit = date ? getLiturgicalDay(date) : null
-  const vestmentColor = lit ? getLiturgicalVestmentColor(lit) : '#6B7280'
+  const vestmentColor = lit ? getLiturgicalVestmentColor(lit) : c.subtext
   const vestmentLabel = lit ? (VESTMENT_LABELS[lit.color ?? ''] ?? lit.color ?? '') : ''
 
   const adjacentDate = (offset: -1 | 1) => {
@@ -154,7 +154,7 @@ export default function ScheduleDayScreen() {
               )
             })}
             <TouchableOpacity style={styles.addBtnRow} onPress={() => router.push(`/(admin)/schedule-form?date=${date}`)}>
-              <Ionicons name="add" size={16} color="#1A237E" />
+              <Ionicons name="add" size={16} color={c.primary} />
               <Text style={styles.addBtnRowText}>Dodaj służbę w tym dniu</Text>
             </TouchableOpacity>
           </>

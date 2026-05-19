@@ -354,7 +354,7 @@ export default function MemberDetailScreen() {
           <EmptyRow text="Brak nadchodzących dyżurów" styles={styles} />
         ) : (
           upcoming.map(a => (
-            <ServiceRow key={a.id} assignment={a} styles={styles} />
+            <ServiceRow key={a.id} assignment={a} styles={styles} c={c} />
           ))
         )}
       </Section>
@@ -365,7 +365,7 @@ export default function MemberDetailScreen() {
           <EmptyRow text="Brak historii służb" styles={styles} />
         ) : (
           history.map(a => (
-            <ServiceRow key={a.id} assignment={a} styles={styles} />
+            <ServiceRow key={a.id} assignment={a} styles={styles} c={c} />
           ))
         )}
       </Section>
@@ -415,9 +415,9 @@ function EmptyRow({ text, styles }: { text: string; styles: any }) {
   )
 }
 
-function ServiceRow({ assignment, styles }: { assignment: AssignmentRow; styles: any }) {
+function ServiceRow({ assignment, styles, c }: { assignment: AssignmentRow; styles: any; c: Colors }) {
   const sc = assignment.schedule
-  const color = STATUS_COLORS[assignment.status] ?? '#6B7280'
+  const color = STATUS_COLORS[assignment.status] ?? c.subtext
   return (
     <View style={[styles.serviceRow, styles.rowBorder]}>
       <View style={{ flex: 1 }}>

@@ -316,8 +316,8 @@ export default function ScheduleDetailScreen() {
 
                 <View style={styles.assigneeRight}>
                   <TouchableOpacity onPress={() => setStatusModalAssignment(a)} disabled={updatingId === a.id}>
-                    <View style={[styles.statusPill, { backgroundColor: (STATUS_COLORS[a.status] ?? '#6B7280') + '22' }]}>
-                      <Text style={[styles.statusText, { color: STATUS_COLORS[a.status] ?? '#6B7280' }]}>
+                    <View style={[styles.statusPill, { backgroundColor: (STATUS_COLORS[a.status] ?? c.subtext) + '22' }]}>
+                      <Text style={[styles.statusText, { color: STATUS_COLORS[a.status] ?? c.subtext }]}>
                         {STATUS_LABELS[a.status] ?? a.status}
                       </Text>
                     </View>
@@ -335,7 +335,7 @@ export default function ScheduleDetailScreen() {
                       </TouchableOpacity>
                     )}
                     {updatingId === a.id ? (
-                      <ActivityIndicator size="small" color="#1A237E" />
+                      <ActivityIndicator size="small" color={c.primary} />
                     ) : (
                       <TouchableOpacity onPress={() => handleRemove(a.id, a.profile.full_name)} hitSlop={8}>
                         <Ionicons name="trash-outline" size={22} color="#DC2626" />
