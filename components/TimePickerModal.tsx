@@ -1,5 +1,8 @@
+import { useMemo } from 'react'
 import { Modal, View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useTheme } from '../lib/ThemeContext'
+import { Colors } from '../lib/theme'
 
 const TIMES: string[] = []
 for (let h = 6; h <= 22; h++) {
@@ -15,6 +18,9 @@ interface Props {
 }
 
 export function TimePickerModal({ visible, value, onConfirm, onClose }: Props) {
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
@@ -22,7 +28,7 @@ export function TimePickerModal({ visible, value, onConfirm, onClose }: Props) {
           <View style={styles.header}>
             <Text style={styles.title}>Wybierz godzinę</Text>
             <TouchableOpacity onPress={onClose} hitSlop={8}>
-              <Ionicons name="close" size={24} color="#666" />
+              <Ionicons name="close" size={24} color={c.subtext} />
             </TouchableOpacity>
           </View>
           <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
@@ -42,29 +48,31 @@ export function TimePickerModal({ visible, value, onConfirm, onClose }: Props) {
   )
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    maxHeight: '65%', paddingBottom: 16,
-  },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 20, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-  },
-  title: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
-  grid: {
-    flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 8,
-  },
-  chip: {
-    width: '22%', paddingVertical: 12, borderRadius: 10,
-    backgroundColor: '#f5f5f5', alignItems: 'center',
-    borderWidth: 1, borderColor: '#ebebeb',
-  },
-  chipActive: { backgroundColor: '#534AB7', borderColor: '#534AB7' },
-  chipText: { fontSize: 14, fontWeight: '600', color: '#444' },
-  chipTextActive: { color: '#fff' },
-})
+function createStyles(c: Colors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end',
+    },
+    sheet: {
+      backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      maxHeight: '65%', paddingBottom: 16,
+    },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      padding: 20, paddingBottom: 12,
+      borderBottomWidth: 1, borderBottomColor: c.primarySurface,
+    },
+    title: { fontSize: 17, fontWeight: '700', color: c.text },
+    grid: {
+      flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 8,
+    },
+    chip: {
+      width: '22%', paddingVertical: 12, borderRadius: 10,
+      backgroundColor: c.bg, alignItems: 'center',
+      borderWidth: 1, borderColor: c.border,
+    },
+    chipActive: { backgroundColor: c.primary, borderColor: c.primary },
+    chipText: { fontSize: 14, fontWeight: '600', color: c.subtext },
+    chipTextActive: { color: '#fff' },
+  })
+}
