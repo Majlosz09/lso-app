@@ -3,10 +3,13 @@ import { Tabs, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { TouchableOpacity, Image } from 'react-native'
 import { useAuthStore } from '../../stores/authStore'
+import { CustomTabBar } from '../../components/CustomTabBar'
+import { useTheme } from '../../lib/ThemeContext'
 
 export default function TabsLayout() {
   const { profile } = useAuthStore()
   const router = useRouter()
+  const { colors } = useTheme()
   const avatarUrl = profile?.avatar_url
 
   useEffect(() => {
@@ -30,29 +33,13 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: '#534AB7',
-        tabBarInactiveTintColor: '#999',
-        tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopColor: '#e0e0e0',
-          paddingBottom: 4,
-        },
-        headerStyle: { backgroundColor: '#534AB7' },
+        headerStyle: { backgroundColor: colors.header },
         headerTintColor: '#fff',
         headerTitleStyle: { fontWeight: '600' },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Dom',
-          headerRight,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
-          ),
-        }}
-      />
       <Tabs.Screen
         name="schedule"
         options={{
@@ -74,6 +61,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Dom',
+          headerRight,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="points"
         options={{
           title: 'Punkty',
@@ -83,8 +80,17 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="swaps" options={{ href: null }} />
-      <Tabs.Screen name="profile" options={{ href: null }} />
+      <Tabs.Screen
+        name="wiedza"
+        options={{
+          title: 'Wiedza',
+          headerRight,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="book-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen name="profile" options={{ href: null, title: 'Profil' }} />
     </Tabs>
   )
 }

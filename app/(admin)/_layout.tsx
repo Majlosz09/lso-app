@@ -2,10 +2,12 @@ import { useEffect } from 'react'
 import { View, ActivityIndicator } from 'react-native'
 import { Stack, useRouter } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
+import { useTheme } from '../../lib/ThemeContext'
 
 export default function AdminLayout() {
   const { profile, parish, isLoading } = useAuthStore()
   const router = useRouter()
+  const { colors } = useTheme()
 
   const hasAccess = profile?.role === 'admin' || (profile?.role === 'member' && profile?.is_admin)
 
@@ -21,7 +23,7 @@ export default function AdminLayout() {
   if (isLoading || !hasAccess) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#534AB7" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     )
   }
@@ -29,7 +31,7 @@ export default function AdminLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: '#534AB7' },
+        headerStyle: { backgroundColor: colors.header },
         headerTintColor: '#fff',
         headerTitleStyle: { fontWeight: '600' },
       }}
@@ -43,6 +45,7 @@ export default function AdminLayout() {
       <Stack.Screen name="parish-settings" options={{ title: 'Ustawienia parafii' }} />
       <Stack.Screen name="mass-schedule" options={{ title: 'Rozkład Mszy' }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+      <Stack.Screen name="statistics" options={{ title: 'Statystyki' }} />
       <Stack.Screen name="point-rules" options={{ title: 'Reguły punktowania' }} />
       <Stack.Screen name="schedule-series" options={{ title: 'Nowy cykl służb' }} />
       <Stack.Screen name="schedule-day" options={{ title: 'Służby w dniu' }} />
