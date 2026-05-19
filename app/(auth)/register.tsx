@@ -189,16 +189,16 @@ function MemberForm({ onBack }: { onBack: () => void }) {
         <Text style={styles.formSub}>Ministrant lub rodzic</Text>
 
         <View style={styles.nameRow}>
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Imię" placeholderTextColor="#999"
+          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Imię" placeholderTextColor={c.textTertiary}
             value={firstName} onChangeText={setFirstName} />
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Nazwisko" placeholderTextColor="#999"
+          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Nazwisko" placeholderTextColor={c.textTertiary}
             value={lastName} onChangeText={setLastName} />
         </View>
 
-        <TextInput style={styles.input} placeholder="Email" placeholderTextColor="#999"
+        <TextInput style={styles.input} placeholder="Email" placeholderTextColor={c.textTertiary}
           autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
         <View style={styles.passwordRow}>
-          <TextInput style={styles.passwordInput} placeholder="Hasło (min. 6 znaków)" placeholderTextColor="#999"
+          <TextInput style={styles.passwordInput} placeholder="Hasło (min. 6 znaków)" placeholderTextColor={c.textTertiary}
             secureTextEntry={!showPassword} value={password} onChangeText={setPassword} />
           <TouchableOpacity onPress={() => setShowPassword(p => !p)} hitSlop={8}>
             <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={c.textTertiary} />
@@ -215,11 +215,11 @@ function MemberForm({ onBack }: { onBack: () => void }) {
           ))}
         </View>
 
-        <TextInput style={styles.input} placeholder="Numer telefonu" placeholderTextColor="#999"
+        <TextInput style={styles.input} placeholder="Numer telefonu" placeholderTextColor={c.textTertiary}
           keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
 
         {role === 'member' && (
-          <TextInput style={styles.input} placeholder="Rocznik ministranta (np. 2018)" placeholderTextColor="#999"
+          <TextInput style={styles.input} placeholder="Rocznik ministranta (np. 2018)" placeholderTextColor={c.textTertiary}
             keyboardType="number-pad" value={rocznik} onChangeText={setRocznik} maxLength={4} />
         )}
 
@@ -229,7 +229,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
           <TextInput
             style={styles.codeInput}
             placeholder="6-znakowy kod (np. AB12CD)"
-            placeholderTextColor="#999"
+            placeholderTextColor={c.textTertiary}
             autoCapitalize="characters"
             value={inviteCode}
             onChangeText={t => setInviteCode(t.toUpperCase())}
@@ -366,22 +366,22 @@ function AdminForm({ onBack }: { onBack: () => void }) {
         <Text style={styles.formSub}>Administrator / ksiądz</Text>
 
         <View style={styles.nameRow}>
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Imię" placeholderTextColor="#999"
+          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Imię" placeholderTextColor={c.textTertiary}
             value={firstName} onChangeText={setFirstName} />
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Nazwisko" placeholderTextColor="#999"
+          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Nazwisko" placeholderTextColor={c.textTertiary}
             value={lastName} onChangeText={setLastName} />
         </View>
 
-        <TextInput style={styles.input} placeholder="Email" placeholderTextColor="#999"
+        <TextInput style={styles.input} placeholder="Email" placeholderTextColor={c.textTertiary}
           autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
         <View style={styles.passwordRow}>
-          <TextInput style={styles.passwordInput} placeholder="Hasło (min. 6 znaków)" placeholderTextColor="#999"
+          <TextInput style={styles.passwordInput} placeholder="Hasło (min. 6 znaków)" placeholderTextColor={c.textTertiary}
             secureTextEntry={!showPassword} value={password} onChangeText={setPassword} />
           <TouchableOpacity onPress={() => setShowPassword(p => !p)} hitSlop={8}>
             <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={c.textTertiary} />
           </TouchableOpacity>
         </View>
-        <TextInput style={styles.input} placeholder="Numer telefonu" placeholderTextColor="#999"
+        <TextInput style={styles.input} placeholder="Numer telefonu" placeholderTextColor={c.textTertiary}
           keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
 
         <View style={styles.divider}>
@@ -390,9 +390,9 @@ function AdminForm({ onBack }: { onBack: () => void }) {
           <View style={styles.dividerLine} />
         </View>
 
-        <TextInput style={styles.input} placeholder="Nazwa parafii *" placeholderTextColor="#999"
+        <TextInput style={styles.input} placeholder="Nazwa parafii *" placeholderTextColor={c.textTertiary}
           value={parishName} onChangeText={setParishName} />
-        <TextInput style={styles.input} placeholder="Miejscowość (opcjonalnie)" placeholderTextColor="#999"
+        <TextInput style={styles.input} placeholder="Miejscowość (opcjonalnie)" placeholderTextColor={c.textTertiary}
           value={parishCity} onChangeText={setParishCity} />
 
         <TouchableOpacity style={[styles.button, { backgroundColor: '#16A34A' }, loading && styles.buttonDisabled]}

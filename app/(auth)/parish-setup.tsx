@@ -146,7 +146,7 @@ export default function ParishSetupScreen() {
             <TextInput
               style={styles.input}
               placeholder="6-znakowy kod (np. AB12CD)"
-              placeholderTextColor="#999"
+              placeholderTextColor={c.textTertiary}
               autoCapitalize="characters"
               value={inviteCode}
               onChangeText={t => setInviteCode(t.toUpperCase())}
@@ -169,7 +169,7 @@ export default function ParishSetupScreen() {
             <TextInput
               style={styles.input}
               placeholder="np. Parafia pw. św. Jana"
-              placeholderTextColor="#999"
+              placeholderTextColor={c.textTertiary}
               value={parishName}
               onChangeText={setParishName}
             />
@@ -177,7 +177,7 @@ export default function ParishSetupScreen() {
             <TextInput
               style={styles.input}
               placeholder="np. Warszawa"
-              placeholderTextColor="#999"
+              placeholderTextColor={c.textTertiary}
               value={parishCity}
               onChangeText={setParishCity}
             />
@@ -202,10 +202,10 @@ export default function ParishSetupScreen() {
               <View style={styles.gpsBox}>
                 <Text style={styles.gpsLabel}>Współrzędne kościoła</Text>
                 <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TextInput style={[styles.input, { flex: 1 }]} placeholder="Szerokość (lat)" placeholderTextColor="#999" value={lat} onChangeText={setLat} keyboardType="numeric" />
-                  <TextInput style={[styles.input, { flex: 1 }]} placeholder="Długość (lng)" placeholderTextColor="#999" value={lng} onChangeText={setLng} keyboardType="numeric" />
+                  <TextInput style={[styles.input, { flex: 1 }]} placeholder="Szerokość (lat)" placeholderTextColor={c.textTertiary} value={lat} onChangeText={setLat} keyboardType="numeric" />
+                  <TextInput style={[styles.input, { flex: 1 }]} placeholder="Długość (lng)" placeholderTextColor={c.textTertiary} value={lng} onChangeText={setLng} keyboardType="numeric" />
                 </View>
-                <TextInput style={styles.input} placeholder="Promień w metrach (domyślnie 200)" placeholderTextColor="#999" value={gpsRadius} onChangeText={setGpsRadius} keyboardType="numeric" />
+                <TextInput style={styles.input} placeholder="Promień w metrach (domyślnie 200)" placeholderTextColor={c.textTertiary} value={gpsRadius} onChangeText={setGpsRadius} keyboardType="numeric" />
               </View>
             )}
 
