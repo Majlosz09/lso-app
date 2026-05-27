@@ -36,7 +36,7 @@ export default function AdminHome() {
   const [scheduleDates, setScheduleDates] = useState<Set<string>>(new Set())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
-  const { colors: c } = useTheme()
+  const { colors: c, isDark } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
 
   const today = localDateStr(new Date())
@@ -86,8 +86,8 @@ export default function AdminHome() {
   }, [scheduleDates, selectedDate, today, c.primary])
 
   const todayLiturgy = getLiturgicalDay(today)
-  const todayAccentColor = todayLiturgy ? getLiturgicalAccentColor(todayLiturgy) : null
-  const todayBgColor = todayLiturgy ? getLiturgicalBgColor(todayLiturgy) : null
+  const todayAccentColor = getLiturgicalAccentColor(todayLiturgy)
+  const todayBgColor = getLiturgicalBgColor(todayLiturgy)
   const firstName = profile?.full_name?.split(' ')[0]
 
   return (
@@ -130,7 +130,7 @@ export default function AdminHome() {
       )}
 
       {/* Today's liturgy banner */}
-      {todayLiturgy && (
+      {todayLiturgy.type !== 'FERIA' && (
         <View style={[styles.liturgyRow, todayBgColor && { backgroundColor: todayBgColor + '18', borderColor: todayBgColor + '40' }]}>
           {todayAccentColor && <View style={[styles.liturgyDot, { backgroundColor: todayAccentColor }]} />}
           <Text style={styles.liturgyTypeLabel}>{todayLiturgy.typeLabel}:</Text>
@@ -141,6 +141,7 @@ export default function AdminHome() {
       {/* Calendar */}
       <View style={styles.calendarCard}>
         <Calendar
+          key={isDark ? 'dark' : 'light'}
           markingType="multi-dot"
           markedDates={markedDates}
           onDayPress={(day: { dateString: string }) => {
@@ -150,15 +151,19 @@ export default function AdminHome() {
           onMonthChange={(month: { year: number; month: number }) => {
             fetchMonthSchedules(month.year, month.month)
           }}
+          style={{ backgroundColor: c.surface }}
           theme={{
             selectedDayBackgroundColor: c.primary,
             arrowColor: c.primary,
             dotColor: c.primary,
             selectedDotColor: '#fff',
             calendarBackground: c.surface,
+            backgroundColor: c.surface,
             dayTextColor: c.text,
-            monthTextColor: c.text,
+            monthTextColor: c.primary,
+            textSectionTitleColor: c.subtext,
             textDisabledColor: c.iconMuted,
+            todayTextColor: c.primary,
           }}
           firstDay={1}
           enableSwipeMonths
@@ -167,7 +172,7 @@ export default function AdminHome() {
             const isSelected = date.dateString === selectedDate
             const isDisabled = state === 'disabled'
             const lit = getLiturgicalDay(date.dateString)
-            const litBg = lit ? getLiturgicalBgColor(lit) : null
+            const litBg = getLiturgicalBgColor(lit)
             const dots: any[] = marking?.dots ?? []
             return (
               <TouchableOpacity onPress={() => onPress(date)} activeOpacity={0.7} style={styles.dayWrapper}>
@@ -287,12 +292,12 @@ function createStyles(c: Colors) {
     liturgyRow: {
       flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap',
       paddingHorizontal: 14, paddingVertical: 10, gap: 6,
-      backgroundColor: '#fffbf0', borderRadius: 12,
-      borderWidth: 1, borderColor: '#f0e8c8',
+      backgroundColor: c.goldSurface, borderRadius: 12,
+      borderWidth: 1, borderColor: c.border,
     },
     liturgyDot: { width: 8, height: 8, borderRadius: 4 },
-    liturgyTypeLabel: { fontSize: 12, color: '#a07800', fontWeight: '600' },
-    liturgyName: { fontSize: 13, color: '#5a4000', flex: 1 },
+    liturgyTypeLabel: { fontSize: 12, color: c.gold, fontWeight: '600' },
+    liturgyName: { fontSize: 13, color: c.text, flex: 1 },
 
     calendarCard: {
       backgroundColor: c.surface, borderRadius: 16, overflow: 'hidden',
@@ -339,7 +344,7 @@ function createStyles(c: Colors) {
 
     absenceBanner: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
-      backgroundColor: '#fff3e0', borderRadius: 14, padding: 14,
+      backgroundColor: c.goldSurface, borderRadius: 14, padding: 14,
       borderWidth: 1.5, borderColor: '#EA580C',
     },
     absenceBannerBadge: {

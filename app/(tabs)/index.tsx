@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase'
 import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { getLiturgicalDay, getLiturgicalAccentColor, getLiturgicalBgColor } from '../../lib/liturgy'
-import { CATEGORY_CONFIG, ScheduleCategory, MassTemplate } from '../../types/database'
+import { CATEGORY_CONFIG, getCatColors, ScheduleCategory, MassTemplate } from '../../types/database'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
@@ -44,7 +44,7 @@ function MemberHomeView() {
   const [massTemplates, setMassTemplates] = useState<MassTemplate[]>([])
   const [upcomingSchedules, setUpcomingSchedules] = useState<any[]>([])
 
-  const { colors: c } = useTheme()
+  const { colors: c, isDark } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
 
   const today = localDateStr(new Date())
@@ -57,8 +57,8 @@ function MemberHomeView() {
   })
 
   const todayLiturgy = getLiturgicalDay(today)
-  const litAccent = todayLiturgy ? getLiturgicalAccentColor(todayLiturgy) : null
-  const litBg = todayLiturgy ? getLiturgicalBgColor(todayLiturgy) : null
+  const litAccent = getLiturgicalAccentColor(todayLiturgy)
+  const litBg = getLiturgicalBgColor(todayLiturgy)
   const firstName = profile?.full_name?.split(' ')[0] ?? '—'
 
   const fetchData = async () => {
@@ -182,7 +182,7 @@ function MemberHomeView() {
       )}
 
       {/* Liturgy for selected day */}
-      {selectedLiturgy && (
+      {selectedLiturgy.type !== 'FERIA' && (
         <View style={styles.dayLiturgyRow}>
           {(() => {
             const ac = getLiturgicalAccentColor(selectedLiturgy)
@@ -200,7 +200,7 @@ function MemberHomeView() {
         </View>
       ) : (
         eventsForDay.map(ev => {
-          const cat = CATEGORY_CONFIG[ev.category] ?? CATEGORY_CONFIG.msza
+          const cat = getCatColors(ev.category, isDark)
           return (
             <View key={ev.id} style={[styles.eventRow, { borderLeftColor: cat.color }]}>
               <View style={[styles.eventTimeBadge, { backgroundColor: cat.bg }]}>
@@ -231,7 +231,7 @@ function MemberHomeView() {
       ) : (
         nextDuties.map((a: any) => {
           const sc = a.schedule
-          const cat = CATEGORY_CONFIG[sc.category as ScheduleCategory] ?? CATEGORY_CONFIG.msza
+          const cat = getCatColors(sc.category as ScheduleCategory, isDark)
           return (
             <View key={a.id} style={[styles.dutyCard, { borderLeftColor: cat.color }]}>
               <View style={styles.dutyTop}>
@@ -260,7 +260,7 @@ function MemberHomeView() {
       <Text style={styles.sectionLabel}>Szybkie akcje</Text>
       <View style={styles.actionsRow}>
         <QuickAction icon="calendar-outline" color={c.primary} label="Zapisy" onPress={() => router.push('/(tabs)/schedule')} styles={styles} />
-        <QuickAction icon="megaphone-outline" color="#2563EB" label="Ogłoszenia" onPress={() => router.push('/(tabs)/announcements')} styles={styles} />
+        <QuickAction icon="megaphone-outline" color={c.primary} label="Ogłoszenia" onPress={() => router.push('/(tabs)/announcements')} styles={styles} />
         <QuickAction icon="trophy-outline" color={c.gold} label="Punkty" onPress={() => router.push('/(tabs)/points')} styles={styles} />
       </View>
     </>
@@ -337,8 +337,8 @@ function ParentHomeView() {
   const firstName = profile?.full_name?.split(' ')[0] ?? '—'
   const today = localDateStr(new Date())
   const todayLiturgy = getLiturgicalDay(today)
-  const litAccent = todayLiturgy ? getLiturgicalAccentColor(todayLiturgy) : null
-  const litBg = todayLiturgy ? getLiturgicalBgColor(todayLiturgy) : null
+  const litAccent = getLiturgicalAccentColor(todayLiturgy)
+  const litBg = getLiturgicalBgColor(todayLiturgy)
 
   const [children, setChildren] = useState<ChildSummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -448,7 +448,7 @@ function ParentHomeView() {
       <Text style={styles.sectionLabel}>Szybkie akcje</Text>
       <View style={styles.actionsRow}>
         <QuickAction icon="calendar-outline" color={c.primary} label="Dyżury dzieci" onPress={() => router.push('/(tabs)/schedule')} styles={styles} />
-        <QuickAction icon="megaphone-outline" color="#2563EB" label="Ogłoszenia" onPress={() => router.push('/(tabs)/announcements')} styles={styles} />
+        <QuickAction icon="megaphone-outline" color={c.primary} label="Ogłoszenia" onPress={() => router.push('/(tabs)/announcements')} styles={styles} />
       </View>
     </ScrollView>
   )
@@ -486,19 +486,19 @@ function createStyles(c: Colors) {
     },
     greetingName: { fontSize: 24, fontWeight: '700', color: '#fff' },
     greetingMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    greetingRole: { fontSize: 13, color: '#ffffffcc', fontWeight: '500' },
-    metaDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: '#ffffff55' },
-    greetingRank: { fontSize: 13, color: '#ffffffcc' },
+    greetingRole: { fontSize: 13, color: c.white + 'CC', fontWeight: '500' },
+    metaDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: c.white + '55' },
+    greetingRank: { fontSize: 13, color: c.white + 'CC' },
 
     liturgyRow: {
       flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap',
       paddingHorizontal: 14, paddingVertical: 10, gap: 6,
-      backgroundColor: '#fffbf0', borderRadius: 12,
-      borderWidth: 1, borderColor: '#f0e8c8',
+      backgroundColor: c.goldSurface, borderRadius: 12,
+      borderWidth: 1, borderColor: c.border,
     },
     liturgyDot: { width: 8, height: 8, borderRadius: 4 },
-    liturgyTypeLabel: { fontSize: 12, color: '#a07800', fontWeight: '600' },
-    liturgyName: { fontSize: 13, color: '#5a4000', flex: 1 },
+    liturgyTypeLabel: { fontSize: 12, color: c.gold, fontWeight: '600' },
+    liturgyName: { fontSize: 13, color: c.text, flex: 1 },
 
     statsRow: { flexDirection: 'row', gap: 12 },
     statBox: {
@@ -539,7 +539,7 @@ function createStyles(c: Colors) {
       flexDirection: 'row', alignItems: 'center', gap: 6,
       paddingHorizontal: 2,
     },
-    dayLiturgyText: { fontSize: 12, color: '#a07800', fontStyle: 'italic', flex: 1 },
+    dayLiturgyText: { fontSize: 12, color: c.gold, fontStyle: 'italic', flex: 1 },
 
     emptyCard: {
       backgroundColor: c.surface, borderRadius: 12, padding: 20,
