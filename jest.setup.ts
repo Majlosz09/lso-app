@@ -32,3 +32,20 @@ jest.mock('./lib/supabase', () => ({
   },
 }))
 
+// Mock expo-file-system
+jest.mock('expo-file-system', () => ({
+  cacheDirectory: 'file:///cache/',
+  writeAsStringAsync: jest.fn().mockResolvedValue(undefined),
+  EncodingType: { UTF8: 'utf8' },
+}))
+
+// Mock expo-sharing
+jest.mock('expo-sharing', () => ({
+  shareAsync: jest.fn().mockResolvedValue(undefined),
+}))
+
+// Mock expo-print
+jest.mock('expo-print', () => ({
+  printToFileAsync: jest.fn().mockResolvedValue({ uri: 'file:///tmp/print.pdf' }),
+}))
+
