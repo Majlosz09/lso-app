@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
-  View, Text, StyleSheet, ScrollView, Image,
-  ActivityIndicator, TouchableOpacity, Modal, Alert
+  View, Text, StyleSheet, ScrollView,
+  ActivityIndicator, TouchableOpacity, Modal, Alert, TextInput
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -12,6 +12,7 @@ import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { AvatarImage } from '../../components/AvatarImage'
 
 type MemberProfile = {
   id: string
@@ -41,6 +42,23 @@ type PointRow = {
   created_at: string
 }
 
+type BadgeRow = {
+  id: string
+  awarded_at: string
+  awarded_by: string | null
+  note: string | null
+  badge_definition: { id: string; name: string; icon: string; type: string } | null
+  awarder: { full_name: string } | null
+}
+
+type ManualBadgeDef = {
+  id: string
+  name: string
+  icon: string
+  criteria_key: string
+  parish_id: string | null
+}
+
 const ROLE_LABELS: Record<string, string> = {
   member: 'Ministrant',
   parent: 'Rodzic',
@@ -67,6 +85,12 @@ export default function MemberDetailScreen() {
   const [parentName, setParentName] = useState<string | null>(null)
   const [parentsList, setParentsList] = useState<ParentEntry[]>([])
   const [parentModalVisible, setParentModalVisible] = useState(false)
+  const [badges, setBadges] = useState<BadgeRow[]>([])
+  const [awardSheetVisible, setAwardSheetVisible] = useState(false)
+  const [manualBadgeDefs, setManualBadgeDefs] = useState<ManualBadgeDef[]>([])
+  const [selectedBadgeDef, setSelectedBadgeDef] = useState<ManualBadgeDef | null>(null)
+  const [awardNote, setAwardNote] = useState('')
+  const [awarding, setAwarding] = useState(false)
 
   useEffect(() => {
     supabase.from('ranks').select('*').order('order').then(({ data }) => {
@@ -133,6 +157,25 @@ export default function MemberDetailScreen() {
     })
   }, [profile?.parent_id])
 
+  const loadBadges = async () => {
+    const { data } = await supabase
+      .from('member_badges')
+      .select(`
+        id, awarded_at, awarded_by, note,
+        badge_definition:badge_definitions(id, name, icon, type),
+        awarder:profiles!awarded_by(full_name)
+      `)
+      .eq('profile_id', id)
+      .eq('is_active', true)
+      .order('awarded_at', { ascending: false })
+    setBadges((data ?? []).filter((b: any) => b.badge_definition !== null) as BadgeRow[])
+  }
+
+  useEffect(() => {
+    if (!id) return
+    loadBadges()
+  }, [id])
+
   const handleChangeRank = async (rankId: string | null) => {
     const { error } = await supabase
       .from('profiles')
@@ -173,6 +216,42 @@ export default function MemberDetailScreen() {
     setParentModalVisible(false)
   }
 
+  const openAwardSheet = async () => {
+    if (manualBadgeDefs.length === 0) {
+      const { data } = await supabase
+        .from('badge_definitions')
+        .select('id, name, icon, criteria_key, parish_id')
+        .eq('type', 'manual')
+        .or(`parish_id.is.null,parish_id.eq.${adminProfile!.parish_id}`)
+        .order('name')
+      setManualBadgeDefs(data ?? [])
+    }
+    setAwardSheetVisible(true)
+  }
+
+  const handleAwardBadge = async () => {
+    if (!selectedBadgeDef) return
+    setAwarding(true)
+    const { error } = await supabase.from('member_badges').insert({
+      profile_id: id,
+      badge_definition_id: selectedBadgeDef.id,
+      awarded_by: adminProfile!.id,
+      note: awardNote.trim() || null,
+      is_active: true,
+    })
+    setAwarding(false)
+    if (error) {
+      Alert.alert('Błąd', error.message === 'duplicate key value violates unique constraint "member_badges_profile_id_badge_definition_id_key"'
+        ? 'Ta odznaka została już wcześniej przyznana.'
+        : error.message)
+      return
+    }
+    setAwardSheetVisible(false)
+    setAwardNote('')
+    setSelectedBadgeDef(null)
+    loadBadges()
+  }
+
   if (loading || !profile) {
     return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
   }
@@ -184,13 +263,7 @@ export default function MemberDetailScreen() {
     <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]}>
       {/* Header */}
       <View style={styles.headerCard}>
-        {profile.avatar_url ? (
-          <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
-        ) : (
-          <View style={styles.avatarCircle}>
-            <Ionicons name="person" size={36} color={c.primary} />
-          </View>
-        )}
+        <AvatarImage avatarUrl={profile.avatar_url} size={72} />
         <Text style={styles.name}>{profile.full_name}</Text>
         <View style={styles.roleBadge}>
           <Text style={styles.roleText}>{ROLE_LABELS[profile.role] ?? profile.role}</Text>
@@ -348,6 +421,33 @@ export default function MemberDetailScreen() {
         </TouchableOpacity>
       )}
 
+      {/* Odznaki */}
+      {isMember && (
+        <Section title="Odznaki" styles={styles}>
+          {badges.length === 0 ? (
+            <EmptyRow text="Brak przyznanych odznak" styles={styles} />
+          ) : (
+            badges.map((b, i) => (
+              <View key={b.id} style={[styles.badgeRow, i < badges.length - 1 && styles.rowBorder]}>
+                <Text style={styles.badgeRowIcon}>{b.badge_definition?.icon ?? '🏅'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.badgeRowName}>{b.badge_definition?.name ?? ''}</Text>
+                  <Text style={styles.badgeRowMeta}>
+                    {new Date(b.awarded_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {b.awarder ? ` · ${b.awarder.full_name}` : ' · System'}
+                  </Text>
+                  {b.note ? <Text style={styles.badgeRowNote}>{b.note}</Text> : null}
+                </View>
+              </View>
+            ))
+          )}
+          <TouchableOpacity style={styles.awardBadgeBtn} onPress={openAwardSheet}>
+            <Ionicons name="ribbon-outline" size={16} color={c.primary} />
+            <Text style={styles.awardBadgeBtnText}>Przyznaj odznakę</Text>
+          </TouchableOpacity>
+        </Section>
+      )}
+
       {/* Nadchodzące dyżury */}
       <Section title="Nadchodzące dyżury" styles={styles}>
         {upcoming.length === 0 ? (
@@ -394,6 +494,71 @@ export default function MemberDetailScreen() {
           )}
         </Section>
       )}
+
+      {/* Bottom sheet: przyznaj odznakę */}
+      <Modal
+        visible={awardSheetVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => { setAwardSheetVisible(false); setSelectedBadgeDef(null); setAwardNote('') }}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => { setAwardSheetVisible(false); setSelectedBadgeDef(null); setAwardNote('') }}
+        >
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Przyznaj odznakę</Text>
+              <TouchableOpacity
+                onPress={() => { setAwardSheetVisible(false); setSelectedBadgeDef(null); setAwardNote('') }}
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={24} color={c.subtext} />
+              </TouchableOpacity>
+            </View>
+
+            {manualBadgeDefs.length === 0 ? (
+              <ActivityIndicator color={c.primary} style={{ padding: 16 }} />
+            ) : (
+              manualBadgeDefs.map(def => (
+                <TouchableOpacity
+                  key={def.id}
+                  style={[styles.rankOption, selectedBadgeDef?.id === def.id && { backgroundColor: c.primarySurface }]}
+                  onPress={() => setSelectedBadgeDef(def)}
+                >
+                  <Text style={{ fontSize: 20 }}>{def.icon}</Text>
+                  <Text style={[styles.rankOptionText, selectedBadgeDef?.id === def.id && { color: c.primary, fontWeight: '700' }]}>
+                    {def.name}
+                  </Text>
+                  {selectedBadgeDef?.id === def.id && <Ionicons name="checkmark" size={18} color={c.primary} />}
+                </TouchableOpacity>
+              ))
+            )}
+
+            <TextInput
+              style={styles.awardNoteInput}
+              placeholder="Notatka (opcjonalnie)..."
+              placeholderTextColor={c.textTertiary}
+              value={awardNote}
+              onChangeText={setAwardNote}
+              multiline
+              numberOfLines={2}
+            />
+
+            <TouchableOpacity
+              style={[styles.awardButton, (!selectedBadgeDef || awarding) && { opacity: 0.4 }]}
+              onPress={handleAwardBadge}
+              disabled={!selectedBadgeDef || awarding}
+            >
+              {awarding
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={styles.awardButtonText}>Przyznaj</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </ScrollView>
   )
 }
@@ -454,14 +619,6 @@ function createStyles(c: Colors) {
       backgroundColor: c.surface, borderRadius: 16, padding: 20,
       alignItems: 'center', gap: 6,
       ...shadow.md,
-    },
-    avatarCircle: {
-      width: 72, height: 72, borderRadius: 36,
-      backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center',
-      marginBottom: 4,
-    },
-    avatarImage: {
-      width: 72, height: 72, borderRadius: 36, marginBottom: 4,
     },
     name: { fontSize: 20, fontWeight: '700', color: c.text },
     roleBadge: { backgroundColor: c.primaryAlpha12, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
@@ -539,5 +696,22 @@ function createStyles(c: Colors) {
     pointAmountText: { fontSize: 14, fontWeight: '700' },
     pointReason: { fontSize: 14, color: c.text, fontWeight: '500' },
     pointDate: { fontSize: 12, color: c.textTertiary, marginTop: 2 },
+
+    badgeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12 },
+    badgeRowIcon: { fontSize: 22, lineHeight: 26 },
+    badgeRowName: { fontSize: 14, fontWeight: '600', color: c.text },
+    badgeRowMeta: { fontSize: 12, color: c.subtext, marginTop: 2 },
+    badgeRowNote: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontStyle: 'italic' },
+    awardBadgeBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      padding: 12, borderTopWidth: 1, borderTopColor: c.primarySurface,
+    },
+    awardBadgeBtnText: { fontSize: 14, fontWeight: '600', color: c.primary },
+    awardNoteInput: {
+      backgroundColor: c.bg, borderRadius: 10,
+      paddingHorizontal: 12, paddingVertical: 10,
+      fontSize: 14, color: c.text, borderWidth: 1, borderColor: c.border,
+      marginTop: 12, marginBottom: 4, minHeight: 60, textAlignVertical: 'top',
+    },
   })
 }
