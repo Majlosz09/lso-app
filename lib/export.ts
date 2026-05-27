@@ -26,8 +26,8 @@ export async function buildExportData(
   from: string,
   to: string,
 ): Promise<ExportData> {
-  const fromDate = new Date(from + 'T00:00:00')
-  const toDate   = new Date(to + 'T23:59:59')
+  const fromDate = new Date(from + 'T00:00:00.000Z')
+  const toDate   = new Date(to + 'T23:59:59.999Z')
 
   const [profilesRes, assignmentsRes, pointsRes] = await Promise.all([
     supabase
@@ -61,12 +61,13 @@ export async function buildExportData(
   for (const a of assignments) {
     const m = map.get(a.profile_id)
     if (!m) continue
+    // 'excused' does not count toward scheduled; 'swapped' and 'assigned' count as scheduled but not present
     if (a.status !== 'excused') m.scheduled++
     if (a.status === 'present' || a.status === 'confirmed') m.present++
   }
   for (const r of pointRows) {
     const m = map.get(r.profile_id)
-    if (m && r.amount > 0) m.points += r.amount
+    if (m) m.points += r.amount
   }
 
   const members: MemberExportRow[] = profiles
