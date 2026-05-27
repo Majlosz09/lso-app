@@ -16,9 +16,11 @@ export function computeAutoStatusBadges(
   const active = new Set<string>()
 
   // Regularny: ≥80% present/confirmed w ostatnich 30 dniach
-  const cutoff = new Date(now)
-  cutoff.setDate(cutoff.getDate() - 30)
-  const recent = assignments.filter(a => new Date(a.scheduleDate) >= cutoff)
+  // Porównanie stringów YYYY-MM-DD zamiast Date obiektów — unika błędów stref czasowych
+  const cutoffStr = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10)
+  const recent = assignments.filter(a => a.scheduleDate >= cutoffStr)
   if (recent.length > 0) {
     const presentCount = recent.filter(
       a => a.status === 'present' || a.status === 'confirmed'
@@ -93,26 +95,30 @@ export async function computeAndSyncBadges(
       .eq('parish_id', parishId)
       .eq('type', 'auto'),
   ])
+  if (systemDefsRes.error) console.error('[badges] system defs error:', systemDefsRes.error)
+  if (parishDefsRes.error) console.error('[badges] parish defs error:', parishDefsRes.error)
   const defs = [...(systemDefsRes.data ?? []), ...(parishDefsRes.data ?? [])]
 
   if (defs.length === 0) return
 
   // 2. Pobierz wszystkie schedule_assignments tego profilu
-  const { data: rawAssignments } = await supabase
+  const { data: rawAssignments, error: assignErr } = await supabase
     .from('schedule_assignments')
     .select('status, schedule:schedules(date)')
     .eq('profile_id', profileId)
+  if (assignErr) console.error('[badges] assignments error:', assignErr)
 
   const assignments: AssignmentForBadge[] = (rawAssignments ?? [])
     .filter((a: any) => a.schedule !== null)
     .map((a: any) => ({ status: a.status, scheduleDate: a.schedule.date }))
 
   // 3. Pobierz created_at profilu (rocznice)
-  const { data: profileData } = await supabase
+  const { data: profileData, error: profileErr } = await supabase
     .from('profiles')
     .select('created_at')
     .eq('id', profileId)
     .single()
+  if (profileErr) console.error('[badges] profile error:', profileErr)
 
   const monthsSince = profileData
     ? Math.floor(
@@ -126,18 +132,19 @@ export async function computeAndSyncBadges(
     a => a.status === 'present' || a.status === 'confirmed'
   ).length
 
-  // 5. Pobierz ranking bieżącego miesiąca (top3)
-  const { data: rankingData } = await supabase
+  // 5. Pobierz top 3 rankingu punktowego (pobieramy tylko 3 wiersze)
+  const { data: top3Data, error: rankErr } = await supabase
     .from('points_summary')
     .select('profile_id')
     .eq('parish_id', parishId)
     .order('total_points', { ascending: false })
+    .limit(3)
+  if (rankErr) console.error('[badges] ranking error:', rankErr)
 
-  let monthRank: number | null = null
-  if (rankingData) {
-    const pos = (rankingData as any[]).findIndex(r => r.profile_id === profileId) + 1
-    monthRank = pos > 0 ? pos : null
-  }
+  const rankIdx = top3Data
+    ? (top3Data as any[]).findIndex(r => r.profile_id === profileId)
+    : -1
+  const monthRank = rankIdx >= 0 ? rankIdx + 1 : null
 
   // 6. Oblicz aktywne/zarobione odznaki
   const activeStatusKeys = computeAutoStatusBadges(assignments, now)
@@ -146,32 +153,36 @@ export async function computeAndSyncBadges(
   const statusDefs = defs.filter((d: any) => d.persistence === 'status')
   const permanentDefs = defs.filter((d: any) => d.persistence === 'permanent')
 
-  // 7. Sync: status-owe — upsert z aktualnym is_active
-  for (const def of statusDefs) {
-    const isActive = activeStatusKeys.has(def.criteria_key)
-    await supabase.from('member_badges').upsert(
-      {
-        profile_id: profileId,
-        badge_definition_id: def.id,
-        is_active: isActive,
-        awarded_by: null,
-      },
-      { onConflict: 'profile_id,badge_definition_id' }
-    )
+  // 7. Sync: status-owe — jeden batched upsert z aktualnym is_active
+  if (statusDefs.length > 0) {
+    const statusRows = statusDefs.map((def: any) => ({
+      profile_id: profileId,
+      badge_definition_id: def.id,
+      is_active: activeStatusKeys.has(def.criteria_key),
+      awarded_by: null,
+    }))
+    const { error: statusErr } = await supabase
+      .from('member_badges')
+      .upsert(statusRows, { onConflict: 'profile_id,badge_definition_id' })
+    if (statusErr) console.error('[badges] status upsert error:', statusErr)
   }
 
-  // 8. Sync: trwałe — insert tylko gdy próg osiągnięty, ignore conflicts
-  for (const def of permanentDefs) {
-    if (earnedPermanentKeys.has(def.criteria_key)) {
-      await supabase.from('member_badges').upsert(
-        {
-          profile_id: profileId,
-          badge_definition_id: def.id,
-          is_active: true,
-          awarded_by: null,
-        },
-        { onConflict: 'profile_id,badge_definition_id', ignoreDuplicates: true }
-      )
-    }
+  // 8. Sync: trwałe — jeden batched upsert tylko dla osiągniętych progów
+  const earnedPermanentRows = permanentDefs
+    .filter((def: any) => earnedPermanentKeys.has(def.criteria_key))
+    .map((def: any) => ({
+      profile_id: profileId,
+      badge_definition_id: def.id,
+      is_active: true,
+      awarded_by: null,
+    }))
+  if (earnedPermanentRows.length > 0) {
+    const { error: permErr } = await supabase
+      .from('member_badges')
+      .upsert(earnedPermanentRows, {
+        onConflict: 'profile_id,badge_definition_id',
+        ignoreDuplicates: true,
+      })
+    if (permErr) console.error('[badges] permanent upsert error:', permErr)
   }
 }
