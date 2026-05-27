@@ -1,17 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator, Platform, Image,
+  ScrollView, Alert, ActivityIndicator, Platform,
   Modal, TextInput, KeyboardAvoidingView
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '../../lib/supabase'
 import { shadow } from '../../lib/shadows'
+import { computeAndSyncBadges } from '../../lib/badges'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import { useThemeStore, ThemeOverride } from '../../stores/themeStore'
+import { AvatarImage } from '../../components/AvatarImage'
+import {
+  PRESET_ICONS, PRESET_COLORS, buildPresetUrl, parsePresetUrl, isPresetUrl,
+} from '../../lib/presetAvatar'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrator',
@@ -32,10 +37,21 @@ function AvatarCard() {
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
   const { profile, fetchProfile } = useAuthStore()
-  const [uploading, setUploading] = useState(false)
-  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(profile?.avatar_url ?? null)
 
-  const pickAvatar = async () => {
+  const [busy, setBusy] = useState(false)
+  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null | undefined>(undefined)
+  const [menuVisible, setMenuVisible] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(false)
+  const [presetVisible, setPresetVisible] = useState(false)
+  const [selIcon, setSelIcon] = useState(PRESET_ICONS[0].icon)
+  const [selColor, setSelColor] = useState(0)
+
+  // undefined = not overridden (use store), null = explicitly removed
+  const displayUrl = localAvatarUrl !== undefined ? localAvatarUrl : (profile?.avatar_url ?? null)
+  const hasAvatar = !!displayUrl
+
+  const pickPhoto = async () => {
+    setMenuVisible(false)
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== 'granted') {
       Alert.alert('Brak uprawnień', 'Zezwól na dostęp do zdjęć w ustawieniach.')
@@ -49,52 +65,83 @@ function AvatarCard() {
     })
     if (result.canceled || !result.assets?.[0]) return
 
-    setUploading(true)
+    setBusy(true)
     try {
+      const p = useAuthStore.getState().profile!
       const uri = result.assets[0].uri
       const response = await fetch(uri)
       if (!response.ok) throw new Error(`Fetch obrazu nieudany: ${response.status}`)
-
       const blob = await response.blob()
       if (blob.size === 0) throw new Error('Pusty plik obrazu')
-      const contentType = blob.type || 'image/jpeg'
-      const path = `${profile!.id}.jpg`
+      const path = `${p.id}.jpg`
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(path, blob, { contentType, upsert: true })
-
+        .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: true })
       if (uploadError) { Alert.alert('Błąd uploadu', uploadError.message); return }
 
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-      const urlWithBuster = `${publicUrl}?t=${Date.now()}`
-
-      const { error: updateError } = await supabase
-        .from('profiles').update({ avatar_url: publicUrl }).eq('id', profile!.id)
-      if (updateError) { Alert.alert('Błąd zapisu profilu', updateError.message); return }
-
-      setLocalAvatarUrl(urlWithBuster)
+      const newUrl = `${publicUrl}?t=${Date.now()}`
+      const { error } = await supabase.from('profiles').update({ avatar_url: newUrl }).eq('id', p.id)
+      if (error) { Alert.alert('Błąd', error.message); return }
+      setLocalAvatarUrl(newUrl)
       fetchProfile()
     } catch (e: any) {
       Alert.alert('Błąd', e.message)
     } finally {
-      setUploading(false)
+      setBusy(false)
     }
   }
 
-  const displayUrl = localAvatarUrl ?? profile?.avatar_url
+  const openPresetPicker = () => {
+    const parsed = parsePresetUrl(displayUrl)
+    setSelIcon(parsed?.icon ?? PRESET_ICONS[0].icon)
+    setSelColor(parsed?.colorIndex ?? 0)
+    setMenuVisible(false)
+    setPresetVisible(true)
+  }
+
+  const savePreset = async () => {
+    setBusy(true)
+    const p = useAuthStore.getState().profile!
+    const currentUrl = p.avatar_url
+    if (!isPresetUrl(currentUrl) && currentUrl) {
+      await supabase.storage.from('avatars').remove([`${p.id}.jpg`])
+    }
+    const newUrl = buildPresetUrl(selIcon, selColor)
+    const { error } = await supabase.from('profiles').update({ avatar_url: newUrl }).eq('id', p.id)
+    setBusy(false)
+    if (error) { Alert.alert('Błąd', error.message); return }
+    setLocalAvatarUrl(newUrl)
+    fetchProfile()
+    setPresetVisible(false)
+  }
+
+  const doRemove = async () => {
+    setMenuVisible(false)
+    setConfirmRemove(false)
+    setBusy(true)
+    const p = useAuthStore.getState().profile!
+    const currentUrl = p.avatar_url
+    if (!isPresetUrl(currentUrl) && currentUrl) {
+      await supabase.storage.from('avatars').remove([`${p.id}.jpg`])
+    }
+    const { error } = await supabase.from('profiles').update({ avatar_url: null }).eq('id', p.id)
+    if (error) {
+      Alert.alert('Błąd', error.message)
+    } else {
+      setLocalAvatarUrl(null)
+      fetchProfile()
+    }
+    setBusy(false)
+  }
 
   return (
     <View style={styles.avatarCard}>
-      <TouchableOpacity onPress={pickAvatar} disabled={uploading} style={styles.avatarWrapper}>
-        {displayUrl
-          ? <Image source={{ uri: displayUrl }} style={styles.avatarImage} />
-          : <View style={styles.avatarPlaceholder}>
-              <Ionicons name="person" size={40} color={c.primary} />
-            </View>
-        }
+      <TouchableOpacity onPress={() => setMenuVisible(true)} disabled={busy} style={styles.avatarWrapper}>
+        <AvatarImage avatarUrl={displayUrl} size={80} />
         <View style={styles.avatarEditBadge}>
-          {uploading
+          {busy
             ? <ActivityIndicator size="small" color="#fff" />
             : <Ionicons name="camera" size={14} color="#fff" />
           }
@@ -105,6 +152,135 @@ function AvatarCard() {
         <Text style={styles.roleText}>{ROLE_LABELS[profile?.role ?? ''] ?? profile?.role}</Text>
       </View>
       <Text style={styles.email}>{useAuthStore.getState().session?.user.email}</Text>
+
+      {/* Action menu */}
+      <Modal visible={menuVisible} transparent animationType="slide" onRequestClose={() => { setMenuVisible(false); setConfirmRemove(false) }}>
+        <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => { setMenuVisible(false); setConfirmRemove(false) }}>
+          <View style={styles.menuSheet}>
+            <View style={styles.menuHandle} />
+            {confirmRemove ? (
+              <>
+                <View style={styles.menuConfirmBox}>
+                  <Ionicons name="warning-outline" size={22} color={c.danger} />
+                  <Text style={styles.menuConfirmText}>Czy na pewno chcesz usunąć zdjęcie profilowe?</Text>
+                </View>
+                <TouchableOpacity style={styles.menuItem} onPress={doRemove} disabled={busy}>
+                  <View style={[styles.menuIconBox, { backgroundColor: c.danger + '18' }]}>
+                    {busy
+                      ? <ActivityIndicator size="small" color={c.danger} />
+                      : <Ionicons name="trash" size={20} color={c.danger} />
+                    }
+                  </View>
+                  <Text style={[styles.menuItemText, { color: c.danger }]}>Tak, usuń</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.menuItem, { justifyContent: 'center' }]} onPress={() => setConfirmRemove(false)}>
+                  <Text style={[styles.menuItemText, { color: c.subtext }]}>Anuluj</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.menuItem} onPress={pickPhoto}>
+                  <View style={[styles.menuIconBox, { backgroundColor: c.primaryAlpha08 }]}>
+                    <Ionicons name="image-outline" size={20} color={c.primary} />
+                  </View>
+                  <Text style={styles.menuItemText}>Wybierz ze zdjęć</Text>
+                  <Ionicons name="chevron-forward" size={16} color={c.border} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.menuItem} onPress={openPresetPicker}>
+                  <View style={[styles.menuIconBox, { backgroundColor: c.primaryAlpha08 }]}>
+                    <Ionicons name="color-palette-outline" size={20} color={c.primary} />
+                  </View>
+                  <Text style={styles.menuItemText}>Wybierz ikonkę</Text>
+                  <Ionicons name="chevron-forward" size={16} color={c.border} />
+                </TouchableOpacity>
+                {hasAvatar && (
+                  <TouchableOpacity style={styles.menuItem} onPress={() => setConfirmRemove(true)}>
+                    <View style={[styles.menuIconBox, { backgroundColor: c.danger + '18' }]}>
+                      <Ionicons name="trash-outline" size={20} color={c.danger} />
+                    </View>
+                    <Text style={[styles.menuItemText, { color: c.danger }]}>Usuń zdjęcie profilowe</Text>
+                    <Ionicons name="chevron-forward" size={16} color={c.border} />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={[styles.menuItem, { justifyContent: 'center' }]} onPress={() => setMenuVisible(false)}>
+                  <Text style={[styles.menuItemText, { color: c.subtext }]}>Anuluj</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Preset picker */}
+      <Modal visible={presetVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setPresetVisible(false)}>
+        <View style={styles.presetModal}>
+          <View style={styles.presetHeader}>
+            <TouchableOpacity onPress={() => setPresetVisible(false)}>
+              <Text style={styles.presetCancel}>Anuluj</Text>
+            </TouchableOpacity>
+            <Text style={styles.presetTitle}>Wybierz ikonkę</Text>
+            <TouchableOpacity onPress={savePreset} disabled={busy}>
+              {busy
+                ? <ActivityIndicator color={c.primary} />
+                : <Text style={styles.presetSave}>Zapisz</Text>
+              }
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={styles.presetContent}>
+            {/* Preview */}
+            <View style={styles.presetPreviewRow}>
+              <View style={[styles.presetPreview, { backgroundColor: PRESET_COLORS[selColor].bg }]}>
+                <Ionicons name={selIcon as any} size={44} color={PRESET_COLORS[selColor].iconColor} />
+              </View>
+            </View>
+
+            {/* Color row */}
+            <Text style={styles.presetSectionLabel}>KOLOR</Text>
+            <View style={styles.presetColorRow}>
+              {PRESET_COLORS.map((col, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[styles.colorSwatch, { backgroundColor: col.bg }, selColor === idx && styles.colorSwatchSelected]}
+                  onPress={() => setSelColor(idx)}
+                  activeOpacity={0.8}
+                >
+                  {selColor === idx && <Ionicons name="checkmark" size={14} color="#fff" />}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Icon grid */}
+            <Text style={styles.presetSectionLabel}>IKONA</Text>
+            <View style={styles.iconGrid}>
+              {PRESET_ICONS.map((def) => {
+                const active = selIcon === def.icon
+                return (
+                  <TouchableOpacity
+                    key={def.icon}
+                    style={[
+                      styles.iconCell,
+                      { backgroundColor: active ? PRESET_COLORS[selColor].bg : c.surface },
+                      active && styles.iconCellActive,
+                    ]}
+                    onPress={() => setSelIcon(def.icon)}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons
+                      name={def.icon as any}
+                      size={26}
+                      color={active ? PRESET_COLORS[selColor].iconColor : c.subtext}
+                    />
+                    <Text style={[styles.iconCellLabel, active && { color: PRESET_COLORS[selColor].iconColor }]}>
+                      {def.label}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -118,40 +294,54 @@ function MemberProfile() {
   const { profile, session, signOut, parish } = useAuthStore()
   const [summary, setSummary] = useState<{ total_points: number; services_count: number } | null>(null)
   const [rank, setRank] = useState<number>(0)
-  const [rankName, setRankName] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
 
+  type RankItem = { id: string; name: string; order: number }
+  type BadgeWithDef = {
+    id: string
+    awarded_at: string
+    badge_definition: { id: string; name: string; icon: string; criteria_key: string } | null
+  }
+
+  const [allRanks, setAllRanks] = useState<RankItem[]>([])
+  const [activeBadges, setActiveBadges] = useState<BadgeWithDef[]>([])
+  const [selectedBadge, setSelectedBadge] = useState<BadgeWithDef | null>(null)
+
   useEffect(() => {
     if (!profile?.id) return
-    const queries: PromiseLike<any>[] = [
+    Promise.all([
       supabase.from('points_summary').select('total_points, services_count').eq('profile_id', profile.id).maybeSingle(),
       supabase.from('points_summary').select('profile_id').eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
-    ]
-    if (profile.rank_id) {
-      queries.push(supabase.from('ranks').select('name').eq('id', profile.rank_id).single())
-    }
-    Promise.all(queries).then(([summaryRes, rankingRes, rankRes]) => {
+    ]).then(([summaryRes, rankingRes]) => {
       if (summaryRes.data) setSummary(summaryRes.data as any)
       if (rankingRes.data) {
         const pos = (rankingRes.data as any[]).findIndex(r => r.profile_id === profile.id) + 1
         setRank(pos)
       }
-      if (rankRes?.data) setRankName(rankRes.data.name)
       setLoading(false)
     })
   }, [profile?.id, profile?.rank_id])
 
-  const handleSignOut = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Czy na pewno chcesz się wylogować?')) signOut()
-      return
-    }
-    Alert.alert('Wylogowanie', 'Czy na pewno chcesz się wylogować?', [
-      { text: 'Anuluj', style: 'cancel' },
-      { text: 'Wyloguj', style: 'destructive', onPress: signOut },
-    ])
-  }
+  useEffect(() => {
+    if (!profile?.id || !profile.parish_id) return
+    Promise.all([
+      supabase.from('ranks')
+        .select('id, name, order')
+        .or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`)
+        .order('order'),
+      supabase.from('member_badges')
+        .select('id, awarded_at, badge_definition:badge_definitions(id, name, icon, criteria_key)')
+        .eq('profile_id', profile.id)
+        .eq('is_active', true),
+    ]).then(([ranksRes, badgesRes]) => {
+      setAllRanks(ranksRes.data ?? [])
+      setActiveBadges((badgesRes.data ?? []).filter((b: any) => b.badge_definition !== null) as unknown as BadgeWithDef[])
+    })
+    computeAndSyncBadges(supabase, profile.id, profile.parish_id).catch(console.error)
+  }, [profile?.id])
+
+  const rankName = allRanks.find(r => r.id === profile?.rank_id)?.name ?? null
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -175,6 +365,40 @@ function MemberProfile() {
         <InfoRow icon="ribbon-outline" label="Ranga" value={rankName ?? 'Brak rangi'} />
         <InfoRow icon="business-outline" label="Parafia" value={parish ? `${parish.name}${parish.city ? `, ${parish.city}` : ''}` : '—'} last />
       </InfoSection>
+
+      {/* Ścieżka formacji */}
+      {allRanks.length > 0 && (
+        <FormationSection ranks={allRanks} currentRankId={profile?.rank_id ?? null} c={c} styles={styles} />
+      )}
+
+      {/* Wyróżnienia (odznaki) */}
+      {activeBadges.length > 0 && (
+        <BadgesSection badges={activeBadges} onBadgePress={setSelectedBadge} c={c} styles={styles} />
+      )}
+
+      {/* Tooltip odznaki */}
+      <Modal
+        visible={selectedBadge !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedBadge(null)}
+      >
+        <TouchableOpacity
+          style={styles.badgeTooltipOverlay}
+          activeOpacity={1}
+          onPress={() => setSelectedBadge(null)}
+        >
+          <View style={styles.badgeTooltip}>
+            <Text style={styles.badgeTooltipIcon}>{selectedBadge?.badge_definition?.icon ?? ''}</Text>
+            <Text style={styles.badgeTooltipName}>{selectedBadge?.badge_definition?.name ?? ''}</Text>
+            <Text style={styles.badgeTooltipDate}>
+              {selectedBadge ? new Date(selectedBadge.awarded_at).toLocaleDateString('pl-PL', {
+                day: 'numeric', month: 'long', year: 'numeric',
+              }) : ''}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Wygląd */}
       <View style={styles.section}>
@@ -213,7 +437,7 @@ function MemberProfile() {
       </View>
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={true} />
-      <SignOutButton onPress={handleSignOut} />
+      <SignOutButton onConfirm={signOut} />
     </ScrollView>
   )
 }
@@ -239,17 +463,6 @@ function AdminProfile() {
       setLoading(false)
     })
   }, [])
-
-  const handleSignOut = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Czy na pewno chcesz się wylogować?')) signOut()
-      return
-    }
-    Alert.alert('Wylogowanie', 'Czy na pewno chcesz się wylogować?', [
-      { text: 'Anuluj', style: 'cancel' },
-      { text: 'Wyloguj', style: 'destructive', onPress: signOut },
-    ])
-  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -308,7 +521,7 @@ function AdminProfile() {
       </View>
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
-      <SignOutButton onPress={handleSignOut} />
+      <SignOutButton onConfirm={signOut} />
     </ScrollView>
   )
 }
@@ -333,7 +546,7 @@ function ParentProfile() {
 
       const summaries = await Promise.all(
         data.map((c: any) =>
-          supabase.from('points_summary').select('services_count').eq('profile_id', c.id).single()
+          supabase.from('points_summary').select('services_count').eq('profile_id', c.id).maybeSingle()
         )
       )
       setChildren(data.map((c: any, i: number) => ({
@@ -344,17 +557,6 @@ function ParentProfile() {
       setLoading(false)
     })
   }, [profile?.id])
-
-  const handleSignOut = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Czy na pewno chcesz się wylogować?')) signOut()
-      return
-    }
-    Alert.alert('Wylogowanie', 'Czy na pewno chcesz się wylogować?', [
-      { text: 'Anuluj', style: 'cancel' },
-      { text: 'Wyloguj', style: 'destructive', onPress: signOut },
-    ])
-  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -428,7 +630,7 @@ function ParentProfile() {
       </View>
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
-      <SignOutButton onPress={handleSignOut} />
+      <SignOutButton onConfirm={signOut} />
     </ScrollView>
   )
 }
@@ -587,14 +789,145 @@ function InfoRow({ icon, label, value, last }: { icon: any; label: string; value
   )
 }
 
-function SignOutButton({ onPress }: { onPress: () => void }) {
+function SignOutButton({ onConfirm }: { onConfirm: () => void }) {
   const { colors: c } = useTheme()
   const styles = createStyles(c)
+  const [confirming, setConfirming] = useState(false)
+
   return (
-    <TouchableOpacity style={styles.signOutButton} onPress={onPress}>
-      <Ionicons name="log-out-outline" size={20} color={c.danger} />
-      <Text style={styles.signOutText}>Wyloguj się</Text>
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity style={styles.signOutButton} onPress={() => setConfirming(true)}>
+        <Ionicons name="log-out-outline" size={20} color={c.danger} />
+        <Text style={styles.signOutText}>Wyloguj się</Text>
+      </TouchableOpacity>
+
+      <Modal visible={confirming} transparent animationType="fade" onRequestClose={() => setConfirming(false)}>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmSheet}>
+            <Text style={styles.confirmTitle}>Wylogowanie</Text>
+            <Text style={styles.confirmMessage}>Czy na pewno chcesz się wylogować?</Text>
+            <View style={styles.confirmActions}>
+              <TouchableOpacity style={styles.confirmCancelBtn} onPress={() => setConfirming(false)}>
+                <Text style={styles.editCancelText}>Anuluj</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmSignOutBtn} onPress={() => { setConfirming(false); onConfirm() }}>
+                <Text style={styles.confirmSignOutText}>Wyloguj</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
+  )
+}
+
+// ─── Formation & Badges ───────────────────────────────────────────────────────
+
+function FormationSection({
+  ranks, currentRankId, c, styles,
+}: {
+  ranks: { id: string; name: string; order: number }[]
+  currentRankId: string | null
+  c: Colors
+  styles: any
+}) {
+  const currentIdx = currentRankId ? ranks.findIndex(r => r.id === currentRankId) : -1
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>ŚCIEŻKA FORMACJI</Text>
+      </View>
+      <View style={styles.formationCard}>
+        {/* Circles + connectors row */}
+        <View style={styles.formationCirclesRow}>
+          {ranks.map((rank, idx) => {
+            const isDone = currentIdx >= 0 && idx < currentIdx
+            const isCurrent = idx === currentIdx
+            return [
+              idx > 0 ? (
+                <View
+                  key={`conn-${rank.id}`}
+                  style={[
+                    styles.formationConnector,
+                    idx <= currentIdx ? styles.formationConnectorDone : null,
+                  ]}
+                />
+              ) : null,
+              <View
+                key={rank.id}
+                style={[
+                  styles.formationCircle,
+                  isDone ? styles.formationCircleDone
+                    : isCurrent ? styles.formationCircleCurrent
+                    : null,
+                ]}
+              >
+                {isDone
+                  ? <Ionicons name="checkmark" size={11} color="#fff" />
+                  : isCurrent
+                    ? <View style={styles.formationDot} />
+                    : null
+                }
+              </View>,
+            ]
+          })}
+        </View>
+        {/* Labels row */}
+        <View style={styles.formationLabelsRow}>
+          {ranks.map((rank, idx) => {
+            const isDone = currentIdx >= 0 && idx < currentIdx
+            const isCurrent = idx === currentIdx
+            return [
+              idx > 0 ? <View key={`spacer-${idx}`} style={{ flex: 1 }} /> : null,
+              <Text
+                key={rank.id}
+                style={[
+                  styles.formationLabel,
+                  isDone ? styles.formationLabelDone
+                    : isCurrent ? styles.formationLabelCurrent
+                    : null,
+                ]}
+                numberOfLines={2}
+              >
+                {rank.name}
+              </Text>,
+            ]
+          })}
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function BadgesSection({
+  badges, onBadgePress, c, styles,
+}: {
+  badges: { id: string; awarded_at: string; badge_definition: { name: string; icon: string } | null }[]
+  onBadgePress: (badge: any) => void
+  c: Colors
+  styles: any
+}) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>WYRÓŻNIENIA</Text>
+      </View>
+      <View style={styles.badgesCard}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgesScroll}>
+          {badges.map(b => (
+            <TouchableOpacity
+              key={b.id}
+              style={styles.badgeChip}
+              onPress={() => onBadgePress(b)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.badgeChipIcon}>{b.badge_definition?.icon ?? '🏅'}</Text>
+              <Text style={styles.badgeChipName}>{b.badge_definition?.name ?? ''}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    </View>
   )
 }
 
@@ -602,7 +935,7 @@ function SignOutButton({ onPress }: { onPress: () => void }) {
 
 function createStyles(c: Colors) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
+    container: { flex: 1, backgroundColor: c.bg, ...(Platform.OS === 'web' && { minHeight: 0 }) },
     content: { padding: 16, gap: 16 },
 
     avatarCard: {
@@ -611,17 +944,77 @@ function createStyles(c: Colors) {
       ...shadow.md,
     },
     avatarWrapper: { position: 'relative', marginBottom: 4 },
-    avatarImage: { width: 80, height: 80, borderRadius: 40 },
-    avatarPlaceholder: {
-      width: 80, height: 80, borderRadius: 40,
-      backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center',
-    },
     avatarEditBadge: {
       position: 'absolute', bottom: 0, right: 0,
       width: 26, height: 26, borderRadius: 13,
       backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center',
-      borderWidth: 2, borderColor: '#fff',
+      borderWidth: 2, borderColor: c.surface,
     },
+
+    // Avatar action menu
+    menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+    menuSheet: {
+      backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      paddingBottom: 28, paddingTop: 8,
+    },
+    menuHandle: {
+      width: 36, height: 4, borderRadius: 2, backgroundColor: c.border,
+      alignSelf: 'center', marginBottom: 12,
+    },
+    menuItem: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      paddingHorizontal: 20, paddingVertical: 14,
+    },
+    menuIconBox: {
+      width: 36, height: 36, borderRadius: 10,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    menuItemText: { flex: 1, fontSize: 15, fontWeight: '500', color: c.text },
+    menuConfirmBox: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      paddingHorizontal: 20, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: c.border,
+    },
+    menuConfirmText: { flex: 1, fontSize: 14, color: c.text, lineHeight: 20 },
+
+    // Preset picker
+    presetModal: { flex: 1, backgroundColor: c.bg },
+    presetHeader: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      padding: 16, borderBottomWidth: 1, borderBottomColor: c.border,
+      backgroundColor: c.surface,
+    },
+    presetTitle: { fontSize: 16, fontWeight: '600', color: c.text },
+    presetCancel: { fontSize: 15, color: c.subtext },
+    presetSave: { fontSize: 15, color: c.primary, fontWeight: '600' },
+    presetContent: { padding: 20, gap: 16 },
+    presetPreviewRow: { alignItems: 'center', paddingVertical: 8 },
+    presetPreview: {
+      width: 96, height: 96, borderRadius: 48,
+      justifyContent: 'center', alignItems: 'center',
+      ...shadow.md,
+    },
+    presetSectionLabel: {
+      fontSize: 11, fontWeight: '700', color: c.textTertiary,
+      letterSpacing: 0.8, textTransform: 'uppercase',
+    },
+    presetColorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    colorSwatch: {
+      width: 36, height: 36, borderRadius: 18,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    colorSwatchSelected: {
+      borderWidth: 3, borderColor: c.text,
+    },
+    iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    iconCell: {
+      width: '22%', flexGrow: 1, aspectRatio: 1,
+      borderRadius: 14, alignItems: 'center', justifyContent: 'center',
+      gap: 4, padding: 8,
+      borderWidth: 1, borderColor: c.border,
+    },
+    iconCellActive: { borderColor: 'transparent' },
+    iconCellLabel: { fontSize: 9, color: c.textTertiary, textAlign: 'center', fontWeight: '600' },
     name: { fontSize: 20, fontWeight: '700', color: c.text },
     roleBadge: {
       backgroundColor: c.primaryAlpha12, borderRadius: 12,
@@ -675,6 +1068,15 @@ function createStyles(c: Colors) {
     },
     signOutText: { fontSize: 15, fontWeight: '600', color: c.danger },
 
+    confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 32 },
+    confirmSheet: { backgroundColor: c.surface, borderRadius: 16, padding: 24, gap: 12, width: '100%', maxWidth: 400 },
+    confirmTitle: { fontSize: 18, fontWeight: '700', color: c.text },
+    confirmMessage: { fontSize: 15, color: c.subtext },
+    confirmActions: { flexDirection: 'row', gap: 10, marginTop: 4 },
+    confirmCancelBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: c.primarySurface, alignItems: 'center' },
+    confirmSignOutBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: c.danger, alignItems: 'center' },
+    confirmSignOutText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+
     sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     editLink: { fontSize: 13, fontWeight: '600', color: c.primary },
 
@@ -714,5 +1116,65 @@ function createStyles(c: Colors) {
     themeBtnActive: { backgroundColor: c.primary },
     themeBtnText: { fontSize: 13, fontWeight: '600', color: c.subtext },
     themeBtnTextActive: { color: '#fff' },
+
+    // Formation
+    formationCard: {
+      backgroundColor: c.surface, borderRadius: 14, padding: 16,
+      ...shadow.xs,
+    },
+    formationCirclesRow: {
+      flexDirection: 'row', alignItems: 'center', marginBottom: 0,
+    },
+    formationConnector: {
+      flex: 1, height: 2, backgroundColor: c.border,
+    },
+    formationConnectorDone: { backgroundColor: '#16A34A' },
+    formationCircle: {
+      width: 24, height: 24, borderRadius: 12,
+      justifyContent: 'center', alignItems: 'center',
+      backgroundColor: c.surface, borderWidth: 2, borderColor: c.border,
+    },
+    formationCircleDone: { backgroundColor: '#16A34A', borderColor: '#16A34A' },
+    formationCircleCurrent: { backgroundColor: c.primary, borderColor: c.primary },
+    formationDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
+    formationLabelsRow: {
+      flexDirection: 'row', marginTop: 8,
+    },
+    formationLabel: {
+      width: 24, textAlign: 'center', fontSize: 9, lineHeight: 12,
+      color: c.textTertiary, fontWeight: '400',
+    },
+    formationLabelDone: { color: '#16A34A' },
+    formationLabelCurrent: { color: c.primary, fontWeight: '700' },
+
+    // Badges
+    badgesCard: {
+      backgroundColor: c.surface, borderRadius: 14,
+      ...shadow.xs,
+    },
+    badgesScroll: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+    badgeChip: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      backgroundColor: c.primarySurface, borderRadius: 20,
+      paddingHorizontal: 12, paddingVertical: 8,
+      borderWidth: 1, borderColor: c.primaryAlpha12,
+    },
+    badgeChipIcon: { fontSize: 16 },
+    badgeChipName: { fontSize: 12, fontWeight: '600', color: c.primary },
+
+    // Badge tooltip
+    badgeTooltipOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
+      justifyContent: 'center', alignItems: 'center', padding: 40,
+    },
+    badgeTooltip: {
+      backgroundColor: c.surface, borderRadius: 16, padding: 24,
+      alignItems: 'center', gap: 6,
+      ...shadow.md,
+      minWidth: 180,
+    },
+    badgeTooltipIcon: { fontSize: 40 },
+    badgeTooltipName: { fontSize: 17, fontWeight: '700', color: c.text },
+    badgeTooltipDate: { fontSize: 13, color: c.subtext },
   })
 }
