@@ -49,19 +49,19 @@ export function ExportModal({ visible, onClose }: Props) {
   const [loading, setLoading] = useState(false)
   const [dateError, setDateError] = useState('')
 
+  const todayStr = useMemo(() => localDateStr(new Date()), [])
+
   const getRange = (): { from: string; to: string } => {
     if (preset === 'custom') return { from: customFrom, to: customTo }
     const d = new Date()
     d.setDate(d.getDate() - preset)
-    return { from: localDateStr(d), to: localDateStr(new Date()) }
+    return { from: localDateStr(d), to: todayStr }
   }
-
-  const todayStr = localDateStr(new Date())
 
   const handleExport = async () => {
     if (preset === 'custom') {
       if (customFrom > customTo) {
-        setDateError('Data "od" musi być wcześniejsza niż "do".')
+        setDateError('Data "od" nie może być późniejsza niż "do".')
         return
       }
       if (customTo > todayStr) {
@@ -70,7 +70,10 @@ export function ExportModal({ visible, onClose }: Props) {
       }
     }
     setDateError('')
-    if (!profile?.parish_id || !parish?.name) return
+    if (!profile?.parish_id || !parish?.name) {
+      Alert.alert('Błąd', 'Brak danych parafii.')
+      return
+    }
 
     setLoading(true)
     try {
