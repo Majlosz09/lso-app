@@ -319,8 +319,7 @@ function MemberProfile() {
         const pos = (rankingRes.data as any[]).findIndex(r => r.profile_id === profile.id) + 1
         setRank(pos)
       }
-      setLoading(false)
-    })
+    }).catch(console.error).finally(() => setLoading(false))
   }, [profile?.id, profile?.rank_id])
 
   useEffect(() => {
@@ -337,9 +336,9 @@ function MemberProfile() {
     ]).then(([ranksRes, badgesRes]) => {
       setAllRanks(ranksRes.data ?? [])
       setActiveBadges((badgesRes.data ?? []).filter((b: any) => b.badge_definition !== null) as unknown as BadgeWithDef[])
-    })
+    }).catch(console.error)
     computeAndSyncBadges(supabase, profile.id, profile.parish_id).catch(console.error)
-  }, [profile?.id])
+  }, [profile?.id, profile?.parish_id])
 
   const rankName = allRanks.find(r => r.id === profile?.rank_id)?.name ?? null
 
@@ -1128,13 +1127,13 @@ function createStyles(c: Colors) {
     formationConnector: {
       flex: 1, height: 2, backgroundColor: c.border,
     },
-    formationConnectorDone: { backgroundColor: '#16A34A' },
+    formationConnectorDone: { backgroundColor: c.success },
     formationCircle: {
       width: 24, height: 24, borderRadius: 12,
       justifyContent: 'center', alignItems: 'center',
       backgroundColor: c.surface, borderWidth: 2, borderColor: c.border,
     },
-    formationCircleDone: { backgroundColor: '#16A34A', borderColor: '#16A34A' },
+    formationCircleDone: { backgroundColor: c.success, borderColor: c.success },
     formationCircleCurrent: { backgroundColor: c.primary, borderColor: c.primary },
     formationDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
     formationLabelsRow: {
@@ -1144,7 +1143,7 @@ function createStyles(c: Colors) {
       width: 24, textAlign: 'center', fontSize: 9, lineHeight: 12,
       color: c.textTertiary, fontWeight: '400',
     },
-    formationLabelDone: { color: '#16A34A' },
+    formationLabelDone: { color: c.success },
     formationLabelCurrent: { color: c.primary, fontWeight: '700' },
 
     // Badges
