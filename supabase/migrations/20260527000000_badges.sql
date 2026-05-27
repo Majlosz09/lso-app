@@ -16,7 +16,7 @@ create table member_badges (
   profile_id          uuid references profiles(id) on delete cascade not null,
   badge_definition_id uuid references badge_definitions(id) on delete cascade not null,
   awarded_at          timestamptz not null default now(),
-  awarded_by          uuid references profiles(id),
+  awarded_by          uuid references profiles(id) on delete set null,
   note                text,
   is_active           boolean not null default true,
   unique (profile_id, badge_definition_id)
@@ -65,12 +65,23 @@ create policy "member_badges_select" on member_badges
     )
   );
 
--- member_badges: członek może INSERT/UPDATE własne (auto-sync), admin może zarządzać dowolnymi w parafii
+-- member_badges: członek może INSERT/UPDATE własne auto-odznaki (auto-sync), admin może zarządzać dowolnymi w parafii
+-- Ograniczamy do type='auto' żeby uniemożliwić przyznanie sobie odznak ręcznych przez API
 create policy "member_badges_member_write" on member_badges
-  for insert with check (profile_id = auth.uid());
+  for insert with check (
+    profile_id = auth.uid()
+    and (select type from badge_definitions where id = badge_definition_id) = 'auto'
+  );
 
 create policy "member_badges_member_update" on member_badges
-  for update using (profile_id = auth.uid());
+  for update using (
+    profile_id = auth.uid()
+    and (select type from badge_definitions where id = badge_definition_id) = 'auto'
+  )
+  with check (
+    profile_id = auth.uid()
+    and (select type from badge_definitions where id = badge_definition_id) = 'auto'
+  );
 
 create policy "member_badges_admin_write" on member_badges
   for all using (
