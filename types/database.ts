@@ -14,10 +14,21 @@ export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   zbiorka:       'Zbiórka',
 }
 
-export const CATEGORY_CONFIG: Record<ScheduleCategory, { label: string; color: string; bg: string }> = {
-  msza:        { label: 'Msza Święta',  color: '#534AB7', bg: '#534AB714' },
-  nabozenstwo: { label: 'Nabożeństwo', color: '#1A8FD1', bg: '#1A8FD114' },
-  zbiorka:     { label: 'Zbiórka',      color: '#2EAD7A', bg: '#2EAD7A14' },
+export const CATEGORY_CONFIG: Record<ScheduleCategory, {
+  label: string; color: string; bg: string; darkColor: string; darkBg: string
+}> = {
+  msza:        { label: 'Msza Święta',  color: '#1A237E', bg: '#E8EAF6', darkColor: '#7986CB', darkBg: '#1A237E55' },
+  nabozenstwo: { label: 'Nabożeństwo', color: '#0EA5E9', bg: '#F0F9FF', darkColor: '#38BDF8', darkBg: '#0EA5E925' },
+  zbiorka:     { label: 'Zbiórka',      color: '#10B981', bg: '#ECFDF5', darkColor: '#4ADE80', darkBg: '#10B98125' },
+}
+
+export function getCatColors(category: ScheduleCategory, isDark: boolean) {
+  const cfg = CATEGORY_CONFIG[category] ?? CATEGORY_CONFIG.msza
+  return {
+    label: cfg.label,
+    color: isDark ? cfg.darkColor : cfg.color,
+    bg:    isDark ? cfg.darkBg    : cfg.bg,
+  }
 }
 
 export interface Parish {
@@ -28,6 +39,10 @@ export interface Parish {
   setup_done: boolean
   created_at: string
   created_by: string | null
+  lat: number | null
+  lng: number | null
+  gps_radius: number
+  attendance_mode: AttendanceMode
 }
 
 export interface PointRule {
@@ -47,7 +62,7 @@ export interface Rank {
   created_at: string
 }
 export type AttendanceMethod = 'gps' | 'qr' | 'manual'
-export type SwapStatus = 'open' | 'accepted' | 'rejected' | 'cancelled'
+export type AttendanceMode = 'button' | 'qr' | 'gps' | 'admin'
 
 export interface Profile {
   id: string
@@ -61,6 +76,7 @@ export interface Profile {
   rocznik: number | null
   rank_id: string | null
   parish_id: string | null
+  push_token: string | null
   created_at: string
 }
 
@@ -187,17 +203,27 @@ export interface MassTemplate {
   created_at: string
 }
 
-export interface SwapOffer {
+export interface BadgeDefinition {
   id: string
-  schedule_id: string
-  from_profile_id: string
-  to_profile_id: string | null
-  message: string | null
-  status: SwapStatus
+  parish_id: string | null
+  name: string
+  icon: string
+  type: 'auto' | 'manual'
+  persistence: 'status' | 'permanent'
+  criteria_key: string
   created_at: string
-  resolved_at: string | null
-  // Relacje
-  schedule?: Schedule
-  from_profile?: Profile
-  to_profile?: Profile
 }
+
+export interface MemberBadge {
+  id: string
+  profile_id: string
+  badge_definition_id: string
+  awarded_at: string
+  awarded_by: string | null
+  note: string | null
+  is_active: boolean
+  // Relacje (opcjonalne, ładowane z join)
+  badge_definition?: BadgeDefinition
+  awarder?: Profile
+}
+
