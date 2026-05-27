@@ -45,6 +45,10 @@ describe('computeAutoStatusBadges', () => {
       const a = [makeA(40, 'present'), makeA(50, 'present')]
       expect(computeAutoStatusBadges(a, NOW).has('regularny')).toBe(false)
     })
+
+    it('nie przyznaje gdy brak assignments w tablicy', () => {
+      expect(computeAutoStatusBadges([], NOW).has('regularny')).toBe(false)
+    })
   })
 
   describe('seria (kolejne non-absent)', () => {
@@ -98,6 +102,23 @@ describe('computeAutoStatusBadges', () => {
       ]
       expect(computeAutoStatusBadges(a, NOW).has('seria_5')).toBe(true)
     })
+
+    it('nie przyznaje serii gdy brak assignments', () => {
+      const r = computeAutoStatusBadges([], NOW)
+      expect(r.has('seria_5')).toBe(false)
+    })
+
+    it('poprawnie liczy serię niezależnie od kolejności w tablicy (dane nieposortowane)', () => {
+      // dane podane w losowej kolejności — funkcja musi sortować po dacie
+      const a = [
+        makeA(10, 'present'),
+        makeA(1, 'present'),
+        makeA(5, 'present'),
+        makeA(3, 'present'),
+        makeA(8, 'present'),
+      ]
+      expect(computeAutoStatusBadges(a, NOW).has('seria_5')).toBe(true)
+    })
   })
 })
 
@@ -146,6 +167,11 @@ describe('computeAutoPermanentBadges', () => {
       expect(r.has('rocznica_2')).toBe(true)
       expect(r.has('rocznica_5')).toBe(true)
     })
+  })
+
+  it('zwraca pusty Set gdy wszystkie progi poniżej minimum', () => {
+    const r = computeAutoPermanentBadges(0, 0, null)
+    expect(r.size).toBe(0)
   })
 
   describe('top3', () => {
