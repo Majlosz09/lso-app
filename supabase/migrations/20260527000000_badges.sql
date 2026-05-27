@@ -15,16 +15,19 @@ create table member_badges (
   id                  uuid primary key default gen_random_uuid(),
   profile_id          uuid references profiles(id) on delete cascade not null,
   badge_definition_id uuid references badge_definitions(id) on delete cascade not null,
-  awarded_at          timestamptz default now(),
+  awarded_at          timestamptz not null default now(),
   awarded_by          uuid references profiles(id),
   note                text,
-  is_active           boolean default true,
+  is_active           boolean not null default true,
   unique (profile_id, badge_definition_id)
 );
 
 -- RLS
 alter table badge_definitions enable row level security;
 alter table member_badges enable row level security;
+
+-- Index on profile_id for fast member badge lookups
+create index member_badges_profile_id_idx on member_badges(profile_id);
 
 -- badge_definitions: widoczne dla wszystkich z tej samej parafii (lub systemowe)
 create policy "badge_definitions_select" on badge_definitions
@@ -62,11 +65,16 @@ create policy "member_badges_select" on member_badges
     )
   );
 
--- member_badges: członek może upsertować własne (auto-sync), admin może upsertować dla dowolnego w parafii
-create policy "member_badges_write" on member_badges
+-- member_badges: członek może INSERT/UPDATE własne (auto-sync), admin może zarządzać dowolnymi w parafii
+create policy "member_badges_member_write" on member_badges
+  for insert with check (profile_id = auth.uid());
+
+create policy "member_badges_member_update" on member_badges
+  for update using (profile_id = auth.uid());
+
+create policy "member_badges_admin_write" on member_badges
   for all using (
-    profile_id = auth.uid()
-    or exists (
+    exists (
       select 1 from profiles a, profiles m
       where a.id = auth.uid()
         and (a.role = 'admin' or a.is_admin = true)
@@ -74,8 +82,7 @@ create policy "member_badges_write" on member_badges
         and a.parish_id = m.parish_id
     )
   ) with check (
-    profile_id = auth.uid()
-    or exists (
+    exists (
       select 1 from profiles a, profiles m
       where a.id = auth.uid()
         and (a.role = 'admin' or a.is_admin = true)

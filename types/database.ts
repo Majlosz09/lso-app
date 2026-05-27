@@ -53,6 +53,8 @@ export interface PointRule {
   created_at: string
 }
 
+export type SwapStatus = 'open' | 'accepted' | 'rejected' | 'cancelled'
+
 export interface Rank {
   id: string
   name: string
@@ -201,6 +203,21 @@ export interface MassTemplate {
   label: string | null
   sort_order: number
   created_at: string
+}
+
+export interface SwapOffer {
+  id: string
+  schedule_id: string
+  from_profile_id: string
+  to_profile_id: string | null
+  message: string | null
+  status: SwapStatus
+  created_at: string
+  resolved_at: string | null
+  // Relacje
+  schedule?: Schedule
+  from_profile?: Profile
+  to_profile?: Profile
 }
 
 export interface BadgeDefinition {
