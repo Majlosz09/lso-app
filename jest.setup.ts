@@ -18,7 +18,7 @@ jest.mock('expo-location', () => ({
   },
 }))
 
-// Mock supabase
+// Mock supabase to prevent real client initialization in tests that don't override it
 jest.mock('./lib/supabase', () => ({
   supabase: {
     from: jest.fn(() => ({
@@ -26,5 +26,9 @@ jest.mock('./lib/supabase', () => ({
       update: jest.fn(),
       eq: jest.fn(),
     })),
+    auth: {
+      signInWithPassword: jest.fn(),
+    },
   },
 }))
+
