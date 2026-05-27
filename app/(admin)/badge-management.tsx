@@ -59,14 +59,20 @@ export default function BadgeManagementScreen() {
         .order('awarded_at', { ascending: false })
         .limit(30),
     ])
-    if (customRes.error) console.error('[badge-management] custom badges error:', customRes.error)
-    if (historyRes.error) console.error('[badge-management] history error:', historyRes.error)
+    if (customRes.error) {
+      console.error('[badge-management] custom badges error:', customRes.error)
+      Alert.alert('Błąd', 'Nie udało się załadować odznak parafii.')
+    }
+    if (historyRes.error) {
+      console.error('[badge-management] history error:', historyRes.error)
+      Alert.alert('Błąd', 'Nie udało się załadować historii przyznanych.')
+    }
     setCustomBadges(customRes.data ?? [])
     setHistory((historyRes.data ?? []).filter((h: any) => h.badge_definition !== null) as AwardHistoryRow[])
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [parishId])
 
   const handleAdd = async () => {
     const name = newName.trim()
