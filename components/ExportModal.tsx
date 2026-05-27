@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Modal, View, Text, StyleSheet,
   TouchableOpacity, ActivityIndicator, Alert,
@@ -48,6 +48,14 @@ export function ExportModal({ visible, onClose }: Props) {
   const [toPickerVisible, setToPickerVisible] = useState(false)
   const [loading, setLoading] = useState(false)
   const [dateError, setDateError] = useState('')
+
+  useEffect(() => {
+    if (visible) {
+      setCustomFrom(subtractDays(30))
+      setCustomTo(localDateStr(new Date()))
+      setDateError('')
+    }
+  }, [visible])
 
   const todayStr = useMemo(() => localDateStr(new Date()), [])
 

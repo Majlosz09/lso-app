@@ -1,6 +1,4 @@
-import * as FileSystem from 'expo-file-system'
 import * as Sharing from 'expo-sharing'
-import * as Print from 'expo-print'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type MemberExportRow = {
@@ -50,6 +48,7 @@ export async function buildExportData(
       .lte('created_at', toDate.toISOString()),
   ])
 
+  if (profilesRes.error) throw new Error(profilesRes.error.message)
   const profiles:    { id: string; full_name: string }[]       = profilesRes.data    ?? []
   const assignments: { profile_id: string; status: string }[]  = assignmentsRes.data ?? []
   const pointRows:   { profile_id: string; amount: number }[]  = pointsRes.data      ?? []
