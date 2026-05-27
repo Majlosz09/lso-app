@@ -8,9 +8,10 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { shadow } from '../../lib/shadows'
-import { CATEGORY_CONFIG, ScheduleCategory } from '../../types/database'
+import { getCatColors, ScheduleCategory } from '../../types/database'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { ExportModal } from '../../components/ExportModal'
 
 type Period = 7 | 30 | 90 | 365
 
@@ -64,6 +65,7 @@ export default function StatisticsScreen() {
   const [topMembers, setTopMembers] = useState<TopMember[]>([])
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([])
   const [monthStats, setMonthStats] = useState<MonthStat[]>([])
+  const [exportVisible, setExportVisible] = useState(false)
 
   const fetchStats = async (p: Period) => {
     if (!profile?.parish_id) return
@@ -210,7 +212,20 @@ export default function StatisticsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Statystyki' }} />
+      <Stack.Screen
+        options={{
+          title: 'Statystyki',
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => setExportVisible(true)}
+              hitSlop={8}
+              style={{ marginRight: 4 }}
+            >
+              <Ionicons name="download-outline" size={22} color={c.primary} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
         {/* Period filter */}
@@ -296,6 +311,7 @@ export default function StatisticsScreen() {
           </>
         )}
       </ScrollView>
+      <ExportModal visible={exportVisible} onClose={() => setExportVisible(false)} />
     </>
   )
 }
@@ -333,7 +349,8 @@ function TopMemberRow({ member, position, styles }: { member: TopMember; positio
 }
 
 function CategoryRow({ stat, styles }: { stat: CategoryStat; styles: any }) {
-  const cfg = CATEGORY_CONFIG[stat.category] ?? CATEGORY_CONFIG.msza
+  const { isDark } = useTheme()
+  const cfg = getCatColors(stat.category, isDark)
   const rate = stat.assigned > 0 ? stat.present / stat.assigned : 0
   return (
     <View style={styles.catRow}>
