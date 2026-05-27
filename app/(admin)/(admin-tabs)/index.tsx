@@ -236,6 +236,17 @@ export default function AdminHome() {
         <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.parishRow} onPress={() => router.push('/(admin)/badge-management')} activeOpacity={0.75}>
+        <View style={[styles.parishIcon, { backgroundColor: '#FFC10718' }]}>
+          <Ionicons name="ribbon-outline" size={22} color="#FFC107" />
+        </View>
+        <View style={styles.parishInfo}>
+          <Text style={styles.parishTitle}>Odznaki</Text>
+          <Text style={styles.parishSub}>Wyróżnienia ministrantów</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />
+      </TouchableOpacity>
+
       {profile?.role === 'member' && profile?.is_admin && (
         <TouchableOpacity style={styles.backToUserBtn} onPress={() => router.replace('/(tabs)')}>
           <Ionicons name="arrow-back-outline" size={18} color={c.primary} />

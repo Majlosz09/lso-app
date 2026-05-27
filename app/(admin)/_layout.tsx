@@ -45,10 +45,10 @@ export default function AdminLayout() {
       <Stack.Screen name="parish-settings" options={{ title: 'Ustawienia parafii' }} />
       <Stack.Screen name="mass-schedule" options={{ title: 'Rozkład Mszy' }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-      <Stack.Screen name="statistics" options={{ title: 'Statystyki' }} />
       <Stack.Screen name="point-rules" options={{ title: 'Reguły punktowania' }} />
       <Stack.Screen name="schedule-series" options={{ title: 'Nowy cykl służb' }} />
       <Stack.Screen name="schedule-day" options={{ title: 'Służby w dniu' }} />
+      <Stack.Screen name="badge-management" options={{ title: 'Odznaki' }} />
     </Stack>
   )
 }
