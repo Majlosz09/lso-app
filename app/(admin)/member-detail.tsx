@@ -87,7 +87,7 @@ export default function MemberDetailScreen() {
   const [parentModalVisible, setParentModalVisible] = useState(false)
   const [badges, setBadges] = useState<BadgeRow[]>([])
   const [awardSheetVisible, setAwardSheetVisible] = useState(false)
-  const [manualBadgeDefs, setManualBadgeDefs] = useState<ManualBadgeDef[]>([])
+  const [manualBadgeDefs, setManualBadgeDefs] = useState<ManualBadgeDef[] | null>(null)
   const [selectedBadgeDef, setSelectedBadgeDef] = useState<ManualBadgeDef | null>(null)
   const [awardNote, setAwardNote] = useState('')
   const [awarding, setAwarding] = useState(false)
@@ -158,7 +158,7 @@ export default function MemberDetailScreen() {
   }, [profile?.parent_id])
 
   const loadBadges = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('member_badges')
       .select(`
         id, awarded_at, awarded_by, note,
@@ -168,6 +168,7 @@ export default function MemberDetailScreen() {
       .eq('profile_id', id)
       .eq('is_active', true)
       .order('awarded_at', { ascending: false })
+    if (error) { console.error('[member-detail] loadBadges error:', error); return }
     setBadges((data ?? []).filter((b: any) => b.badge_definition !== null) as BadgeRow[])
   }
 
@@ -217,7 +218,7 @@ export default function MemberDetailScreen() {
   }
 
   const openAwardSheet = async () => {
-    if (manualBadgeDefs.length === 0) {
+    if (manualBadgeDefs === null) {
       const { data } = await supabase
         .from('badge_definitions')
         .select('id, name, icon, criteria_key, parish_id')
@@ -518,7 +519,7 @@ export default function MemberDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            {manualBadgeDefs.length === 0 ? (
+            {!manualBadgeDefs || manualBadgeDefs.length === 0 ? (
               <ActivityIndicator color={c.primary} style={{ padding: 16 }} />
             ) : (
               manualBadgeDefs.map(def => (
