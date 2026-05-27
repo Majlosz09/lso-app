@@ -81,13 +81,21 @@ export async function computeAndSyncBadges(
   const now = new Date()
 
   // 1. Pobierz auto-definicje odznak (systemowe + parafialne)
-  const { data: defs } = await supabase
-    .from('badge_definitions')
-    .select('id, criteria_key, persistence')
-    .or(`parish_id.is.null,parish_id.eq.${parishId}`)
-    .eq('type', 'auto')
+  const [systemDefsRes, parishDefsRes] = await Promise.all([
+    supabase
+      .from('badge_definitions')
+      .select('id, criteria_key, persistence')
+      .is('parish_id', null)
+      .eq('type', 'auto'),
+    supabase
+      .from('badge_definitions')
+      .select('id, criteria_key, persistence')
+      .eq('parish_id', parishId)
+      .eq('type', 'auto'),
+  ])
+  const defs = [...(systemDefsRes.data ?? []), ...(parishDefsRes.data ?? [])]
 
-  if (!defs || defs.length === 0) return
+  if (defs.length === 0) return
 
   // 2. Pobierz wszystkie schedule_assignments tego profilu
   const { data: rawAssignments } = await supabase
