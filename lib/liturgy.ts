@@ -7,8 +7,15 @@ export type LiturgicalEntry = {
   color?: string
 }
 
-export function getLiturgicalDay(dateStr: string): LiturgicalEntry | null {
-  return (data as Record<string, LiturgicalEntry>)[dateStr] ?? null
+export const LITURGICAL_FERIA: LiturgicalEntry = {
+  name: 'Dzień powszedni',
+  type: 'FERIA',
+  typeLabel: 'Feria',
+  color: 'GREEN',
+}
+
+export function getLiturgicalDay(dateStr: string): LiturgicalEntry {
+  return (data as Record<string, LiturgicalEntry>)[dateStr] ?? LITURGICAL_FERIA
 }
 
 export const COLOR_HEX: Record<string, string> = {

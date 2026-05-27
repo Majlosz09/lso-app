@@ -1,6 +1,8 @@
 import {
   getLiturgicalAccentColor,
   getLiturgicalBgColor,
+  getLiturgicalDay,
+  LITURGICAL_FERIA,
   COLOR_HEX,
   LiturgicalEntry,
 } from '../../lib/liturgy'
@@ -57,5 +59,19 @@ describe('getLiturgicalBgColor', () => {
 
   it('returns RED for RED FEAST', () => {
     expect(getLiturgicalBgColor(makeEntry('FEAST', 'RED'))).toBe(COLOR_HEX.RED)
+  })
+})
+
+describe('getLiturgicalDay', () => {
+  it('returns LITURGICAL_FERIA for unknown date', () => {
+    const result = getLiturgicalDay('1900-01-01')
+    expect(result.type).toBe('FERIA')
+    expect(result).toBe(LITURGICAL_FERIA)
+  })
+
+  it('returns LiturgicalEntry (not FERIA) for Christmas 2026', () => {
+    const result = getLiturgicalDay('2026-12-25')
+    expect(result.type).not.toBe('FERIA')
+    expect(result.name).toBeTruthy()
   })
 })
