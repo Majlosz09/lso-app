@@ -1,4 +1,4 @@
-import { validateParishQr, buildParishQrValue } from '../../lib/checkin'
+import { validateParishQr, buildParishQrValue, validateGps } from '../../lib/checkin'
 
 describe('validateParishQr', () => {
   it('returns true for matching parishId', () => {
@@ -28,4 +28,25 @@ describe('buildParishQrValue', () => {
     const qr = buildParishQrValue(parishId)
     expect(validateParishQr(qr, parishId)).toBe(true)
   })
+})
+
+import * as Location from 'expo-location'
+
+describe('validateGps', () => {
+  it('returns error when GPS times out after 15s', async () => {
+    jest.useFakeTimers()
+    try {
+      ;(Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' })
+      ;(Location.getCurrentPositionAsync as jest.Mock).mockReturnValue(new Promise(() => {}))
+
+      const resultPromise = validateGps({ parishLat: 0, parishLng: 0, parishRadius: 100 })
+      await jest.advanceTimersByTimeAsync(15_000)
+      const result = await resultPromise
+
+      expect(result.success).toBe(false)
+      expect((result as any).message).toContain('15s')
+    } finally {
+      jest.useRealTimers()
+    }
+  }, 30000)
 })
