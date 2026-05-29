@@ -4,6 +4,7 @@ import {
   ScrollView, Alert, ActivityIndicator, Platform,
   Modal, TextInput, KeyboardAvoidingView
 } from 'react-native'
+import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '../../lib/supabase'
@@ -293,6 +294,7 @@ function MemberProfile() {
   const styles = useMemo(() => createStyles(c), [c])
   const { themeOverride, setThemeOverride } = useThemeStore()
   const { profile, session, signOut, parish } = useAuthStore()
+  const router = useRouter()
   const [summary, setSummary] = useState<{ total_points: number; services_count: number } | null>(null)
   const [rank, setRank] = useState<number>(0)
   const [loading, setLoading] = useState(true)
@@ -370,6 +372,15 @@ function MemberProfile() {
       {activeBadges.length > 0 && (
         <BadgesSection badges={activeBadges} onBadgePress={setSelectedBadge} c={c} />
       )}
+
+      <TouchableOpacity
+        style={styles.catalogLink}
+        onPress={() => router.push('/(tabs)/badge-catalog')}
+        activeOpacity={0.75}
+      >
+        <Ionicons name="ribbon-outline" size={16} color={c.primary} />
+        <Text style={styles.catalogLinkText}>Zobacz dostępne odznaki →</Text>
+      </TouchableOpacity>
 
       {/* Tooltip odznaki */}
       <Modal
@@ -523,34 +534,52 @@ function AdminProfile() {
 
 // ─── Parent Profile ───────────────────────────────────────────────────────────
 
-type Child = { id: string; full_name: string; services_count: number }
+type Child = {
+  id: string
+  full_name: string
+  rank_name: string | null
+  services_count: number
+  badges: string[]  // emoji icons of active badges
+}
 
 function ParentProfile() {
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
   const { themeOverride, setThemeOverride } = useThemeStore()
   const { profile, session, signOut, parish } = useAuthStore()
+  const router = useRouter()
   const [children, setChildren] = useState<Child[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
 
   useEffect(() => {
     if (!profile?.id) return
-    supabase.from('profiles').select('id, full_name').eq('parent_id', profile.id).then(async ({ data }) => {
-      if (!data || data.length === 0) { setLoading(false); return }
+    supabase.from('profiles')
+      .select('id, full_name, rank_id, ranks(name)')
+      .eq('parent_id', profile.id)
+      .then(async ({ data }) => {
+        if (!data || data.length === 0) { setLoading(false); return }
 
-      const summaries = await Promise.all(
-        data.map((c: any) =>
-          supabase.from('points_summary').select('services_count').eq('profile_id', c.id).maybeSingle()
+        const extras = await Promise.all(
+          data.map((kid: any) => Promise.all([
+            supabase.from('points_summary').select('services_count').eq('profile_id', kid.id).maybeSingle(),
+            supabase.from('member_badges')
+              .select('badge_definition:badge_definitions(icon)')
+              .eq('profile_id', kid.id)
+              .eq('is_active', true),
+          ]))
         )
-      )
-      setChildren(data.map((c: any, i: number) => ({
-        id: c.id,
-        full_name: c.full_name,
-        services_count: (summaries[i].data as any)?.services_count ?? 0,
-      })))
-      setLoading(false)
-    })
+        setChildren(data.map((kid: any, i: number) => ({
+          id: kid.id,
+          full_name: kid.full_name,
+          rank_name: (kid.ranks as any)?.name ?? null,
+          services_count: (extras[i][0].data as any)?.services_count ?? 0,
+          badges: ((extras[i][1].data ?? []) as any[])
+            .map((b: any) => b.badge_definition?.icon)
+            .filter(Boolean),
+        })))
+        setLoading(false)
+      })
   }, [profile?.id])
 
   return (
@@ -567,19 +596,43 @@ function ParentProfile() {
           </View>
         ) : (
           children.map((child, i) => (
-            <View key={child.id} style={[styles.childRow, i < children.length - 1 && styles.childRowBorder]}>
+            <TouchableOpacity
+              key={child.id}
+              style={[styles.childRow, i < children.length - 1 && styles.childRowBorder]}
+              onPress={() => router.push(`/(tabs)/member-profile?id=${child.id}`)}
+              activeOpacity={0.75}
+            >
               <View style={styles.childAvatar}>
                 <Ionicons name="person" size={16} color={c.primary} />
               </View>
-              <Text style={styles.childName}>{child.full_name}</Text>
-              <View style={styles.childBadge}>
-                <Ionicons name="checkmark-circle-outline" size={13} color={c.success} />
-                <Text style={styles.childBadgeText}>{child.services_count} służb</Text>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={styles.childName}>{child.full_name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.childRank, !child.rank_name && { color: c.textTertiary }]}>
+                    {child.rank_name ?? 'Brak rangi'}
+                  </Text>
+                  {child.badges.slice(0, 4).map((icon, idx) => (
+                    <Text key={idx} style={{ fontSize: 14 }}>{icon}</Text>
+                  ))}
+                  {child.badges.length > 4 && (
+                    <Text style={styles.moreBadges}>+{child.badges.length - 4}</Text>
+                  )}
+                </View>
               </View>
-            </View>
+              <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
+            </TouchableOpacity>
           ))
         )}
       </InfoSection>
+
+      <TouchableOpacity
+        style={styles.catalogLink}
+        onPress={() => router.push('/(tabs)/badge-catalog')}
+        activeOpacity={0.75}
+      >
+        <Ionicons name="ribbon-outline" size={16} color={c.primary} />
+        <Text style={styles.catalogLinkText}>Zobacz dostępne odznaki →</Text>
+      </TouchableOpacity>
 
       <InfoSection title="Informacje" onEdit={() => setEditing(true)}>
         <InfoRow icon="person-outline" label="Imię i nazwisko" value={profile?.full_name ?? '—'} />
@@ -941,6 +994,8 @@ function createStyles(c: Colors) {
     childName: { flex: 1, fontSize: 15, fontWeight: '500', color: c.text },
     childBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     childBadgeText: { fontSize: 13, color: c.success, fontWeight: '500' },
+    childRank: { fontSize: 12, color: c.primary, fontWeight: '500' },
+    moreBadges: { fontSize: 11, color: c.textTertiary },
 
     emptyChildren: { alignItems: 'center', padding: 24, gap: 8 },
     emptyChildrenText: { fontSize: 14, color: c.textTertiary, textAlign: 'center' },
@@ -1046,6 +1101,14 @@ function createStyles(c: Colors) {
     },
     badgeChipIcon: { fontSize: 16 },
     badgeChipName: { fontSize: 12, fontWeight: '600', color: c.primary },
+
+    // Catalog link
+    catalogLink: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      padding: 14, backgroundColor: c.surface, borderRadius: 12,
+      borderWidth: 1, borderColor: c.primaryAlpha12,
+    },
+    catalogLinkText: { fontSize: 14, color: c.primary, fontWeight: '500' },
 
     // Badge tooltip
     badgeTooltipOverlay: {
