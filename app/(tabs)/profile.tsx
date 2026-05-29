@@ -17,6 +17,7 @@ import { AvatarImage } from '../../components/AvatarImage'
 import {
   PRESET_ICONS, PRESET_COLORS, buildPresetUrl, parsePresetUrl, isPresetUrl,
 } from '../../lib/presetAvatar'
+import { FormationSection, BadgesSection, BadgeWithDef } from '../../components/FormationBadges'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrator',
@@ -298,11 +299,6 @@ function MemberProfile() {
   const [editing, setEditing] = useState(false)
 
   type RankItem = { id: string; name: string; order: number }
-  type BadgeWithDef = {
-    id: string
-    awarded_at: string
-    badge_definition: { id: string; name: string; icon: string; criteria_key: string } | null
-  }
 
   const [allRanks, setAllRanks] = useState<RankItem[]>([])
   const [activeBadges, setActiveBadges] = useState<BadgeWithDef[]>([])
@@ -367,12 +363,12 @@ function MemberProfile() {
 
       {/* Ścieżka formacji */}
       {allRanks.length > 0 && (
-        <FormationSection ranks={allRanks} currentRankId={profile?.rank_id ?? null} c={c} styles={styles} />
+        <FormationSection ranks={allRanks} currentRankId={profile?.rank_id ?? null} c={c} />
       )}
 
       {/* Wyróżnienia (odznaki) */}
       {activeBadges.length > 0 && (
-        <BadgesSection badges={activeBadges} onBadgePress={setSelectedBadge} c={c} styles={styles} />
+        <BadgesSection badges={activeBadges} onBadgePress={setSelectedBadge} c={c} />
       )}
 
       {/* Tooltip odznaki */}
@@ -817,116 +813,6 @@ function SignOutButton({ onConfirm }: { onConfirm: () => void }) {
         </View>
       </Modal>
     </>
-  )
-}
-
-// ─── Formation & Badges ───────────────────────────────────────────────────────
-
-function FormationSection({
-  ranks, currentRankId, c, styles,
-}: {
-  ranks: { id: string; name: string; order: number }[]
-  currentRankId: string | null
-  c: Colors
-  styles: any
-}) {
-  const currentIdx = currentRankId ? ranks.findIndex(r => r.id === currentRankId) : -1
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>ŚCIEŻKA FORMACJI</Text>
-      </View>
-      <View style={styles.formationCard}>
-        {/* Circles + connectors row */}
-        <View style={styles.formationCirclesRow}>
-          {ranks.map((rank, idx) => {
-            const isDone = currentIdx >= 0 && idx < currentIdx
-            const isCurrent = idx === currentIdx
-            return [
-              idx > 0 ? (
-                <View
-                  key={`conn-${rank.id}`}
-                  style={[
-                    styles.formationConnector,
-                    idx <= currentIdx ? styles.formationConnectorDone : null,
-                  ]}
-                />
-              ) : null,
-              <View
-                key={rank.id}
-                style={[
-                  styles.formationCircle,
-                  isDone ? styles.formationCircleDone
-                    : isCurrent ? styles.formationCircleCurrent
-                    : null,
-                ]}
-              >
-                {isDone
-                  ? <Ionicons name="checkmark" size={11} color="#fff" />
-                  : isCurrent
-                    ? <View style={styles.formationDot} />
-                    : null
-                }
-              </View>,
-            ]
-          })}
-        </View>
-        {/* Labels row */}
-        <View style={styles.formationLabelsRow}>
-          {ranks.map((rank, idx) => {
-            const isDone = currentIdx >= 0 && idx < currentIdx
-            const isCurrent = idx === currentIdx
-            return [
-              idx > 0 ? <View key={`spacer-${idx}`} style={{ flex: 1 }} /> : null,
-              <Text
-                key={rank.id}
-                style={[
-                  styles.formationLabel,
-                  isDone ? styles.formationLabelDone
-                    : isCurrent ? styles.formationLabelCurrent
-                    : null,
-                ]}
-                numberOfLines={2}
-              >
-                {rank.name}
-              </Text>,
-            ]
-          })}
-        </View>
-      </View>
-    </View>
-  )
-}
-
-function BadgesSection({
-  badges, onBadgePress, c, styles,
-}: {
-  badges: { id: string; awarded_at: string; badge_definition: { name: string; icon: string } | null }[]
-  onBadgePress: (badge: any) => void
-  c: Colors
-  styles: any
-}) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>WYRÓŻNIENIA</Text>
-      </View>
-      <View style={styles.badgesCard}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.badgesScroll}>
-          {badges.map(b => (
-            <TouchableOpacity
-              key={b.id}
-              style={styles.badgeChip}
-              onPress={() => onBadgePress(b)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.badgeChipIcon}>{b.badge_definition?.icon ?? '🏅'}</Text>
-              <Text style={styles.badgeChipName}>{b.badge_definition?.name ?? ''}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    </View>
   )
 }
 
