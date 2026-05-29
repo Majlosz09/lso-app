@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Colors } from '../lib/theme'
+import { shadow } from '../lib/shadows'
 
 export type BadgeWithDef = {
   id: string
@@ -110,7 +111,7 @@ function createFormationStyles(c: Colors) {
     section: { gap: 8 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     sectionTitle: { fontSize: 13, fontWeight: '600', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 },
-    formationCard: { backgroundColor: c.surface, borderRadius: 14, padding: 16 },
+    formationCard: { backgroundColor: c.surface, borderRadius: 14, padding: 16, ...shadow.xs },
     formationCirclesRow: { flexDirection: 'row', alignItems: 'center' },
     formationConnector: { flex: 1, height: 2, backgroundColor: c.border },
     formationConnectorDone: { backgroundColor: c.success },
@@ -134,7 +135,7 @@ function createBadgesStyles(c: Colors) {
     section: { gap: 8 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     sectionTitle: { fontSize: 13, fontWeight: '600', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 },
-    badgesCard: { backgroundColor: c.surface, borderRadius: 14 },
+    badgesCard: { backgroundColor: c.surface, borderRadius: 14, ...shadow.xs },
     badgesScroll: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
     badgeChip: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
