@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { STATUS_COLORS, STATUS_LABELS } from '../../lib/status'
-import { CATEGORY_CONFIG, ScheduleCategory } from '../../types/database'
+import { getCatColors, ScheduleCategory } from '../../types/database'
 import { shadow } from '../../lib/shadows'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
@@ -43,7 +43,7 @@ export default function ScheduleDetailScreen() {
   const { profile: adminProfile } = useAuthStore()
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  const { colors: c } = useTheme()
+  const { colors: c, isDark } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
   const [schedule, setSchedule] = useState<ScheduleDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -107,10 +107,10 @@ export default function ScheduleDetailScreen() {
         await handleChangeStatus(assignment.id, 'absent')
       }
     } else {
-      const { error } = await supabase.from('attendance').insert({
-        schedule_id: id, profile_id: profileId, method: 'manual',
-        checked_at: new Date().toISOString(), marked_by: adminProfile?.id,
-        parish_id: adminProfile?.parish_id,
+      const { error } = await supabase.rpc('check_in_and_award_points', {
+        p_schedule_id: id,
+        p_profile_id: profileId,
+        p_parish_id: adminProfile?.parish_id,
       })
       if (error) { Alert.alert('Błąd', error.message); setTogglingAttendance(null); return }
       setAttendanceIds(prev => new Set([...prev, profileId]))
@@ -124,6 +124,7 @@ export default function ScheduleDetailScreen() {
   const openAddModal = async () => {
     const { data } = await supabase
       .from('profiles').select('id, full_name')
+      .eq('parish_id', adminProfile!.parish_id)
       .eq('role', 'member').eq('is_active', true).order('full_name')
     setAllMembers(data ?? [])
     setAddSearch('')
@@ -214,7 +215,7 @@ export default function ScheduleDetailScreen() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 
-  const cat = CATEGORY_CONFIG[schedule.category] ?? CATEGORY_CONFIG.msza
+  const cat = getCatColors(schedule.category, isDark)
   const presentCount = attendanceIds.size
   const totalCount = schedule.assignments.length
 
