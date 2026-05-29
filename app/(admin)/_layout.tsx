@@ -49,6 +49,7 @@ export default function AdminLayout() {
       <Stack.Screen name="schedule-series" options={{ title: 'Nowy cykl służb' }} />
       <Stack.Screen name="schedule-day" options={{ title: 'Służby w dniu' }} />
       <Stack.Screen name="badge-management" options={{ title: 'Odznaki' }} />
+      <Stack.Screen name="rank-assignment" options={{ title: 'Przydziel rangi' }} />
     </Stack>
   )
 }

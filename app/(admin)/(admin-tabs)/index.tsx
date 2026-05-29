@@ -247,6 +247,17 @@ export default function AdminHome() {
         <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.parishRow} onPress={() => router.push('/(admin)/rank-assignment')} activeOpacity={0.75}>
+        <View style={[styles.parishIcon, { backgroundColor: c.primaryAlpha08 }]}>
+          <Ionicons name="ribbon" size={22} color={c.primary} />
+        </View>
+        <View style={styles.parishInfo}>
+          <Text style={styles.parishTitle}>Przydziel rangi</Text>
+          <Text style={styles.parishSub}>Masowe przypisywanie rang formacyjnych</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />
+      </TouchableOpacity>
+
       {profile?.role === 'member' && profile?.is_admin && (
         <TouchableOpacity style={styles.backToUserBtn} onPress={() => router.replace('/(tabs)')}>
           <Ionicons name="arrow-back-outline" size={18} color={c.primary} />
