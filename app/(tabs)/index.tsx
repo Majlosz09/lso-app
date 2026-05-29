@@ -327,8 +327,10 @@ function MemberHomeView() {
 type ChildSummary = {
   id: string
   full_name: string
+  rank_name: string | null
   services_count: number
-  nextDuty: { title: string; date: string; time: string } | null
+  nextDuty: { title: string; date: string; time: string | null } | null
+  badges: string[]
 }
 
 function ParentHomeView() {
@@ -348,17 +350,19 @@ function ParentHomeView() {
 
   useEffect(() => {
     if (!profile?.id) return
+    let cancelled = false
     const fetch = async () => {
       const { data: kids } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, full_name, rank_id, ranks(name)')
         .eq('parent_id', profile.id)
 
+      if (cancelled) return
       if (!kids || kids.length === 0) { setLoading(false); return }
 
       const results = await Promise.all(
         kids.map(async (k: any) => {
-          const [summaryRes, nextRes] = await Promise.all([
+          const [summaryRes, nextRes, badgesRes] = await Promise.all([
             supabase.from('points_summary').select('services_count').eq('profile_id', k.id).maybeSingle(),
             supabase.from('schedule_assignments')
               .select('schedule:schedules(title, date, time)')
@@ -368,21 +372,29 @@ function ParentHomeView() {
               .order('schedule(time)', { ascending: true })
               .limit(1)
               .maybeSingle(),
+            supabase.from('member_badges')
+              .select('badge_definition:badge_definitions(icon)')
+              .eq('profile_id', k.id)
+              .eq('is_active', true),
           ])
           const assignment = nextRes.data as any
           const nextDuty = assignment?.schedule ?? null
           return {
             id: k.id,
             full_name: k.full_name,
+            rank_name: (k as any).ranks?.name ?? null,
             services_count: (summaryRes.data as any)?.services_count ?? 0,
             nextDuty,
+            badges: ((badgesRes.data ?? []) as any[]).map((b: any) => b.badge_definition?.icon).filter(Boolean),
           }
         })
       )
+      if (cancelled) return
       setChildren(results)
       setLoading(false)
     }
     fetch()
+    return () => { cancelled = true }
   }, [profile?.id])
 
   return (
@@ -413,18 +425,31 @@ function ParentHomeView() {
         </View>
       ) : (
         children.map(child => (
-          <View key={child.id} style={styles.childCard}>
+          <TouchableOpacity
+            key={child.id}
+            style={styles.childCard}
+            onPress={() => router.push(`/(tabs)/member-profile?id=${child.id}`)}
+            activeOpacity={0.8}
+          >
             <View style={styles.childCardTop}>
               <View style={styles.childAvatarSmall}>
                 <Ionicons name="person" size={16} color={c.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.childCardName}>{child.full_name}</Text>
-                <Text style={styles.childCardMeta}>{child.services_count} służb</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                  <Text style={[styles.childCardMeta, child.rank_name ? { color: c.primary, fontWeight: '500' } : {}]}>
+                    {child.rank_name ?? 'Brak rangi'}
+                  </Text>
+                  {child.badges.slice(0, 3).map((icon: string, idx: number) => (
+                    <Text key={idx} style={{ fontSize: 13 }}>{icon}</Text>
+                  ))}
+                  {child.badges.length > 3 && (
+                    <Text style={styles.childCardMeta}>+{child.badges.length - 3}</Text>
+                  )}
+                </View>
               </View>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/schedule')} style={styles.childCardArrow}>
-                <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
-              </TouchableOpacity>
+              <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
             </View>
             {child.nextDuty ? (
               <View style={styles.childNextDuty}>
@@ -441,7 +466,7 @@ function ParentHomeView() {
                 <Text style={[styles.childNextDutyText, { color: c.textTertiary }]}>Brak nadchodzących dyżurów</Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         ))
       )}
 
