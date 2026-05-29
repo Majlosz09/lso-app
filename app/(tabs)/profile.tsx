@@ -554,11 +554,17 @@ function ParentProfile() {
 
   useEffect(() => {
     if (!profile?.id) return
-    supabase.from('profiles')
-      .select('id, full_name, rank_id, ranks(name)')
-      .eq('parent_id', profile.id)
+    let cancelled = false
+    Promise.resolve(
+      supabase.from('profiles')
+        .select('id, full_name, rank_id, ranks(name)')
+        .eq('parent_id', profile.id)
+    )
       .then(async ({ data }) => {
-        if (!data || data.length === 0) { setLoading(false); return }
+        if (!data || data.length === 0) {
+          if (!cancelled) setLoading(false)
+          return
+        }
 
         const extras = await Promise.all(
           data.map((kid: any) => Promise.all([
@@ -569,17 +575,22 @@ function ParentProfile() {
               .eq('is_active', true),
           ]))
         )
-        setChildren(data.map((kid: any, i: number) => ({
-          id: kid.id,
-          full_name: kid.full_name,
-          rank_name: (kid.ranks as any)?.name ?? null,
-          services_count: (extras[i][0].data as any)?.services_count ?? 0,
-          badges: ((extras[i][1].data ?? []) as any[])
-            .map((b: any) => b.badge_definition?.icon)
-            .filter(Boolean),
-        })))
-        setLoading(false)
+        if (!cancelled) {
+          setChildren(data.map((kid: any, i: number) => ({
+            id: kid.id,
+            full_name: kid.full_name,
+            rank_name: (kid.ranks as any)?.name ?? null,
+            services_count: (extras[i][0].data as any)?.services_count ?? 0,
+            badges: ((extras[i][1].data ?? []) as any[])
+              .map((b: any) => b.badge_definition?.icon)
+              .filter(Boolean),
+          })))
+          setLoading(false)
+        }
       })
+      .catch(console.error)
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [profile?.id])
 
   return (
