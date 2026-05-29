@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
+import { BADGE_CATALOG } from '../../lib/badges'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
@@ -27,6 +28,10 @@ type AwardHistoryRow = {
   badge_definition: { name: string; icon: string } | null
 }
 
+type AllBadge = {
+  id: string; name: string; icon: string; criteria_key: string; parish_id: string | null
+}
+
 export default function BadgeManagementScreen() {
   const { profile } = useAuthStore()
   const parishId = profile?.parish_id!
@@ -36,13 +41,14 @@ export default function BadgeManagementScreen() {
 
   const [customBadges, setCustomBadges] = useState<CustomBadge[]>([])
   const [history, setHistory] = useState<AwardHistoryRow[]>([])
+  const [allBadges, setAllBadges] = useState<AllBadge[]>([])
   const [loading, setLoading] = useState(true)
   const [newName, setNewName] = useState('')
   const [newIcon, setNewIcon] = useState('')
   const [adding, setAdding] = useState(false)
 
   const fetchData = async () => {
-    const [customRes, historyRes] = await Promise.all([
+    const [customRes, historyRes, allBadgesRes] = await Promise.all([
       supabase.from('badge_definitions')
         .select('id, name, icon, criteria_key')
         .eq('parish_id', parishId)
@@ -58,6 +64,10 @@ export default function BadgeManagementScreen() {
         .not('awarded_by', 'is', null)
         .order('awarded_at', { ascending: false })
         .limit(30),
+      supabase.from('badge_definitions')
+        .select('id, name, icon, criteria_key, parish_id')
+        .or(`parish_id.is.null,parish_id.eq.${parishId}`)
+        .order('name'),
     ])
     if (customRes.error) {
       console.error('[badge-management] custom badges error:', customRes.error)
@@ -69,6 +79,7 @@ export default function BadgeManagementScreen() {
     }
     setCustomBadges(customRes.data ?? [])
     setHistory((historyRes.data ?? []).filter((h: any) => h.badge_definition !== null) as AwardHistoryRow[])
+    setAllBadges(allBadgesRes.data ?? [])
     setLoading(false)
   }
 
@@ -201,6 +212,21 @@ export default function BadgeManagementScreen() {
           ))
         )}
       </View>
+      {/* Sekcja: Katalog odznak */}
+      <Text style={[styles.sectionLabel, { marginTop: 8 }]}>KATALOG ODZNAK</Text>
+      <View style={styles.card}>
+        {allBadges.map((b, i) => (
+          <View key={b.id} style={[styles.catalogRow, i < allBadges.length - 1 && styles.rowBorder]}>
+            <Text style={styles.badgeIcon}>{b.icon}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.badgeName}>{b.name}</Text>
+              <Text style={styles.catalogDesc}>
+                {BADGE_CATALOG[b.criteria_key] ?? 'Przyznawana ręcznie przez animatora'}
+              </Text>
+            </View>
+          </View>
+        ))}
+      </View>
     </ScrollView>
   )
 }
@@ -255,5 +281,11 @@ function createStyles(c: Colors) {
     historyMeta: { fontSize: 12, color: c.subtext, marginTop: 2 },
     historyAwarder: { fontSize: 11, color: c.textTertiary, marginTop: 1 },
     historyNote: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontStyle: 'italic' },
+
+    catalogRow: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+      paddingHorizontal: 16, paddingVertical: 12,
+    },
+    catalogDesc: { fontSize: 12, color: c.subtext, marginTop: 2 },
   })
 }
