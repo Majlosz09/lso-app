@@ -47,7 +47,7 @@ export default function RankAssignmentScreen() {
         .order('order'),
     ])
 
-    const raw = (membersRes.data ?? []) as RawMemberRow[]
+    const raw = (membersRes.data ?? []) as unknown as RawMemberRow[]
     const unranked = raw.filter(m => m.rank_id === null).sort((a, b) => a.full_name.localeCompare(b.full_name, 'pl'))
     const ranked = raw.filter(m => m.rank_id !== null).sort((a, b) => a.full_name.localeCompare(b.full_name, 'pl'))
     const sorted: MemberRow[] = [...unranked, ...ranked].map(m => ({
