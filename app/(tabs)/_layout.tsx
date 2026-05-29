@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
 import { Tabs, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { TouchableOpacity, Image } from 'react-native'
+import { TouchableOpacity } from 'react-native'
 import { useAuthStore } from '../../stores/authStore'
 import { CustomTabBar } from '../../components/CustomTabBar'
 import { useTheme } from '../../lib/ThemeContext'
+import { AvatarImage } from '../../components/AvatarImage'
 
 export default function TabsLayout() {
   const { profile } = useAuthStore()
@@ -25,7 +26,7 @@ export default function TabsLayout() {
       hitSlop={8}
     >
       {avatarUrl
-        ? <Image source={{ uri: avatarUrl }} style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)' }} />
+        ? <AvatarImage avatarUrl={avatarUrl} size={32} borderColor="rgba(255,255,255,0.6)" borderWidth={2} />
         : <Ionicons name="person-circle-outline" size={30} color="#fff" />
       }
     </TouchableOpacity>
@@ -91,6 +92,8 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen name="profile" options={{ href: null, title: 'Profil' }} />
+      <Tabs.Screen name="badge-catalog" options={{ href: null, title: 'Katalog odznak' }} />
+      <Tabs.Screen name="member-profile" options={{ href: null, title: 'Profil ministranta' }} />
     </Tabs>
   )
 }
