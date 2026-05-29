@@ -1,6 +1,7 @@
 import {
   computeAutoStatusBadges,
   computeAutoPermanentBadges,
+  BADGE_CATALOG,
 } from '../../lib/badges'
 
 // helper: tworzy assignment z datą N dni temu
@@ -189,6 +190,22 @@ describe('computeAutoPermanentBadges', () => {
 
     it('brak top3 gdy nie w rankingu', () => {
       expect(computeAutoPermanentBadges(0, 0, null).has('top3')).toBe(false)
+    })
+  })
+})
+
+describe('BADGE_CATALOG', () => {
+  it('contains entry for every system criteria_key', () => {
+    const systemKeys = [
+      'regularny', 'seria_5', 'seria_10', 'seria_15', 'seria_20',
+      'weteran_100', 'weteran_250', 'weteran_500',
+      'rocznica_1', 'rocznica_2', 'rocznica_5',
+      'top3', 'sumienny', 'animator', 'szczegolna',
+    ]
+    systemKeys.forEach(key => {
+      expect(BADGE_CATALOG[key]).toBeDefined()
+      expect(typeof BADGE_CATALOG[key]).toBe('string')
+      expect(BADGE_CATALOG[key].length).toBeGreaterThan(0)
     })
   })
 })

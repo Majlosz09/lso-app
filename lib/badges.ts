@@ -186,3 +186,21 @@ export async function computeAndSyncBadges(
     if (permErr) console.error('[badges] permanent upsert error:', permErr)
   }
 }
+
+export const BADGE_CATALOG: Record<string, string> = {
+  regularny:   'Minimum 80% obecności w ostatnich 30 dniach',
+  seria_5:     '5 dyżurów z rzędu bez nieobecności',
+  seria_10:    '10 dyżurów z rzędu bez nieobecności',
+  seria_15:    '15 dyżurów z rzędu bez nieobecności',
+  seria_20:    '20 dyżurów z rzędu bez nieobecności',
+  weteran_100: 'Łącznie 100 zaliczonych dyżurów',
+  weteran_250: 'Łącznie 250 zaliczonych dyżurów',
+  weteran_500: 'Łącznie 500 zaliczonych dyżurów',
+  rocznica_1:  '1 rok w aplikacji',
+  rocznica_2:  '2 lata w aplikacji',
+  rocznica_5:  '5 lat w aplikacji',
+  top3:        'Top 3 w rankingu parafii (przyznawana raz)',
+  sumienny:    'Przyznawana ręcznie przez animatora',
+  animator:    'Przyznawana ręcznie przez animatora',
+  szczegolna:  'Przyznawana ręcznie przez animatora',
+}
