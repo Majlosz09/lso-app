@@ -57,6 +57,9 @@ export default function ScheduleDetailScreen() {
   const [adding, setAdding] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteSheetVisible, setDeleteSheetVisible] = useState(false)
+  const [attendanceSheetVisible, setAttendanceSheetVisible] = useState(false)
+  const [draftIds, setDraftIds] = useState<Set<string>>(new Set())
+  const [saving, setSaving] = useState(false)
 
   const fetchSchedule = async () => {
     const [scheduleRes, attendanceRes] = await Promise.all([
@@ -119,6 +122,43 @@ export default function ScheduleDetailScreen() {
       }
     }
     setTogglingAttendance(null)
+  }
+
+  const handleSaveAttendance = async () => {
+    if (!schedule || !adminProfile?.parish_id) return
+    setSaving(true)
+
+    for (const profileId of draftIds) {
+      if (!attendanceIds.has(profileId)) {
+        const { error } = await supabase.rpc('check_in_and_award_points', {
+          p_schedule_id: id,
+          p_profile_id: profileId,
+          p_parish_id: adminProfile.parish_id,
+        })
+        if (error) { Alert.alert('Błąd', error.message); setSaving(false); fetchSchedule(); return }
+        await supabase.from('schedule_assignments')
+          .update({ status: 'present' })
+          .eq('profile_id', profileId)
+          .eq('schedule_id', id)
+      }
+    }
+
+    for (const profileId of attendanceIds) {
+      if (!draftIds.has(profileId)) {
+        const { error } = await supabase.from('attendance').delete()
+          .eq('schedule_id', id).eq('profile_id', profileId)
+        if (error) { Alert.alert('Błąd', error.message); setSaving(false); fetchSchedule(); return }
+        await supabase.from('schedule_assignments')
+          .update({ status: 'absent' })
+          .eq('profile_id', profileId)
+          .eq('schedule_id', id)
+      }
+    }
+
+    setAttendanceIds(new Set(draftIds))
+    setSaving(false)
+    setAttendanceSheetVisible(false)
+    fetchSchedule()
   }
 
   const openAddModal = async () => {
@@ -279,6 +319,20 @@ export default function ScheduleDetailScreen() {
             <Text style={styles.attendanceLabel}>Nieobecnych</Text>
           </View>
         </View>
+
+        {schedule.category === 'zbiorka' && (
+          <TouchableOpacity
+            style={styles.attendanceBtn}
+            onPress={() => {
+              setDraftIds(new Set(attendanceIds))
+              setAttendanceSheetVisible(true)
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="checkmark-done-outline" size={18} color="#fff" />
+            <Text style={styles.attendanceBtnText}>Zaznacz obecność</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Assignments section */}
         <View style={styles.sectionHeader}>
@@ -466,6 +520,72 @@ export default function ScheduleDetailScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      {/* Attendance sheet */}
+      <Modal
+        visible={attendanceSheetVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => { if (!saving) setAttendanceSheetVisible(false) }}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => { if (!saving) setAttendanceSheetVisible(false) }}
+        >
+          <TouchableOpacity style={styles.attendanceSheet} activeOpacity={1}>
+            <View style={styles.deleteSheetHandle} />
+            <Text style={styles.modalTitle}>Lista obecności</Text>
+            <Text style={[styles.modalSubtitle, { marginBottom: 12 }]}>{schedule?.title}</Text>
+
+            <ScrollView style={styles.attendanceList} showsVerticalScrollIndicator={false}>
+              {(schedule?.assignments ?? []).map((a, i) => (
+                <TouchableOpacity
+                  key={a.id}
+                  style={[
+                    styles.attendanceRow,
+                    i < (schedule?.assignments.length ?? 0) - 1 && styles.rowBorder,
+                  ]}
+                  onPress={() => setDraftIds(prev => {
+                    const s = new Set(prev)
+                    if (s.has(a.profile_id)) s.delete(a.profile_id)
+                    else s.add(a.profile_id)
+                    return s
+                  })}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.memberAvatar}>
+                    <Ionicons name="person" size={15} color={c.primary} />
+                  </View>
+                  <Text style={styles.memberName}>{a.profile.full_name}</Text>
+                  <Ionicons
+                    name={draftIds.has(a.profile_id) ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={26}
+                    color={draftIds.has(a.profile_id) ? '#16A34A' : '#D1D5DB'}
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <View style={styles.attendanceFooter}>
+              <Text style={styles.attendanceCount}>
+                {draftIds.size} z {schedule?.assignments.length ?? 0} obecnych
+              </Text>
+              <TouchableOpacity
+                style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+                onPress={handleSaveAttendance}
+                disabled={saving}
+                activeOpacity={0.8}
+              >
+                {saving
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.saveBtnText}>Zapisz</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </>
   )
 }
@@ -579,5 +699,34 @@ function createStyles(c: Colors) {
       backgroundColor: c.bg, alignItems: 'center',
     },
     deleteCancelText: { fontSize: 15, fontWeight: '600', color: c.subtext },
+
+    attendanceBtn: {
+      backgroundColor: c.primary, borderRadius: 12, padding: 14,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      ...shadow.md,
+    },
+    attendanceBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+    attendanceSheet: {
+      backgroundColor: c.surface,
+      borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      padding: 20, paddingBottom: 32, maxHeight: '80%',
+    },
+    attendanceList: { flexGrow: 0 },
+    attendanceRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      paddingVertical: 12,
+    },
+    rowBorder: { borderBottomWidth: 1, borderBottomColor: c.primarySurface },
+    attendanceFooter: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: c.primarySurface,
+    },
+    attendanceCount: { fontSize: 14, color: c.subtext },
+    saveBtn: {
+      backgroundColor: c.primary, borderRadius: 10,
+      paddingHorizontal: 24, paddingVertical: 12,
+      alignItems: 'center', justifyContent: 'center', minWidth: 80,
+    },
+    saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
   })
 }
