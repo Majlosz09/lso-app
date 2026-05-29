@@ -4,6 +4,7 @@ import {
   RefreshControl, ActivityIndicator, TouchableOpacity
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
@@ -104,17 +105,17 @@ export default function PointsScreen() {
     <View style={styles.container}>
       <View style={styles.summaryCard}>
         <View style={styles.summaryTop}>
-          <Ionicons name="trophy" size={28} color="#f0a500" />
+          <Ionicons name="trophy" size={28} color={c.gold} />
           <Text style={styles.summaryTitle}>Twoje punkty</Text>
         </View>
         <Text style={styles.summaryPoints}>{summary?.total_points ?? 0}</Text>
         <View style={styles.summaryRow}>
-          <Ionicons name="checkmark-circle-outline" size={14} color="#ffffffaa" />
+          <Ionicons name="checkmark-circle-outline" size={14} color={c.white + 'AA'} />
           <Text style={styles.summaryMeta}>{summary?.services_count ?? 0} służb</Text>
           {myRank > 0 && (
             <>
               <Text style={styles.summaryDot}>·</Text>
-              <Ionicons name="bar-chart-outline" size={14} color="#ffffffaa" />
+              <Ionicons name="bar-chart-outline" size={14} color={c.white + 'AA'} />
               <Text style={styles.summaryMeta}>#{myRank} w rankingu</Text>
             </>
           )}
@@ -140,6 +141,7 @@ export default function PointsScreen() {
         <FlatList
           data={points}
           keyExtractor={(item) => item.id}
+          style={{ flex: 1, backgroundColor: c.bg }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.empty}>
@@ -154,6 +156,7 @@ export default function PointsScreen() {
         <FlatList
           data={ranking}
           keyExtractor={(item) => item.profile_id}
+          style={{ flex: 1, backgroundColor: c.bg }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.empty}>
@@ -183,8 +186,8 @@ function PointCard({ point, styles, colors: c }: { point: PointWithSchedule; sty
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.cardReason} numberOfLines={1}>{point.reason}</Text>
-        <View style={[styles.amountBadge, { backgroundColor: isPositive ? '#16A34A22' : c.subtext + '22' }]}>
-          <Text style={[styles.amountText, { color: isPositive ? '#16A34A' : c.subtext }]}>
+        <View style={[styles.amountBadge, { backgroundColor: isPositive ? c.success + '33' : c.subtext + '22' }]}>
+          <Text style={[styles.amountText, { color: isPositive ? c.success : c.subtext }]}>
             {isPositive ? '+' : ''}{point.amount} pkt
           </Text>
         </View>
@@ -209,9 +212,16 @@ function PointCard({ point, styles, colors: c }: { point: PointWithSchedule; sty
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
-function RankingRow({ entry, position, isMe, styles, colors: c }: { entry: RankingEntry; position: number; isMe: boolean; styles: any; colors: Colors }) {
+function RankingRow({ entry, position, isMe, styles, colors: c }: {
+  entry: RankingEntry; position: number; isMe: boolean; styles: any; colors: Colors
+}) {
+  const router = useRouter()
   return (
-    <View style={[styles.rankRow, isMe && styles.rankRowMe]}>
+    <TouchableOpacity
+      style={[styles.rankRow, isMe && styles.rankRowMe]}
+      onPress={() => !isMe && router.push(`/(tabs)/member-profile?id=${entry.profile_id}`)}
+      activeOpacity={isMe ? 1 : 0.7}
+    >
       <Text style={styles.rankPosition}>
         {position <= 3 ? MEDALS[position - 1] : `#${position}`}
       </Text>
@@ -224,7 +234,7 @@ function RankingRow({ entry, position, isMe, styles, colors: c }: { entry: Ranki
       <Text style={[styles.rankPoints, isMe && { color: c.primary }]}>
         {entry.total_points} pkt
       </Text>
-    </View>
+    </TouchableOpacity>
   )
 }
 
@@ -360,11 +370,11 @@ function createStyles(c: Colors) {
       gap: 6,
     },
     summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    summaryTitle: { color: '#ffffffcc', fontSize: 14, fontWeight: '500' },
-    summaryPoints: { color: '#fff', fontSize: 48, fontWeight: '700', lineHeight: 56 },
+    summaryTitle: { color: c.white + 'CC', fontSize: 14, fontWeight: '500' },
+    summaryPoints: { color: c.white, fontSize: 48, fontWeight: '700', lineHeight: 56 },
     summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    summaryMeta: { color: '#ffffffaa', fontSize: 13 },
-    summaryDot: { color: '#ffffff55', marginHorizontal: 2 },
+    summaryMeta: { color: c.white + 'AA', fontSize: 13 },
+    summaryDot: { color: c.white + '55', marginHorizontal: 2 },
 
     tabs: {
       flexDirection: 'row',
