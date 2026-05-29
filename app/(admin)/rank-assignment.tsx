@@ -12,10 +12,16 @@ import { Colors } from '../../lib/theme'
 
 type MemberRow = { id: string; full_name: string; rank_id: string | null; rank_name: string | null }
 type RankOption = { id: string; name: string; order: number }
+type RawMemberRow = {
+  id: string
+  full_name: string
+  rank_id: string | null
+  ranks: { name: string } | null
+}
 
 export default function RankAssignmentScreen() {
   const { profile } = useAuthStore()
-  const parishId = profile?.parish_id!
+  const parishId = profile?.parish_id
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
   const insets = useSafeAreaInsets()
@@ -41,14 +47,14 @@ export default function RankAssignmentScreen() {
         .order('order'),
     ])
 
-    const raw = (membersRes.data ?? []) as any[]
+    const raw = (membersRes.data ?? []) as RawMemberRow[]
     const unranked = raw.filter(m => m.rank_id === null).sort((a, b) => a.full_name.localeCompare(b.full_name, 'pl'))
     const ranked = raw.filter(m => m.rank_id !== null).sort((a, b) => a.full_name.localeCompare(b.full_name, 'pl'))
     const sorted: MemberRow[] = [...unranked, ...ranked].map(m => ({
       id: m.id,
       full_name: m.full_name,
       rank_id: m.rank_id,
-      rank_name: (m.ranks as any)?.name ?? null,
+      rank_name: m.ranks?.name ?? null,
     }))
 
     setMembers(sorted)
@@ -56,7 +62,7 @@ export default function RankAssignmentScreen() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchData() }, [parishId])
+  useEffect(() => { if (parishId) fetchData() }, [parishId])
 
   const handleSetRank = async (memberId: string, rankId: string | null) => {
     const rankName = rankId ? ranks.find(r => r.id === rankId)?.name ?? null : null
@@ -96,7 +102,7 @@ export default function RankAssignmentScreen() {
           <View style={styles.memberRow}>
             <View style={styles.memberAvatar}>
               <Text style={styles.memberInitials}>
-                {item.full_name.split(' ').map((n: string) => n[0]).slice(0, 2).join('')}
+                {item.full_name.split(' ').map(n => n[0]).slice(0, 2).join('')}
               </Text>
             </View>
             <Text style={styles.memberName} numberOfLines={1}>{item.full_name}</Text>
@@ -132,7 +138,7 @@ export default function RankAssignmentScreen() {
             <Text style={styles.sheetTitle}>{pickerTarget?.full_name}</Text>
 
             <TouchableOpacity
-              style={[styles.rankOption, pickerTarget?.rank_id === null && styles.rankOptionActive]}
+              style={styles.rankOption}
               onPress={() => handleSetRank(pickerTarget!.id, null)}
             >
               <Text style={[styles.rankOptionText, pickerTarget?.rank_id === null && styles.rankOptionTextActive]}>
@@ -144,7 +150,7 @@ export default function RankAssignmentScreen() {
             {ranks.map(rank => (
               <TouchableOpacity
                 key={rank.id}
-                style={[styles.rankOption, pickerTarget?.rank_id === rank.id && styles.rankOptionActive]}
+                style={styles.rankOption}
                 onPress={() => handleSetRank(pickerTarget!.id, rank.id)}
               >
                 <Text style={[styles.rankOptionText, pickerTarget?.rank_id === rank.id && styles.rankOptionTextActive]}>
@@ -207,7 +213,6 @@ function createStyles(c: Colors) {
       paddingVertical: 14, paddingHorizontal: 4,
       borderBottomWidth: 1, borderBottomColor: c.primarySurface,
     },
-    rankOptionActive: {},
     rankOptionText: { fontSize: 16, color: c.text },
     rankOptionTextActive: { color: c.primary, fontWeight: '600' },
   })
