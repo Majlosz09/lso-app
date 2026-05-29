@@ -78,7 +78,7 @@ export default function BadgeManagementScreen() {
       Alert.alert('Błąd', 'Nie udało się załadować historii przyznanych.')
     }
     setCustomBadges(customRes.data ?? [])
-    setHistory((historyRes.data ?? []).filter((h: any) => h.badge_definition !== null) as AwardHistoryRow[])
+    setHistory((historyRes.data ?? []).filter((h: any) => h.badge_definition !== null) as unknown as AwardHistoryRow[])
     setAllBadges(allBadgesRes.data ?? [])
     setLoading(false)
   }
