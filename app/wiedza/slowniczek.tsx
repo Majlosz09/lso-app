@@ -74,7 +74,9 @@ export default function SlowniczekScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="search-outline" size={40} color={c.iconMuted} />
-              <Text style={styles.emptyText}>Brak wyników dla "{query}"</Text>
+              <Text style={styles.emptyText}>
+                {query ? `Brak wyników dla "${query}"` : `Brak wyników w kategorii "${activeTag}"`}
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -122,7 +124,7 @@ function createStyles(c: Colors) {
     },
     tagActive: { backgroundColor: c.primary, borderColor: c.primary },
     tagText: { fontSize: 13, fontWeight: '500', color: c.subtext },
-    tagTextActive: { color: '#fff' },
+    tagTextActive: { color: c.white },
     list: { paddingHorizontal: 16, paddingBottom: 24 },
     item: {
       backgroundColor: c.surface, borderRadius: 12, padding: 14,
