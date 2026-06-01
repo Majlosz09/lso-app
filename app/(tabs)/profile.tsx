@@ -19,6 +19,7 @@ import {
   PRESET_ICONS, PRESET_COLORS, buildPresetUrl, parsePresetUrl, isPresetUrl,
 } from '../../lib/presetAvatar'
 import { FormationSection, BadgesSection, BadgeWithDef } from '../../components/FormationBadges'
+import { OnboardingModal } from '../../components/OnboardingModal'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrator',
@@ -299,6 +300,7 @@ function MemberProfile() {
   const [rank, setRank] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   type RankItem = { id: string; name: string; order: number }
 
@@ -442,8 +444,24 @@ function MemberProfile() {
         </View>
       </View>
 
+      <TouchableOpacity
+        style={styles.instructionBtn}
+        onPress={() => setShowOnboarding(true)}
+        activeOpacity={0.75}
+      >
+        <View style={[styles.menuIconBox, { backgroundColor: c.primaryAlpha08 }]}>
+          <Ionicons name="school-outline" size={20} color={c.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.instructionBtnLabel}>Instruktaż aplikacji</Text>
+          <Text style={styles.instructionBtnSub}>Powtórz samouczek korzystania z aplikacji</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={c.primary} />
+      </TouchableOpacity>
+
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={true} />
       <SignOutButton onConfirm={signOut} />
+      <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </ScrollView>
   )
 }
@@ -458,6 +476,7 @@ function AdminProfile() {
   const [stats, setStats] = useState({ members: 0, upcoming: 0 })
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0]
@@ -526,8 +545,24 @@ function AdminProfile() {
         </View>
       </View>
 
+      <TouchableOpacity
+        style={styles.instructionBtn}
+        onPress={() => setShowOnboarding(true)}
+        activeOpacity={0.75}
+      >
+        <View style={[styles.menuIconBox, { backgroundColor: c.primaryAlpha08 }]}>
+          <Ionicons name="school-outline" size={20} color={c.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.instructionBtnLabel}>Instruktaż aplikacji</Text>
+          <Text style={styles.instructionBtnSub}>Powtórz samouczek korzystania z aplikacji</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={c.primary} />
+      </TouchableOpacity>
+
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
       <SignOutButton onConfirm={signOut} />
+      <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </ScrollView>
   )
 }
@@ -551,6 +586,7 @@ function ParentProfile() {
   const [children, setChildren] = useState<Child[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     if (!profile?.id) return
@@ -688,8 +724,24 @@ function ParentProfile() {
         </View>
       </View>
 
+      <TouchableOpacity
+        style={styles.instructionBtn}
+        onPress={() => setShowOnboarding(true)}
+        activeOpacity={0.75}
+      >
+        <View style={[styles.menuIconBox, { backgroundColor: c.primaryAlpha08 }]}>
+          <Ionicons name="school-outline" size={20} color={c.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.instructionBtnLabel}>Instruktaż aplikacji</Text>
+          <Text style={styles.instructionBtnSub}>Powtórz samouczek korzystania z aplikacji</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={c.primary} />
+      </TouchableOpacity>
+
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
       <SignOutButton onConfirm={signOut} />
+      <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </ScrollView>
   )
 }
@@ -1010,6 +1062,14 @@ function createStyles(c: Colors) {
 
     emptyChildren: { alignItems: 'center', padding: 24, gap: 8 },
     emptyChildrenText: { fontSize: 14, color: c.textTertiary, textAlign: 'center' },
+
+    instructionBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      backgroundColor: c.primaryAlpha08, borderRadius: 12, padding: 14,
+      borderWidth: 1, borderColor: c.primaryAlpha20,
+    },
+    instructionBtnLabel: { fontSize: 15, fontWeight: '600', color: c.primary },
+    instructionBtnSub: { fontSize: 12, color: c.subtext, marginTop: 1 },
 
     signOutButton: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,

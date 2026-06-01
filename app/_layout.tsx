@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import Toast from 'react-native-toast-message'
@@ -7,6 +7,7 @@ import * as Notifications from 'expo-notifications'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { ThemeProvider } from '../lib/ThemeContext'
+import { OnboardingModal } from '../components/OnboardingModal'
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -43,6 +44,7 @@ function AuthGate() {
   const { session, profile, isLoading, setSession } = useAuthStore()
   const router = useRouter()
   const segments = useSegments()
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -86,6 +88,12 @@ function AuthGate() {
     }
   }, [session, isLoading, profile, segments])
 
+  useEffect(() => {
+    if (profile && profile.parish_id && profile.onboarding_completed === false) {
+      setShowOnboarding(true)
+    }
+  }, [profile?.id, profile?.onboarding_completed])
+
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>
@@ -98,6 +106,10 @@ function AuthGate() {
         <Stack.Screen name="wiedza" options={{ headerShown: false }} />
       </Stack>
       <Toast />
+      <OnboardingModal
+        visible={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+      />
     </>
   )
 }
