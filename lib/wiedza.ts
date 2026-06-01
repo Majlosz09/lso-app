@@ -131,7 +131,7 @@ export const WIEDZA_DATA: WiedzaCategory[] = [
     id: 'slowniczek',
     title: 'Słowniczek',
     emoji: '📖',
-    itemCount: 40,
+    itemCount: 29,
     searchable: true,
     sections: [
       {
