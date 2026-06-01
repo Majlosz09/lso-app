@@ -594,32 +594,59 @@ function MemberScheduleView() {
     setSignUpModal({ visible: true, schedule })
   }
 
-  const doSignUp = async (scheduleId: string, date: string, timeSlot: string, mode: 'once' | 'recurring') => {
-    const key = `${date}_${timeSlot}`
-    setSigningUpId(key)
-    const { data, error } = await supabase.rpc('sign_up_for_slot', {
-      p_date: date,
-      p_time_label: timeSlot,
-      p_mode: mode,
+  const doSignUp = (scheduleId: string, date: string, timeSlot: string, mode: 'once' | 'recurring') => {
+    const dateStr = new Date(date + 'T12:00:00').toLocaleDateString('pl-PL', {
+      weekday: 'long', day: 'numeric', month: 'long',
     })
-    setSigningUpId(null)
-    if (error) { Alert.alert('Błąd', error.message); return }
-    if (mode === 'recurring') {
-      const dow = new Date(date + 'T12:00:00').getDay()
-      const DAY_FULL_LOCAL = ['Niedzielę', 'Poniedziałek', 'Wtorek', 'Środę', 'Czwartek', 'Piątek', 'Sobotę']
-      Alert.alert('Cykl aktywny',
-        `Zapisano cyklicznie na każd${dow === 0 || dow === 3 || dow === 6 ? 'ą' : 'y'} ${DAY_FULL_LOCAL[dow]} o ${timeSlot}. Objęto ${(data as any)?.count ?? 1} służb.`
-      )
-    }
-    fetchWeekSchedules(weekDays)
+    Alert.alert(
+      'Zapisz na służbę',
+      `Zapisać się na służbę ${dateStr} o ${timeSlot}?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Zapisz',
+          onPress: async () => {
+            const key = `${date}_${timeSlot}`
+            setSigningUpId(key)
+            const { data, error } = await supabase.rpc('sign_up_for_slot', {
+              p_date: date,
+              p_time_label: timeSlot,
+              p_mode: mode,
+            })
+            setSigningUpId(null)
+            if (error) { Alert.alert('Błąd', error.message); return }
+            if (mode === 'recurring') {
+              const dow = new Date(date + 'T12:00:00').getDay()
+              const DAY_FULL_LOCAL = ['Niedzielę', 'Poniedziałek', 'Wtorek', 'Środę', 'Czwartek', 'Piątek', 'Sobotę']
+              Alert.alert('Cykl aktywny',
+                `Zapisano cyklicznie na każd${dow === 0 || dow === 3 || dow === 6 ? 'ą' : 'y'} ${DAY_FULL_LOCAL[dow]} o ${timeSlot}. Objęto ${(data as any)?.count ?? 1} służb.`
+              )
+            }
+            fetchWeekSchedules(weekDays)
+          },
+        },
+      ]
+    )
   }
 
-  const unsignOne = async (assignmentId: string) => {
-    setUnsigningId(assignmentId)
-    const { error } = await supabase.from('schedule_assignments').delete().eq('id', assignmentId)
-    setUnsigningId(null)
-    if (error) { Alert.alert('Błąd', error.message); return }
-    fetchWeekSchedules(weekDays)
+  const unsignOne = (assignmentId: string) => {
+    Alert.alert(
+      'Wypisz ze służby',
+      'Wypisać się z tej służby?',
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Wypisz',
+          onPress: async () => {
+            setUnsigningId(assignmentId)
+            const { error } = await supabase.from('schedule_assignments').delete().eq('id', assignmentId)
+            setUnsigningId(null)
+            if (error) { Alert.alert('Błąd', error.message); return }
+            fetchWeekSchedules(weekDays)
+          },
+        },
+      ]
+    )
   }
 
   const unsignCycle = async (assignmentId: string, commitmentId: string) => {
@@ -657,16 +684,28 @@ function MemberScheduleView() {
     })
   }
 
-  const reportAbsence = async (assignmentId: string, reason: string) => {
-    setReportingAbsenceId(assignmentId)
-    const { error } = await supabase
-      .from('schedule_assignments')
-      .update({ status: 'excused', absence_reason: reason })
-      .eq('id', assignmentId)
-    setReportingAbsenceId(null)
-    if (error) { Alert.alert('Błąd', error.message); return }
-    setAbsenceModal({ visible: false, assignmentId: '', title: '', reason: '' })
-    fetchWeekSchedules(weekDays)
+  const reportAbsence = (assignmentId: string, reason: string) => {
+    Alert.alert(
+      'Zgłoś nieobecność',
+      'Zgłosić nieobecność na tej służbie?',
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Zgłoś',
+          onPress: async () => {
+            setReportingAbsenceId(assignmentId)
+            const { error } = await supabase
+              .from('schedule_assignments')
+              .update({ status: 'excused', absence_reason: reason })
+              .eq('id', assignmentId)
+            setReportingAbsenceId(null)
+            if (error) { Alert.alert('Błąd', error.message); return }
+            setAbsenceModal({ visible: false, assignmentId: '', title: '', reason: '' })
+            fetchWeekSchedules(weekDays)
+          },
+        },
+      ]
+    )
   }
 
   // --- Derived data ---
