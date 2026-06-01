@@ -192,7 +192,7 @@ export default function MemberDetailScreen() {
     const rankDisplay = rankName ? `rangę „${rankName}"` : 'brak rangi'
     Alert.alert(
       'Zmień rangę',
-      `Przypisać ${rankDisplay} ministrancowi ${profile.full_name}?`,
+      `Przypisać ${rankDisplay} ministrancowi ${profile!.full_name}?`,
       [
         { text: 'Anuluj', style: 'cancel' },
         {
@@ -258,7 +258,7 @@ export default function MemberDetailScreen() {
     if (!selectedBadgeDef) return
     Alert.alert(
       'Przyznaj odznakę',
-      `Przyznać odznakę „${selectedBadgeDef.name}" ministrancowi ${profile.full_name}?`,
+      `Przyznać odznakę „${selectedBadgeDef.name}" ministrancowi ${profile!.full_name}?`,
       [
         { text: 'Anuluj', style: 'cancel' },
         {
