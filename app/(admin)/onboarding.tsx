@@ -11,6 +11,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { ServiceType, SERVICE_TYPE_LABELS, AttendanceMode } from '../../types/database'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import GpsLocationPicker from '../../components/GpsLocationPicker'
 
 const DAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So']
 const DAYS_FULL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']
@@ -334,34 +335,13 @@ export default function OnboardingScreen() {
             {attendanceMode === 'gps' && (
               <View style={styles.gpsFields}>
                 <Text style={styles.gpsTitle}>Lokalizacja kościoła</Text>
-                <Text style={styles.gpsSub}>
-                  Podaj współrzędne kościoła i promień w metrach, w którym ministranci mogą potwierdzić obecność.
-                </Text>
-                <View style={styles.gpsRow}>
-                  <TextInput
-                    style={styles.gpsInput}
-                    placeholder="Szerokość (np. 50.0613)"
-                    placeholderTextColor={c.textTertiary}
-                    value={gpsLat}
-                    onChangeText={setGpsLat}
-                    keyboardType="decimal-pad"
-                  />
-                  <TextInput
-                    style={styles.gpsInput}
-                    placeholder="Długość (np. 19.9372)"
-                    placeholderTextColor={c.textTertiary}
-                    value={gpsLng}
-                    onChangeText={setGpsLng}
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-                <TextInput
-                  style={[styles.gpsInput, { width: '100%' }]}
-                  placeholder="Promień w metrach (domyślnie 200)"
-                  placeholderTextColor={c.textTertiary}
-                  value={gpsRadius}
-                  onChangeText={setGpsRadius}
-                  keyboardType="number-pad"
+                <GpsLocationPicker
+                  lat={gpsLat}
+                  lng={gpsLng}
+                  gpsRadius={gpsRadius}
+                  onLatChange={setGpsLat}
+                  onLngChange={setGpsLng}
+                  onGpsRadiusChange={setGpsRadius}
                 />
               </View>
             )}
@@ -595,13 +575,6 @@ function createStyles(c: Colors) {
       borderWidth: 1, borderColor: c.primaryAlpha20,
     },
     gpsTitle: { fontSize: 14, fontWeight: '700', color: c.text },
-    gpsSub: { fontSize: 13, color: c.subtext, lineHeight: 18 },
-    gpsRow: { flexDirection: 'row', gap: 10 },
-    gpsInput: {
-      flex: 1, backgroundColor: c.bg, borderRadius: 10,
-      paddingHorizontal: 12, paddingVertical: 11,
-      fontSize: 14, color: c.text, borderWidth: 1, borderColor: c.border,
-    },
 
     // Done
     doneContainer: { alignItems: 'center', gap: 24, paddingTop: 20 },

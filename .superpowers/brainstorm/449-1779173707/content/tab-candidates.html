@@ -1,0 +1,110 @@
+<h2>Która 5. zakładka pasuje najlepiej?</h2>
+<p class="subtitle">Wybierz opcję, która Twoim zdaniem najlepiej uzupełnia nawigację dla ministranta/rodzica</p>
+
+<style>
+  .tab-preview {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 10px 6px 6px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .tab-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 2px;
+    font-size: 10px;
+    color: #999;
+    font-family: -apple-system, sans-serif;
+  }
+  .tab-item.active { color: #4F46E5; }
+  .tab-item.center-highlight {
+    color: #fff;
+    background: #4F46E5;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    margin-top: -10px;
+    box-shadow: 0 3px 10px rgba(79,70,229,0.4);
+    padding: 0;
+    justify-content: center;
+  }
+  .tab-icon { font-size: 18px; line-height: 1; }
+  .tab-label { font-size: 9px; letter-spacing: 0; }
+</style>
+
+<div class="options">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Zastępstwa</h3>
+      <p>Ministranci mogą zgłaszać nieobecności i prosić o zastępstwo. Inni mogą się zgłosić. Tabela <code>swap_offers</code> w bazie już istnieje — to gotowy grunt.</p>
+      <div class="tab-preview">
+        <div class="tab-item"><span class="tab-icon">🏠</span><span class="tab-label">Dom</span></div>
+        <div class="tab-item"><span class="tab-icon">📅</span><span class="tab-label">Dyżur</span></div>
+        <div class="tab-item center-highlight"><span class="tab-icon">🏠</span></div>
+        <div class="tab-item"><span class="tab-icon">📢</span><span class="tab-label">Ogłosz.</span></div>
+        <div class="tab-item"><span class="tab-icon">🔄</span><span class="tab-label">Zastęp.</span></div>
+      </div>
+      <small style="color:#6B7280">Punkty zostają — Dom w środku</small>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Profil</h3>
+      <p>Przenieść obecny ukryty ekran profilu jako widoczną zakładkę. Prosty ruch — zero nowego kodu. Użytkownik ma bezpośredni dostęp do ustawień i danych konta.</p>
+      <div class="tab-preview">
+        <div class="tab-item"><span class="tab-icon">📅</span><span class="tab-label">Dyżur</span></div>
+        <div class="tab-item"><span class="tab-icon">📢</span><span class="tab-label">Ogłosz.</span></div>
+        <div class="tab-item center-highlight"><span class="tab-icon">🏠</span></div>
+        <div class="tab-item"><span class="tab-icon">🏆</span><span class="tab-label">Punkty</span></div>
+        <div class="tab-item"><span class="tab-icon">👤</span><span class="tab-label">Profil</span></div>
+      </div>
+      <small style="color:#6B7280">Dom w środku, Profil zastępuje avatar w headerze</small>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Dostępność</h3>
+      <p>Ministranci oznaczają dni, kiedy <em>nie mogą</em> służyć (wyjazd, egzaminy). Admin widzi to tworząc grafik — koniec z ręcznym korygowaniem. Logicznie spina się z Dyżurem.</p>
+      <div class="tab-preview">
+        <div class="tab-item"><span class="tab-icon">📅</span><span class="tab-label">Dyżur</span></div>
+        <div class="tab-item"><span class="tab-icon">📢</span><span class="tab-label">Ogłosz.</span></div>
+        <div class="tab-item center-highlight"><span class="tab-icon">🏠</span></div>
+        <div class="tab-item"><span class="tab-icon">🏆</span><span class="tab-label">Punkty</span></div>
+        <div class="tab-item"><span class="tab-icon">🗓️</span><span class="tab-label">Dostępn.</span></div>
+      </div>
+      <small style="color:#6B7280">Nowa funkcja — ministranci zgłaszają niedyspozycyjność</small>
+    </div>
+  </div>
+
+  <div class="option" data-choice="d" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Wspólnota</h3>
+      <p>Widok grupy: lista ministranckich kolegów, kontakty, info o grupie. Dla rodziców: mogą zobaczyć z kim służy ich dziecko, kiedy są zbiórki.</p>
+      <div class="tab-preview">
+        <div class="tab-item"><span class="tab-icon">📅</span><span class="tab-label">Dyżur</span></div>
+        <div class="tab-item"><span class="tab-icon">📢</span><span class="tab-label">Ogłosz.</span></div>
+        <div class="tab-item center-highlight"><span class="tab-icon">🏠</span></div>
+        <div class="tab-item"><span class="tab-icon">🏆</span><span class="tab-label">Punkty</span></div>
+        <div class="tab-item"><span class="tab-icon">👥</span><span class="tab-label">Grupa</span></div>
+      </div>
+      <small style="color:#6B7280">Buduje poczucie wspólnoty w grupie</small>
+    </div>
+  </div>
+
+</div>

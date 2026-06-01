@@ -32,7 +32,8 @@ export default function AwardPoints() {
       .from('profiles')
       .select('*')
       .eq('is_active', true)
-      .neq('role', 'admin')
+      .eq('role', 'member')
+      .eq('parish_id', adminProfile?.parish_id)
       .order('full_name')
       .then(({ data }) => {
         if (data) {

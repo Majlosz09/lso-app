@@ -1,0 +1,261 @@
+<h2>Jak wyróżnić środkową zakładkę?</h2>
+<p class="subtitle">3 style — każdy pokazany dla obu profili (ministranta i admina)</p>
+
+<style>
+  .profile-pair {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 6px;
+  }
+  .phone-mock {
+    flex: 1;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #E5E7EB;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .phone-screen {
+    background: #F9FAFB;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  .screen-label {
+    font-size: 11px;
+    color: #9CA3AF;
+    font-family: -apple-system, sans-serif;
+  }
+  .tab-bar {
+    display: flex;
+    align-items: flex-end;
+    padding: 0 4px 6px;
+    background: #fff;
+    height: 56px;
+  }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+    padding-bottom: 2px;
+  }
+  .tab-icon { font-size: 18px; line-height: 1.2; }
+  .tab-lbl { font-size: 8.5px; color: #9CA3AF; font-family: -apple-system, sans-serif; white-space: nowrap; }
+  .tab-lbl.active { color: #4F46E5; }
+
+  /* STYLE A — FAB uniesiony */
+  .fab-center {
+    flex: 0 0 52px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .fab-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 26px;
+    background: #4F46E5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 4px 12px rgba(79,70,229,0.45);
+  }
+  .fab-lbl { font-size: 8.5px; color: #4F46E5; font-family: -apple-system, sans-serif; margin-top: 2px; font-weight: 600; }
+  .tab-bar-fab {
+    display: flex;
+    align-items: flex-end;
+    padding: 0 4px 4px;
+    background: #fff;
+    height: 64px;
+    border-top: 1px solid #E5E7EB;
+  }
+
+  /* STYLE B — Pill tło */
+  .pill-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 6px;
+    background: #EEF2FF;
+    border-radius: 14px;
+    margin: 4px 2px;
+  }
+  .pill-icon { font-size: 18px; line-height: 1.2; color: #4F46E5; }
+  .pill-lbl { font-size: 8.5px; color: #4F46E5; font-family: -apple-system, sans-serif; font-weight: 600; }
+  .tab-bar-pill {
+    display: flex;
+    align-items: center;
+    padding: 4px 4px 6px;
+    background: #fff;
+    height: 58px;
+    border-top: 1px solid #E5E7EB;
+  }
+
+  /* STYLE C — Większa ikona + kolor */
+  .big-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+    padding-bottom: 4px;
+  }
+  .big-icon { font-size: 28px; line-height: 1.1; }
+  .big-lbl { font-size: 8.5px; color: #4F46E5; font-family: -apple-system, sans-serif; font-weight: 700; }
+  .tab-bar-big {
+    display: flex;
+    align-items: flex-end;
+    padding: 0 4px 4px;
+    background: #fff;
+    height: 58px;
+    border-top: 1px solid #E5E7EB;
+  }
+
+  .profile-label {
+    font-size: 9px;
+    text-align: center;
+    color: #6B7280;
+    font-family: -apple-system, sans-serif;
+    padding: 3px 0 4px;
+    border-top: 1px solid #F3F4F6;
+    background: #FAFAFA;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+</style>
+
+<div class="options">
+
+  <!-- OPCJA A -->
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>FAB — przycisk uniesiony</h3>
+      <p>Środkowy przycisk "wyskakuje" ponad pasek. Klasyczny pattern znany z wielu aplikacji (Instagram, Spotify).</p>
+
+      <div class="profile-pair">
+        <div class="phone-mock">
+          <div class="phone-screen"><span class="screen-label">ekran główny</span></div>
+          <div class="tab-bar-fab">
+            <div class="tab"><span class="tab-icon">📅</span><span class="tab-lbl">Dyżur</span></div>
+            <div class="tab"><span class="tab-icon">📢</span><span class="tab-lbl">Ogłosz.</span></div>
+            <div class="fab-center">
+              <div class="fab-btn">🏠</div>
+              <span class="fab-lbl">Dom</span>
+            </div>
+            <div class="tab"><span class="tab-icon">🏆</span><span class="tab-lbl">Punkty</span></div>
+            <div class="tab"><span class="tab-icon">📖</span><span class="tab-lbl">Wiedza</span></div>
+          </div>
+          <div class="profile-label">Ministrant / Rodzic</div>
+        </div>
+        <div class="phone-mock">
+          <div class="phone-screen"><span class="screen-label">ekran główny</span></div>
+          <div class="tab-bar-fab">
+            <div class="tab"><span class="tab-icon">👥</span><span class="tab-lbl">Ministranc.</span></div>
+            <div class="tab"><span class="tab-icon">📅</span><span class="tab-lbl">Grafiki</span></div>
+            <div class="fab-center">
+              <div class="fab-btn">🏠</div>
+              <span class="fab-lbl">Panel</span>
+            </div>
+            <div class="tab"><span class="tab-icon">📢</span><span class="tab-lbl">Ogłosz.</span></div>
+            <div class="tab"><span class="tab-icon">🏆</span><span class="tab-lbl">Punkty</span></div>
+          </div>
+          <div class="profile-label">Admin</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPCJA B -->
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Pill — kolorowe tło</h3>
+      <p>Środkowa zakładka ma delikatne fioletowe tło (pill shape). Bardziej subtelne, pasek zostaje płaski — nowoczesny styl.</p>
+
+      <div class="profile-pair">
+        <div class="phone-mock">
+          <div class="phone-screen"><span class="screen-label">ekran główny</span></div>
+          <div class="tab-bar-pill">
+            <div class="tab"><span class="tab-icon">📅</span><span class="tab-lbl">Dyżur</span></div>
+            <div class="tab"><span class="tab-icon">📢</span><span class="tab-lbl">Ogłosz.</span></div>
+            <div class="pill-center">
+              <span class="pill-icon">🏠</span>
+              <span class="pill-lbl">Dom</span>
+            </div>
+            <div class="tab"><span class="tab-icon">🏆</span><span class="tab-lbl">Punkty</span></div>
+            <div class="tab"><span class="tab-icon">📖</span><span class="tab-lbl">Wiedza</span></div>
+          </div>
+          <div class="profile-label">Ministrant / Rodzic</div>
+        </div>
+        <div class="phone-mock">
+          <div class="phone-screen"><span class="screen-label">ekran główny</span></div>
+          <div class="tab-bar-pill">
+            <div class="tab"><span class="tab-icon">👥</span><span class="tab-lbl">Ministranc.</span></div>
+            <div class="tab"><span class="tab-icon">📅</span><span class="tab-lbl">Grafiki</span></div>
+            <div class="pill-center">
+              <span class="pill-icon">🏠</span>
+              <span class="pill-lbl">Panel</span>
+            </div>
+            <div class="tab"><span class="tab-icon">📢</span><span class="tab-lbl">Ogłosz.</span></div>
+            <div class="tab"><span class="tab-icon">🏆</span><span class="tab-lbl">Punkty</span></div>
+          </div>
+          <div class="profile-label">Admin</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPCJA C -->
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Big Icon — większa ikona</h3>
+      <p>Środkowa zakładka ma większą ikonę (28px vs 20px) i pogrubiony label w kolorze. Żaden element nie wychodzi poza pasek — najprostsze w implementacji.</p>
+
+      <div class="profile-pair">
+        <div class="phone-mock">
+          <div class="phone-screen"><span class="screen-label">ekran główny</span></div>
+          <div class="tab-bar-big">
+            <div class="tab"><span class="tab-icon">📅</span><span class="tab-lbl">Dyżur</span></div>
+            <div class="tab"><span class="tab-icon">📢</span><span class="tab-lbl">Ogłosz.</span></div>
+            <div class="big-center">
+              <span class="big-icon">🏠</span>
+              <span class="big-lbl">Dom</span>
+            </div>
+            <div class="tab"><span class="tab-icon">🏆</span><span class="tab-lbl">Punkty</span></div>
+            <div class="tab"><span class="tab-icon">📖</span><span class="tab-lbl">Wiedza</span></div>
+          </div>
+          <div class="profile-label">Ministrant / Rodzic</div>
+        </div>
+        <div class="phone-mock">
+          <div class="phone-screen"><span class="screen-label">ekran główny</span></div>
+          <div class="tab-bar-big">
+            <div class="tab"><span class="tab-icon">👥</span><span class="tab-lbl">Ministranc.</span></div>
+            <div class="tab"><span class="tab-icon">📅</span><span class="tab-lbl">Grafiki</span></div>
+            <div class="big-center">
+              <span class="big-icon">🏠</span>
+              <span class="big-lbl">Panel</span>
+            </div>
+            <div class="tab"><span class="tab-icon">📢</span><span class="tab-lbl">Ogłosz.</span></div>
+            <div class="tab"><span class="tab-icon">🏆</span><span class="tab-lbl">Punkty</span></div>
+          </div>
+          <div class="profile-label">Admin</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

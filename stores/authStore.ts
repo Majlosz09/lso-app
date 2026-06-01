@@ -4,8 +4,21 @@ import { Platform } from 'react-native'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { Profile, Parish } from '../types/database'
+import { registerForPushNotificationsAsync } from '../lib/notifications'
+
+let _coverageRunning = false
 
 async function ensureSchedulesCoverage(parishId: string) {
+  if (_coverageRunning) return
+  _coverageRunning = true
+  try {
+    await _doEnsureSchedulesCoverage(parishId)
+  } finally {
+    _coverageRunning = false
+  }
+}
+
+async function _doEnsureSchedulesCoverage(parishId: string) {
   const oneYearOut = new Date()
   oneYearOut.setFullYear(oneYearOut.getFullYear() + 1)
   const oneYearStr = oneYearOut.toISOString().split('T')[0]
@@ -36,6 +49,7 @@ async function ensureSchedulesCoverage(parishId: string) {
     })
   }
 }
+
 
 interface AuthState {
   session: Session | null
@@ -77,20 +91,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (!error && data) {
       const profileData = data as Profile
-      set({ profile: profileData, isLoading: false })
 
+      let parishData = null
       if (profileData.parish_id) {
-        const { data: parishData } = await supabase
+        const { data: p } = await supabase
           .from('parishes')
           .select('*')
           .eq('id', profileData.parish_id)
           .single()
-        set({ parish: parishData ?? null })
-        // Fire-and-forget: ensure schedules cover next year
-        ensureSchedulesCoverage(profileData.parish_id).catch(() => {})
-      } else {
-        set({ parish: null })
+        parishData = p ?? null
       }
+
+      // Single atomic set — prevents the layout from seeing a stale parish
+      // while profile is already fresh (which would cause a spurious redirect)
+      set({ profile: profileData, parish: parishData, isLoading: false })
+
+      if (parishData?.setup_done) ensureSchedulesCoverage(profileData.parish_id!).catch(() => {})
+      registerForPushNotificationsAsync(profileData.id).catch(() => {})
     } else {
       set({ isLoading: false })
     }

@@ -323,7 +323,12 @@ export default function ScheduleDetailScreen() {
         {schedule.category === 'zbiorka' && (
           <TouchableOpacity
             style={styles.attendanceBtn}
-            onPress={() => {
+            onPress={async () => {
+              const { data } = await supabase
+                .from('profiles').select('id, full_name')
+                .eq('parish_id', adminProfile!.parish_id)
+                .eq('role', 'member').eq('is_active', true).order('full_name')
+              setAllMembers(data ?? [])
               setDraftIds(new Set(attendanceIds))
               setAttendanceSheetVisible(true)
             }}
@@ -539,17 +544,17 @@ export default function ScheduleDetailScreen() {
             <Text style={[styles.modalSubtitle, { marginBottom: 12 }]}>{schedule?.title}</Text>
 
             <ScrollView style={styles.attendanceList} showsVerticalScrollIndicator={false}>
-              {(schedule?.assignments ?? []).map((a, i) => (
+              {allMembers.map((m, i) => (
                 <TouchableOpacity
-                  key={a.id}
+                  key={m.id}
                   style={[
                     styles.attendanceRow,
-                    i < (schedule?.assignments.length ?? 0) - 1 && styles.rowBorder,
+                    i < allMembers.length - 1 && styles.rowBorder,
                   ]}
                   onPress={() => setDraftIds(prev => {
                     const s = new Set(prev)
-                    if (s.has(a.profile_id)) s.delete(a.profile_id)
-                    else s.add(a.profile_id)
+                    if (s.has(m.id)) s.delete(m.id)
+                    else s.add(m.id)
                     return s
                   })}
                   activeOpacity={0.7}
@@ -557,11 +562,11 @@ export default function ScheduleDetailScreen() {
                   <View style={styles.memberAvatar}>
                     <Ionicons name="person" size={15} color={c.primary} />
                   </View>
-                  <Text style={styles.memberName}>{a.profile.full_name}</Text>
+                  <Text style={styles.memberName}>{m.full_name}</Text>
                   <Ionicons
-                    name={draftIds.has(a.profile_id) ? 'checkmark-circle' : 'ellipse-outline'}
+                    name={draftIds.has(m.id) ? 'checkmark-circle' : 'ellipse-outline'}
                     size={26}
-                    color={draftIds.has(a.profile_id) ? '#16A34A' : '#D1D5DB'}
+                    color={draftIds.has(m.id) ? '#16A34A' : '#D1D5DB'}
                   />
                 </TouchableOpacity>
               ))}
@@ -569,7 +574,7 @@ export default function ScheduleDetailScreen() {
 
             <View style={styles.attendanceFooter}>
               <Text style={styles.attendanceCount}>
-                {draftIds.size} z {schedule?.assignments.length ?? 0} obecnych
+                {draftIds.size} z {allMembers.length} obecnych
               </Text>
               <TouchableOpacity
                 style={[styles.saveBtn, saving && { opacity: 0.6 }]}

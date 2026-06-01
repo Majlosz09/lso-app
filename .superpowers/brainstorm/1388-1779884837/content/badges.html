@@ -1,0 +1,92 @@
+<h2>Które odznaki chcesz w systemie?</h2>
+<p class="subtitle">Zaznacz wszystkie które mają sens. Podzielone na dwie grupy — automatyczne (system przyznaje sam) i ręczne (admin przyznaje).</p>
+
+<h3 style="margin:24px 0 12px;color:#1A237E">🤖 Automatyczne — system przyznaje wg kryteriów</h3>
+<div class="options" data-multiselect>
+
+  <div class="option" data-choice="regularity" onclick="toggleSelect(this)">
+    <div class="letter">🔥</div>
+    <div class="content">
+      <h3>Regularny</h3>
+      <p>≥80% frekwencji w ostatnich 30 dniach</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="streak" onclick="toggleSelect(this)">
+    <div class="letter">⚡</div>
+    <div class="content">
+      <h3>Seria [N] dni</h3>
+      <p>Np. 30, 60, 90 dni bez nieobecności (jak Duolingo streak)</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="veteran" onclick="toggleSelect(this)">
+    <div class="letter">🎖️</div>
+    <div class="content">
+      <h3>Weteran</h3>
+      <p>Łącznie ≥100 / ≥250 / ≥500 służb przez całe życie w parafii</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="top3" onclick="toggleSelect(this)">
+    <div class="letter">🏆</div>
+    <div class="content">
+      <h3>Top 3 miesiąca</h3>
+      <p>Najwyższy ranking punktowy w danym miesiącu</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="punctual" onclick="toggleSelect(this)">
+    <div class="letter">⏰</div>
+    <div class="content">
+      <h3>Punktualny</h3>
+      <p>Brak spóźnień przez ostatnie N służb (wymaga danych z check-in)</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="anniversary" onclick="toggleSelect(this)">
+    <div class="letter">🎂</div>
+    <div class="content">
+      <h3>Rocznica</h3>
+      <p>1 rok, 2 lata, 5 lat w LSO</p>
+    </div>
+  </div>
+
+</div>
+
+<h3 style="margin:28px 0 12px;color:#B45309">🙋 Ręczne — admin przyznaje za konkretną zasługę</h3>
+<div class="options" data-multiselect>
+
+  <div class="option" data-choice="diligent" onclick="toggleSelect(this)">
+    <div class="letter">⭐</div>
+    <div class="content">
+      <h3>Sumienny</h3>
+      <p>Ogólne wyróżnienie za postawę — admin przyznaje kiedy chce</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="leader" onclick="toggleSelect(this)">
+    <div class="letter">👑</div>
+    <div class="content">
+      <h3>Animator / Lider</h3>
+      <p>Za prowadzenie innych ministrantów, organizację</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="special" onclick="toggleSelect(this)">
+    <div class="letter">✝️</div>
+    <div class="content">
+      <h3>Szczególna posługa</h3>
+      <p>Za udział w wyjątkowym wydarzeniu — prymicje, procesja Bożego Ciała, wizyta biskupa</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="custom" onclick="toggleSelect(this)">
+    <div class="letter">🎨</div>
+    <div class="content">
+      <h3>Własna odznaka (custom)</h3>
+      <p>Admin tworzy dowolną odznakę z własną nazwą i ikoną — pełna elastyczność</p>
+    </div>
+  </div>
+
+</div>

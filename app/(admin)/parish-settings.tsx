@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, ScrollView, Share, Modal, Platform
+  Alert, ActivityIndicator, ScrollView, Share, Modal, Platform,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -14,6 +14,7 @@ import { buildParishQrValue } from '../../lib/checkin'
 import type { AttendanceMode } from '../../types/database'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import GpsLocationPicker from '../../components/GpsLocationPicker'
 
 export default function ParishSettingsScreen() {
   const { parish, fetchProfile } = useAuthStore()
@@ -41,6 +42,15 @@ export default function ParishSettingsScreen() {
   const [savingAttendance, setSavingAttendance] = useState(false)
   const [qrModalVisible, setQrModalVisible] = useState(false)
 
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [toastMsg, setToastMsg] = useState<string | null>(null)
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg)
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToastMsg(null), 3000)
+  }
+
   useEffect(() => {
     if (parish) {
       setName(parish.name)
@@ -63,7 +73,7 @@ export default function ParishSettingsScreen() {
     setSaving(false)
     if (error) { Alert.alert('Błąd', error.message); return }
     await fetchProfile()
-    Alert.alert('Zapisano', 'Dane parafii zostały zaktualizowane.')
+    showToast('Dane parafii zostały zaktualizowane.')
   }
 
   const handleSaveAttendance = async () => {
@@ -94,8 +104,8 @@ export default function ParishSettingsScreen() {
       .eq('id', parish?.id)
     setSavingAttendance(false)
     if (error) { Alert.alert('Błąd', error.message); return }
-    await fetchProfile()
-    Alert.alert('Zapisano', 'Ustawienia weryfikacji obecności zostały zaktualizowane.')
+    try { await fetchProfile() } catch (e) { console.error('[save] fetchProfile error:', e) }
+    showToast('Ustawienia weryfikacji obecności zostały zaktualizowane.')
   }
 
   const handleRegenerate = () => {
@@ -132,7 +142,7 @@ export default function ParishSettingsScreen() {
   }
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]}
@@ -178,43 +188,14 @@ export default function ParishSettingsScreen() {
           {attendanceMode === 'gps' && (
             <View style={styles.gpsBox}>
               <Text style={styles.gpsBoxTitle}>Lokalizacja kościoła</Text>
-              <Text style={styles.gpsBoxSub}>
-                Wpisz współrzędne kościoła. Możesz je znaleźć na Google Maps — kliknij prawym przyciskiem na budynek i skopiuj koordynaty.
-              </Text>
-              <View style={styles.coordRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Szerokość (lat)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={lat}
-                    onChangeText={setLat}
-                    placeholder="np. 52.2297"
-                    placeholderTextColor={c.textTertiary}
-                    keyboardType="numeric"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Długość (lng)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={lng}
-                    onChangeText={setLng}
-                    placeholder="np. 21.0122"
-                    placeholderTextColor={c.textTertiary}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-              <Text style={styles.label}>Promień (metry)</Text>
-              <TextInput
-                style={styles.input}
-                value={gpsRadius}
-                onChangeText={setGpsRadius}
-                placeholder="200"
-                placeholderTextColor={c.textTertiary}
-                keyboardType="numeric"
+              <GpsLocationPicker
+                lat={lat}
+                lng={lng}
+                gpsRadius={gpsRadius}
+                onLatChange={setLat}
+                onLngChange={setLng}
+                onGpsRadiusChange={setGpsRadius}
               />
-              <Text style={styles.gpsHint}>Ministrant musi być w tej odległości od kościoła.</Text>
             </View>
           )}
 
@@ -285,6 +266,14 @@ export default function ParishSettingsScreen() {
         </View>
       </ScrollView>
 
+      {/* Success toast */}
+      {toastMsg && (
+        <View style={styles.toast} pointerEvents="none">
+          <Ionicons name="checkmark-circle" size={20} color="#fff" />
+          <Text style={styles.toastText}>{toastMsg}</Text>
+        </View>
+      )}
+
       {/* QR Modal */}
       <Modal visible={qrModalVisible} transparent animationType="fade" onRequestClose={() => setQrModalVisible(false)}>
         <TouchableOpacity style={styles.qrOverlay} activeOpacity={1} onPress={() => setQrModalVisible(false)}>
@@ -306,7 +295,7 @@ export default function ParishSettingsScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-    </>
+    </View>
   )
 }
 
@@ -342,10 +331,7 @@ function createStyles(c: Colors) {
 
     // GPS fields
     gpsBox: { backgroundColor: '#EA580C10', borderRadius: 12, padding: 14, gap: 4, marginBottom: 4 },
-    gpsBoxTitle: { fontSize: 14, fontWeight: '700', color: '#EA580C' },
-    gpsBoxSub: { fontSize: 12, color: '#a05000', lineHeight: 17, marginBottom: 6 },
-    coordRow: { flexDirection: 'row', gap: 10 },
-    gpsHint: { fontSize: 12, color: '#a05000', marginTop: 2 },
+    gpsBoxTitle: { fontSize: 14, fontWeight: '700', color: '#EA580C', marginBottom: 8 },
 
     // QR button
     qrButton: {
@@ -379,6 +365,15 @@ function createStyles(c: Colors) {
     navTitle: { fontSize: 15, fontWeight: '600', color: c.text },
     navSub: { fontSize: 12, color: c.textTertiary, marginTop: 1 },
     divider: { height: 1, backgroundColor: c.primarySurface, marginVertical: 2 },
+
+    toast: {
+      position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
+      bottom: 24, left: 20, right: 20, zIndex: 9999,
+      backgroundColor: '#10B981', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14,
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      ...shadow.md,
+    },
+    toastText: { color: '#fff', fontSize: 14, fontWeight: '600', flex: 1 },
 
     // QR Modal
     qrOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 24 },

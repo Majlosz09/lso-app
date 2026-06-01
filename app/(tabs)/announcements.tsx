@@ -52,7 +52,7 @@ export default function AnnouncementsScreen() {
     setRefreshing(false)
   }
 
-  useEffect(() => { fetchAnnouncements() }, [])
+  useEffect(() => { if (profile?.parish_id) fetchAnnouncements() }, [profile?.parish_id])
 
   useRealtimeTable('announcements', fetchAnnouncements)
 
@@ -61,6 +61,7 @@ export default function AnnouncementsScreen() {
   const handleCreate = async () => {
     if (!newTitle.trim()) { Alert.alert('Błąd', 'Wpisz tytuł ogłoszenia.'); return }
     if (!newContent.trim()) { Alert.alert('Błąd', 'Wpisz treść ogłoszenia.'); return }
+    if (!profile?.id || !profile?.parish_id) return
 
     setSubmitting(true)
     const { error } = await supabase.from('announcements').insert({
@@ -68,6 +69,7 @@ export default function AnnouncementsScreen() {
       content: newContent.trim(),
       author_id: profile?.id,
       is_pinned: isPinned,
+      parish_id: profile?.parish_id,
     })
     setSubmitting(false)
 
@@ -109,6 +111,7 @@ export default function AnnouncementsScreen() {
       <FlatList
         data={announcements}
         keyExtractor={(item) => item.id}
+        style={{ backgroundColor: c.bg }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -130,7 +133,7 @@ export default function AnnouncementsScreen() {
 
       {isAdmin && (
         <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
-          <Ionicons name="add" size={28} color="#fff" />
+          <Ionicons name="add" size={28} color={c.white} />
         </TouchableOpacity>
       )}
 
@@ -212,7 +215,7 @@ function AnnouncementCard({
         </View>
         {isAdmin && (
           <TouchableOpacity onPress={onDelete} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-            <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+            <Ionicons name="trash-outline" size={18} color={c.danger} />
           </TouchableOpacity>
         )}
       </View>

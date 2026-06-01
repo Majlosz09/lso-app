@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Polityka Prywatności — LSO App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #f8f8fc;
+    }
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    header {
+      background: #534AB7;
+      color: #fff;
+      padding: 40px 24px;
+      text-align: center;
+    }
+    header h1 { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+    header p { font-size: 14px; opacity: 0.8; }
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #534AB7;
+      margin-top: 40px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #534AB722;
+    }
+    h3 { font-size: 15px; font-weight: 700; margin-top: 20px; margin-bottom: 8px; }
+    p { margin-bottom: 12px; color: #333; }
+    ul { margin: 0 0 12px 24px; }
+    ul li { margin-bottom: 6px; color: #333; }
+    .highlight {
+      background: #534AB710;
+      border-left: 4px solid #534AB7;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 20px 0;
+    }
+    .highlight p { margin: 0; }
+    .updated {
+      font-size: 13px;
+      color: #888;
+      text-align: center;
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+    }
+    a { color: #534AB7; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Polityka Prywatności</h1>
+  <p>LSO App — Liturgiczna Służba Ołtarza</p>
+</header>
+
+<div class="container">
+
+  <div class="highlight">
+    <p>Niniejsza polityka prywatności opisuje, jakie dane osobowe zbiera aplikacja LSO App, w jaki sposób są przetwarzane oraz jakie prawa przysługują użytkownikom.</p>
+  </div>
+
+  <h2>1. Administrator danych</h2>
+  <p>Administratorem danych osobowych w rozumieniu Rozporządzenia Parlamentu Europejskiego i Rady (UE) 2016/679 (RODO) jest:</p>
+  <p>
+    <strong>Miłosz Jakubczak</strong><br />
+    E-mail: <a href="mailto:kontakt@lsoapp.pl">kontakt@lsoapp.pl</a>
+  </p>
+  <p>W przypadku danych przetwarzanych w ramach konkretnej parafii, współadministratorem może być opiekun lub administrator danej grupy LSO, który zarejestrował parafię w aplikacji.</p>
+
+  <h2>2. Jakie dane zbieramy</h2>
+
+  <h3>Dane konta użytkownika</h3>
+  <ul>
+    <li>Imię i nazwisko</li>
+    <li>Adres e-mail</li>
+    <li>Numer telefonu</li>
+    <li>Rok urodzenia (dla ministrantów)</li>
+    <li>Rola w parafii (ministrant, rodzic, administrator)</li>
+  </ul>
+
+  <h3>Dane parafii (zbierane przez administratora)</h3>
+  <ul>
+    <li>Nazwa parafii i miejscowość</li>
+    <li>Współrzędne GPS kościoła (opcjonalnie, przy wyborze weryfikacji obecności przez GPS)</li>
+    <li>Rozkład Mszy Świętych</li>
+  </ul>
+
+  <h3>Dane aktywności</h3>
+  <ul>
+    <li>Historia przypisań do służb</li>
+    <li>Potwierdzenia obecności (data, godzina, metoda weryfikacji)</li>
+    <li>Historia punktów</li>
+    <li>Lokalizacja urządzenia (jednorazowo podczas potwierdzania obecności przez GPS — niezbędna do weryfikacji)</li>
+  </ul>
+
+  <h3>Dane techniczne</h3>
+  <ul>
+    <li>Token powiadomień push (do wysyłania przypomnień o służbach)</li>
+    <li>Logi błędów aplikacji (bez danych osobowych)</li>
+  </ul>
+
+  <h2>3. Cel i podstawa prawna przetwarzania</h2>
+  <ul>
+    <li><strong>Realizacja usługi</strong> (art. 6 ust. 1 lit. b RODO) — zarządzanie grafikiem służb, weryfikacja obecności, system punktacji</li>
+    <li><strong>Uzasadniony interes administratora</strong> (art. 6 ust. 1 lit. f RODO) — bezpieczeństwo aplikacji, zapobieganie nadużyciom</li>
+    <li><strong>Zgoda użytkownika</strong> (art. 6 ust. 1 lit. a RODO) — dostęp do lokalizacji, powiadomienia push</li>
+  </ul>
+
+  <h2>4. Udostępnianie danych</h2>
+  <p>Dane osobowe są dostępne wyłącznie dla:</p>
+  <ul>
+    <li><strong>Administratora parafii</strong>, do której należy użytkownik — imię, nazwisko, rola, telefon, historia służb i punkty</li>
+    <li><strong>Innych ministrantów tej samej parafii</strong> — wyłącznie imię i nazwisko (w rankingach i grafikach)</li>
+    <li><strong>Supabase</strong> (supabase.com) — dostawca infrastruktury bazy danych i uwierzytelniania, z siedzibą w USA, działający zgodnie z mechanizmami przekazywania danych do państw trzecich (SCC)</li>
+  </ul>
+  <p>Danych nie sprzedajemy ani nie udostępniamy podmiotom trzecim w celach marketingowych.</p>
+
+  <h2>5. Jak długo przechowujemy dane</h2>
+  <ul>
+    <li>Dane konta — przez czas aktywności konta lub do żądania usunięcia</li>
+    <li>Historia służb i punktów — przez czas przynależności do parafii</li>
+    <li>Dane parafii — do jej usunięcia przez administratora</li>
+    <li>Po usunięciu konta — dane są nieodwracalnie usuwane w ciągu 30 dni</li>
+  </ul>
+
+  <h2>6. Twoje prawa (RODO)</h2>
+  <p>Masz prawo do:</p>
+  <ul>
+    <li><strong>Dostępu</strong> do swoich danych osobowych</li>
+    <li><strong>Sprostowania</strong> nieprawidłowych danych</li>
+    <li><strong>Usunięcia</strong> danych („prawo do bycia zapomnianym")</li>
+    <li><strong>Ograniczenia</strong> przetwarzania</li>
+    <li><strong>Przeniesienia</strong> danych</li>
+    <li><strong>Sprzeciwu</strong> wobec przetwarzania opartego na uzasadnionym interesie</li>
+    <li><strong>Cofnięcia zgody</strong> (lokalizacja, powiadomienia) w dowolnym momencie w ustawieniach urządzenia</li>
+  </ul>
+  <p>Aby skorzystać z praw lub złożyć skargę, napisz na: <a href="mailto:kontakt@lsoapp.pl">kontakt@lsoapp.pl</a></p>
+  <p>Masz też prawo złożyć skargę do organu nadzorczego — w Polsce jest to Prezes Urzędu Ochrony Danych Osobowych (<a href="https://uodo.gov.pl" target="_blank">uodo.gov.pl</a>).</p>
+
+  <h2>7. Uprawnienia aplikacji</h2>
+  <ul>
+    <li><strong>Kamera</strong> — do skanowania kodów QR podczas weryfikacji obecności</li>
+    <li><strong>Lokalizacja</strong> — do weryfikacji obecności w oparciu o GPS (tylko gdy admin parafii wybierze ten tryb)</li>
+    <li><strong>Powiadomienia</strong> — do przypomnień o nadchodzących służbach</li>
+  </ul>
+  <p>Każde z tych uprawnień jest opcjonalne i może być cofnięte w ustawieniach systemu operacyjnego.</p>
+
+  <h2>8. Bezpieczeństwo</h2>
+  <p>Dane są przechowywane na serwerach Supabase z szyfrowaniem w tranzycie (HTTPS/TLS) i w spoczynku. Dostęp do bazy danych jest ograniczony mechanizmami Row Level Security (RLS) — każdy użytkownik ma dostęp wyłącznie do danych swojej parafii.</p>
+
+  <h2>9. Dzieci</h2>
+  <p>Aplikacja może być używana przez osoby niepełnoletnie (ministrantów) za wiedzą i zgodą rodzica lub opiekuna prawnego. Rejestracja nieletnich odbywa się wyłącznie za pośrednictwem administratora parafii lub rodzica korzystającego z konta rodzicielskiego.</p>
+
+  <h2>10. Zmiany polityki prywatności</h2>
+  <p>O istotnych zmianach w polityce prywatności poinformujemy przez powiadomienie w aplikacji lub e-mail. Aktualna wersja jest zawsze dostępna pod adresem <a href="https://lsoapp.pl/privacy">lsoapp.pl/privacy</a>.</p>
+
+  <h2>11. Kontakt</h2>
+  <p>W sprawach dotyczących ochrony danych osobowych oraz w celu skorzystania ze swoich praw prosimy o kontakt:</p>
+  <p>
+    E-mail: <a href="mailto:kontakt@lsoapp.pl">kontakt@lsoapp.pl</a>
+  </p>
+
+  <p class="updated">Ostatnia aktualizacja: 27 maja 2026 r.</p>
+
+</div>
+</body>
+</html>

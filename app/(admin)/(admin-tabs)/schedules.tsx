@@ -7,7 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../../lib/supabase'
 import { useAuthStore } from '../../../stores/authStore'
-import { MassTemplate, CATEGORY_CONFIG, ScheduleCategory } from '../../../types/database'
+import { MassTemplate, getCatColors, ScheduleCategory } from '../../../types/database'
 import { shadow } from '../../../lib/shadows'
 import { useTheme } from '../../../lib/ThemeContext'
 import { Colors } from '../../../lib/theme'
@@ -65,7 +65,7 @@ export default function SchedulesTab() {
   const [loading, setLoading] = useState(true)
   const [creatingSlotKey, setCreatingSlotKey] = useState<string | null>(null)
 
-  const { colors: c } = useTheme()
+  const { colors: c, isDark } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
 
   const { start, end, label } = useMemo(() => getWeekBounds(weekOffset), [weekOffset])
@@ -223,7 +223,7 @@ export default function SchedulesTab() {
                     .map(a => a.profile?.full_name)
                     .filter(Boolean) ?? []
                   const isCreating = creatingSlotKey === slot.key
-                  const cat = CATEGORY_CONFIG[slot.category] ?? CATEGORY_CONFIG.msza
+                  const cat = getCatColors(slot.category, isDark)
 
                   return (
                     <TouchableOpacity

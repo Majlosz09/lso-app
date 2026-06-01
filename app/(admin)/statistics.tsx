@@ -1,9 +1,9 @@
-import { useEffect, useLayoutEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, ScrollView, StyleSheet,
   TouchableOpacity, ActivityIndicator,
 } from 'react-native'
-import { useNavigation } from 'expo-router'
+import { Stack } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
@@ -66,21 +66,6 @@ export default function StatisticsScreen() {
   const [categoryStats, setCategoryStats] = useState<CategoryStat[]>([])
   const [monthStats, setMonthStats] = useState<MonthStat[]>([])
   const [exportVisible, setExportVisible] = useState(false)
-  const navigation = useNavigation()
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => setExportVisible(true)}
-          hitSlop={8}
-          style={{ marginRight: 4 }}
-        >
-          <Ionicons name="download-outline" size={22} color={c.primary} />
-        </TouchableOpacity>
-      ),
-    })
-  }, [c.primary])
 
   const fetchStats = async (p: Period) => {
     if (!profile?.parish_id) return
@@ -227,6 +212,19 @@ export default function StatisticsScreen() {
 
   return (
     <>
+      <Stack.Screen options={{
+        title: 'Statystyki',
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => setExportVisible(true)}
+            hitSlop={8}
+            style={{ marginRight: 4 }}
+          >
+            <Ionicons name="download-outline" size={22} color="#fff" />
+          </TouchableOpacity>
+        ),
+      }} />
+
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
         {/* Period filter */}

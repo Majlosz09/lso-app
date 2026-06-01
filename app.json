@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "lso-app",
+    "name": "LSO App",
     "slug": "lso-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,32 +8,34 @@
     "scheme": "lsoapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "description": "Aplikacja dla Liturgicznej Służby Ołtarza — grafik służb, weryfikacja obecności i punktacja ministrantów.",
+    "privacyPolicyUrl": "https://lsoapp.pl/privacy",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#534AB7"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "pl.lsoapp.app",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#534AB7"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED"
       ],
-      "package": "com.anonymous.lsoapp"
+      "package": "pl.lsoapp.app",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
@@ -54,10 +56,25 @@
         {
           "locationWhenInUsePermission": "Aplikacja LSO potrzebuje dostępu do lokalizacji do weryfikacji obecności."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#534AB7",
+          "sounds": []
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "948ef4cf-804f-4539-aea5-234b68ce2087"
+      }
+    },
+    "owner": "majlosz"
   }
 }

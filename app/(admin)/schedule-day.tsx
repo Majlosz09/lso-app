@@ -4,10 +4,11 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
-import { CATEGORY_CONFIG, ScheduleCategory } from '../../types/database'
+import { getCatColors, ScheduleCategory } from '../../types/database'
 import { shadow } from '../../lib/shadows'
 import { getLiturgicalDay, getLiturgicalVestmentColor, VESTMENT_LABELS } from '../../lib/liturgy'
 import { useTheme } from '../../lib/ThemeContext'
+import { useAuthStore } from '../../stores/authStore'
 import { Colors } from '../../lib/theme'
 
 type DaySchedule = {
@@ -22,23 +23,25 @@ export default function ScheduleDayScreen() {
   const { date } = useLocalSearchParams<{ date: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  const { colors: c } = useTheme()
+  const { colors: c, isDark } = useTheme()
+  const { profile } = useAuthStore()
   const styles = useMemo(() => createStyles(c), [c])
   const [schedules, setSchedules] = useState<DaySchedule[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!date) return
+    if (!date || !profile?.parish_id) { setLoading(false); return }
     supabase
       .from('schedules')
       .select('id, title, time, category, schedule_assignments(profile:profiles(full_name))')
       .eq('date', date)
+      .eq('parish_id', profile.parish_id)
       .order('time')
       .then(({ data }) => {
         setSchedules((data ?? []) as unknown as DaySchedule[])
         setLoading(false)
       })
-  }, [date])
+  }, [date, profile?.parish_id])
 
   const d = date ? new Date(date + 'T12:00:00') : null
   const dayTitle = d
@@ -117,7 +120,7 @@ export default function ScheduleDayScreen() {
         ) : (
           <>
             {schedules.map(s => {
-              const cat = CATEGORY_CONFIG[s.category] ?? CATEGORY_CONFIG.msza
+              const cat = getCatColors(s.category, isDark)
               const names = s.schedule_assignments.map(a => a.profile?.full_name).filter(Boolean) as string[]
               return (
                 <TouchableOpacity

@@ -32,7 +32,7 @@ export type MemberExportRow = {
   fullName: string
   scheduled: number   // liczba przypisanych służb
   present: number     // liczba potwierdzeń obecności
-  attendanceRate: number  // present/scheduled * 100, zaokrąglone do 1 miejsca
+  attendanceRate: number  // present/scheduled * 100, zaokrąglone do 1 miejsca; 0 gdy scheduled=0
   points: number      // suma punktów w okresie
 }
 

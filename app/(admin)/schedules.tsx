@@ -10,6 +10,7 @@ import { Schedule } from '../../types/database'
 import { shadow } from '../../lib/shadows'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { useAuthStore } from '../../stores/authStore'
 
 type ScheduleWithGroup = Schedule & { group?: { name: string } }
 
@@ -20,12 +21,15 @@ export default function AdminSchedules() {
   const [refreshing, setRefreshing] = useState(false)
 
   const { colors: c } = useTheme()
+  const { profile } = useAuthStore()
   const styles = useMemo(() => createStyles(c), [c])
 
   const fetchSchedules = async () => {
+    if (!profile?.parish_id) { setLoading(false); setRefreshing(false); return }
     const { data, error } = await supabase
       .from('schedules')
       .select('*, group:groups(name)')
+      .eq('parish_id', profile.parish_id)
       .order('date', { ascending: false })
 
     if (!error && data) setSchedules(data)
@@ -33,7 +37,7 @@ export default function AdminSchedules() {
     setRefreshing(false)
   }
 
-  useEffect(() => { fetchSchedules() }, [])
+  useEffect(() => { fetchSchedules() }, [profile?.parish_id])
 
   const onRefresh = () => { setRefreshing(true); fetchSchedules() }
 

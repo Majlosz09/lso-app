@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase'
 import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { STATUS_COLORS, STATUS_LABELS } from '../../lib/status'
-import { CATEGORY_CONFIG, ScheduleCategory, AssignmentStatus } from '../../types/database'
+import { CATEGORY_CONFIG, getCatColors, ScheduleCategory, AssignmentStatus } from '../../types/database'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 import { validateGps, validateParishQr } from '../../lib/checkin'
 import { useTheme } from '../../lib/ThemeContext'
@@ -116,6 +116,7 @@ function ParentScheduleView() {
     <FlatList
       data={items}
       keyExtractor={item => item.assignmentId}
+      style={{ flex: 1, backgroundColor: c.bg }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData() }} />}
       ListHeaderComponent={
         <Text style={styles.parentHeader}>Nadchodzące dyżury dzieci</Text>
@@ -174,8 +175,7 @@ function WeekStrip({ weekDays, selectedDate, onSelect, onPrev, onNext, eventDate
       <TouchableOpacity onPress={onPrev} style={styles.weekArrow} hitSlop={8}>
         <Ionicons name="chevron-back" size={20} color={c.primary} />
       </TouchableOpacity>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.weekDaysScroll}>
+      <View style={styles.weekDaysRow}>
         {weekDays.map(date => {
           const d = new Date(date + 'T12:00:00')
           const isSelected = date === selectedDate
@@ -207,7 +207,7 @@ function WeekStrip({ weekDays, selectedDate, onSelect, onPrev, onNext, eventDate
             </TouchableOpacity>
           )
         })}
-      </ScrollView>
+      </View>
       <TouchableOpacity onPress={onNext} style={styles.weekArrow} hitSlop={8}>
         <Ionicons name="chevron-forward" size={20} color={c.primary} />
       </TouchableOpacity>
@@ -234,18 +234,19 @@ function ScheduleTile({
   onCheckIn, onSignUp, onUnsign, onReportAbsence,
   styles, colors: c,
 }: ScheduleTileProps) {
+  const { isDark } = useTheme()
   const assignment = schedule.assignment
   const alreadyCheckedIn = schedule.hasAttendance || assignment?.status === 'present'
   const windowOpen = isCheckInWindowOpen(schedule)
   const isSun = isSunday(schedule.date)
   const cat = schedule.category as ScheduleCategory
-  const cfg = CATEGORY_CONFIG[cat]
+  const cfg = getCatColors(cat, isDark)
   const status: AssignmentStatus | undefined = assignment?.status
 
   // Border color: colored border only when window is open and not yet checked in
   let borderColor = c.border
   if (!isSun && windowOpen && !alreadyCheckedIn) {
-    borderColor = (cat === 'msza' && assignment) ? '#16A34A' : c.primary
+    borderColor = (cat === 'msza' && assignment) ? c.success : c.primary
   }
 
   // Determine the primary action button
@@ -260,7 +261,7 @@ function ScheduleTile({
       const isAssigned = !!assignment
       actionButton = (
         <TouchableOpacity
-          style={[styles.tileBtn, { backgroundColor: isAssigned ? '#16A34A' : c.primary }]}
+          style={[styles.tileBtn, { backgroundColor: isAssigned ? c.success : c.primary }]}
           onPress={onCheckIn}
           disabled={checkingIn}
         >
@@ -279,8 +280,8 @@ function ScheduleTile({
             disabled={unsigning}
           >
             {unsigning
-              ? <ActivityIndicator size="small" color="#EA580C" />
-              : <Text style={[styles.tileBtnText, { color: '#EA580C' }]}>Wypisz się</Text>
+              ? <ActivityIndicator size="small" color={c.danger} />
+              : <Text style={[styles.tileBtnText, { color: c.danger }]}>Wypisz się</Text>
             }
           </TouchableOpacity>
         )
@@ -338,13 +339,13 @@ function ScheduleTile({
           {/* Status badges */}
           <View style={styles.badgeRow}>
             {alreadyCheckedIn && (
-              <View style={[styles.pill, { backgroundColor: '#16A34A22' }]}>
-                <Text style={[styles.pillText, { color: '#16A34A' }]}>OBECNY</Text>
+              <View style={[styles.pill, { backgroundColor: c.success + '33' }]}>
+                <Text style={[styles.pillText, { color: c.success }]}>OBECNY</Text>
               </View>
             )}
             {!alreadyCheckedIn && assignment && (
-              <View style={[styles.pill, { backgroundColor: '#16A34A22' }]}>
-                <Text style={[styles.pillText, { color: '#16A34A' }]}>DYŻUR</Text>
+              <View style={[styles.pill, { backgroundColor: c.success + '33' }]}>
+                <Text style={[styles.pillText, { color: c.success }]}>DYŻUR</Text>
               </View>
             )}
             {status && !['assigned', 'present'].includes(status) && (
@@ -710,7 +711,7 @@ function MemberScheduleView() {
         colors={c}
       />
       <ScrollView
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: c.bg }}
         contentContainerStyle={{ padding: 16, gap: 10 }}
         refreshControl={
           <RefreshControl
@@ -768,7 +769,7 @@ function MemberScheduleView() {
                     <Text style={styles.modalBtnCancelText}>Anuluj</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.modalBtn, { backgroundColor: '#EA580C' }]}
+                    style={[styles.modalBtn, { backgroundColor: c.danger }]}
                     onPress={() => {
                       const id = unsignModal.assignmentId
                       setUnsignModal(m => ({ ...m, visible: false }))
@@ -843,7 +844,7 @@ function MemberScheduleView() {
                 <Text style={styles.modalBtnSubmitText}>Jednorazowo</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#16A34A' }]}
+                style={[styles.modalBtn, { backgroundColor: c.success }]}
                 onPress={() => {
                   const s = signUpModal.schedule
                   setSignUpModal({ visible: false, schedule: null })
@@ -1017,11 +1018,11 @@ function createStyles(c: Colors) {
     liturgyRow: {
       flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap',
       paddingHorizontal: 16, paddingVertical: 8, gap: 6,
-      backgroundColor: '#fffbf0', borderBottomWidth: 1, borderBottomColor: '#f0e8c8',
+      backgroundColor: c.goldSurface, borderBottomWidth: 1, borderBottomColor: c.border,
     },
     liturgyDot: { width: 8, height: 8, borderRadius: 4 },
-    liturgyTypeLabel: { fontSize: 12, color: '#a07800', fontWeight: '600' },
-    liturgyName: { fontSize: 13, color: '#5a4000', flex: 1 },
+    liturgyTypeLabel: { fontSize: 12, color: c.gold, fontWeight: '600' },
+    liturgyName: { fontSize: 13, color: c.text, flex: 1 },
 
     parentHeader: { fontSize: 17, fontWeight: '700', color: c.text, marginBottom: 4 },
 
@@ -1042,7 +1043,7 @@ function createStyles(c: Colors) {
       backgroundColor: c.successSurface, borderRadius: 8,
       paddingHorizontal: 10, paddingVertical: 6, marginTop: 6,
     },
-    attBadgeText: { fontSize: 13, color: '#16A34A', fontWeight: '500' },
+    attBadgeText: { fontSize: 13, color: c.success, fontWeight: '500' },
 
     absentBadge: {
       flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -1116,10 +1117,10 @@ function createStyles(c: Colors) {
 
     confirmedBadge: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
-      backgroundColor: '#eaf4fb', borderRadius: 8,
+      backgroundColor: c.primarySurface, borderRadius: 8,
       paddingHorizontal: 10, paddingVertical: 6, marginTop: 2,
     },
-    confirmedText: { fontSize: 12, color: '#2563EB', fontWeight: '500' },
+    confirmedText: { fontSize: 12, color: c.primary, fontWeight: '500' },
 
     rejectionBadge: {
       flexDirection: 'row', alignItems: 'flex-start', gap: 6,
@@ -1166,8 +1167,8 @@ function createStyles(c: Colors) {
       borderBottomWidth: 1, borderBottomColor: c.primarySurface,
     },
     weekArrow: { paddingHorizontal: 8 },
-    weekDaysScroll: { paddingHorizontal: 4, gap: 2 },
-    dayPill: { alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2, minWidth: 38 },
+    weekDaysRow: { flex: 1, flexDirection: 'row' },
+    dayPill: { flex: 1, alignItems: 'center', paddingVertical: 2 },
     dayPillLabel: { fontSize: 10, fontWeight: '700', color: c.textTertiary, marginBottom: 2 },
     dayPillCircle: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
     dayPillSelected: { backgroundColor: c.primary },
@@ -1194,7 +1195,7 @@ function createStyles(c: Colors) {
       minWidth: 80, alignItems: 'center',
     },
     tileBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
-    tileBtnOutline: { backgroundColor: '#fff3e0', borderWidth: 1, borderColor: '#EA580C' },
+    tileBtnOutline: { backgroundColor: c.goldSurface, borderWidth: 1, borderColor: '#EA580C' },
     tileBtnSecondary: { backgroundColor: c.primarySurface },
     absenceLink: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.bg },
     absenceLinkText: { fontSize: 12, color: c.danger, fontWeight: '600' },

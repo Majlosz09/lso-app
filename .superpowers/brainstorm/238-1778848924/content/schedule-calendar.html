@@ -1,0 +1,138 @@
+<h2>Nawigacja po grafiku — jak przeglądać dni?</h2>
+<p class="subtitle">Oba warianty używają przycisku "Obecny". Pytanie o nawigację u góry.</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:12px">
+
+  <!-- OPTION A: Full calendar -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter" style="float:right;margin:-4px -4px 8px 8px">A</div>
+      <h3 style="margin:0 0 4px">Pełny kalendarz (jak teraz)</h3>
+      <p style="font-size:12px;color:#888;margin:0 0 10px">Tapnij dzień → widzisz wydarzenia. Łatwo skakać dalej w przód.</p>
+
+      <div class="mockup" style="font-size:11px">
+        <div class="mockup-header" style="padding:8px 12px;font-size:12px">Grafik służb</div>
+        <div class="mockup-body" style="padding:10px">
+
+          <!-- Mini calendar -->
+          <div style="background:#f9f9f9;border-radius:8px;padding:8px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <div style="font-size:10px;font-weight:700;color:#534AB7">← Maj 2025 →</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center">
+              <div style="font-size:8px;color:#aaa;font-weight:700">Pn</div>
+              <div style="font-size:8px;color:#aaa;font-weight:700">Wt</div>
+              <div style="font-size:8px;color:#aaa;font-weight:700">Śr</div>
+              <div style="font-size:8px;color:#aaa;font-weight:700">Cz</div>
+              <div style="font-size:8px;color:#aaa;font-weight:700">Pt</div>
+              <div style="font-size:8px;color:#aaa;font-weight:700">Sb</div>
+              <div style="font-size:8px;color:#aaa;font-weight:700">Nd</div>
+              <div style="font-size:9px;color:#888;padding:3px">—</div>
+              <div style="font-size:9px;color:#888;padding:3px">—</div>
+              <div style="font-size:9px;color:#888;padding:3px">—</div>
+              <div style="font-size:9px;color:#888;padding:3px">1</div>
+              <div style="font-size:9px;color:#888;padding:3px">2</div>
+              <div style="font-size:9px;color:#888;padding:3px">3</div>
+              <div style="font-size:9px;color:#888;padding:3px">4</div>
+              <div style="font-size:9px;color:#888;padding:3px">5</div>
+              <div style="font-size:9px;color:#888;padding:3px">6</div>
+              <div style="font-size:9px;color:#888;padding:3px">7</div>
+              <div style="font-size:9px;color:#888;padding:3px">8</div>
+              <div style="font-size:9px;color:#888;padding:3px">9</div>
+              <div style="font-size:9px;color:#888;padding:3px">10</div>
+              <div style="font-size:9px;color:#888;padding:3px">11</div>
+              <div style="font-size:9px;color:#888;padding:3px;background:#534AB7;color:#fff;border-radius:4px;font-weight:700">12</div>
+              <div style="font-size:9px;color:#888;padding:3px">13</div>
+              <div style="font-size:9px;color:#888;padding:3px">14</div>
+              <div style="font-size:9px;color:#888;padding:3px">15</div>
+              <div style="font-size:9px;color:#888;padding:3px">16</div>
+              <div style="font-size:9px;color:#888;padding:3px">17</div>
+              <div style="font-size:9px;color:#888;padding:3px">18</div>
+            </div>
+          </div>
+
+          <!-- Events for selected day -->
+          <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;margin-bottom:6px">Poniedziałek 12 maja</div>
+          <div style="background:#fff;border-radius:8px;border:1.5px solid #27ae60;padding:8px 10px;margin-bottom:5px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:11px;font-weight:700">07:00 Msza · <span style="color:#27ae60">DYŻUR</span></div>
+              </div>
+              <div style="background:#27ae60;color:#fff;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700">Obecny</div>
+            </div>
+          </div>
+          <div style="background:#fff;border-radius:8px;border:1.5px solid #534AB7;padding:8px 10px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><div style="font-size:11px;font-weight:700">18:00 Msza</div></div>
+              <div style="background:#534AB7;color:#fff;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700">Obecny</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION B: Week strip -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <div class="letter" style="float:right;margin:-4px -4px 8px 8px">B</div>
+      <h3 style="margin:0 0 4px">Pasek tygodnia</h3>
+      <p style="font-size:12px;color:#888;margin:0 0 10px">Scroll poziomy po dniach, lista wydarzeń poniżej. Prościej, mniej miejsca.</p>
+
+      <div class="mockup" style="font-size:11px">
+        <div class="mockup-header" style="padding:8px 12px;font-size:12px">Grafik służb</div>
+        <div class="mockup-body" style="padding:10px">
+
+          <!-- Week strip -->
+          <div style="display:flex;gap:6px;overflow:hidden;margin-bottom:10px;padding:2px">
+            <div style="display:flex;flex-direction:column;align-items:center;background:#f0f0f0;border-radius:8px;padding:5px 8px;min-width:34px">
+              <div style="font-size:8px;color:#aaa;font-weight:700">PN</div>
+              <div style="font-size:13px;font-weight:700;color:#888">12</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;background:#534AB7;border-radius:8px;padding:5px 8px;min-width:34px">
+              <div style="font-size:8px;color:#ffffff99;font-weight:700">WT</div>
+              <div style="font-size:13px;font-weight:800;color:#fff">13</div>
+              <div style="width:4px;height:4px;background:#fff;border-radius:50%;margin-top:2px"></div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;background:#f0f0f0;border-radius:8px;padding:5px 8px;min-width:34px">
+              <div style="font-size:8px;color:#aaa;font-weight:700">ŚR</div>
+              <div style="font-size:13px;font-weight:700;color:#888">14</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;background:#f0f0f0;border-radius:8px;padding:5px 8px;min-width:34px">
+              <div style="font-size:8px;color:#aaa;font-weight:700">CZ</div>
+              <div style="font-size:13px;font-weight:700;color:#888">15</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;background:#f0f0f0;border-radius:8px;padding:5px 8px;min-width:34px">
+              <div style="font-size:8px;color:#aaa;font-weight:700">PT</div>
+              <div style="font-size:13px;font-weight:700;color:#888">16</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;background:#f0f0f0;border-radius:8px;padding:5px 8px;min-width:34px">
+              <div style="font-size:8px;color:#aaa;font-weight:700">SB</div>
+              <div style="font-size:13px;font-weight:700;color:#888">17</div>
+            </div>
+          </div>
+
+          <!-- Events for selected day -->
+          <div style="font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase;margin-bottom:6px">Wtorek 13 maja</div>
+          <div style="background:#fff;border-radius:8px;border:1px solid #eee;padding:8px 10px;margin-bottom:5px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><div style="font-size:11px;font-weight:700">07:00 Msza Święta</div></div>
+              <div style="background:#f0f0f0;color:#534AB7;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700">Zapisz się</div>
+            </div>
+          </div>
+          <div style="background:#fff;border-radius:8px;border:1.5px solid #534AB7;padding:8px 10px;margin-bottom:5px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:11px;font-weight:700">20:00 Nabożeństwo</div>
+              </div>
+              <div style="background:#534AB7;color:#fff;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700">Obecny</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:16px">Obie opcje — jeden widok, przycisk "Obecny" wszędzie. Którą nawigację wolisz?</p>

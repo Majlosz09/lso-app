@@ -99,7 +99,7 @@ export default function MemberDetailScreen() {
   }, [])
 
   useEffect(() => {
-    if (!id) return
+    if (!id || !adminProfile?.parish_id) return
     const today = new Date().toISOString().split('T')[0]
 
     const queries: PromiseLike<any>[] = [
@@ -119,6 +119,7 @@ export default function MemberDetailScreen() {
       supabase.from('points')
         .select('id, amount, reason, created_at')
         .eq('profile_id', id)
+        .eq('parish_id', adminProfile?.parish_id)
         .order('created_at', { ascending: false })
         .limit(10),
     ]

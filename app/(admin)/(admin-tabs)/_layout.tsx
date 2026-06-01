@@ -1,9 +1,10 @@
 import { Tabs, useRouter } from 'expo-router'
-import { TouchableOpacity, Image, View } from 'react-native'
+import { TouchableOpacity, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useAuthStore } from '../../../stores/authStore'
 import { CustomTabBar } from '../../../components/CustomTabBar'
 import { useTheme } from '../../../lib/ThemeContext'
+import { AvatarImage } from '../../../components/AvatarImage'
 
 export default function AdminTabsLayout() {
   const router = useRouter()
@@ -18,7 +19,7 @@ export default function AdminTabsLayout() {
       hitSlop={8}
     >
       {avatarUrl
-        ? <Image source={{ uri: avatarUrl }} style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)' }} />
+        ? <AvatarImage avatarUrl={avatarUrl} size={32} borderColor="rgba(255,255,255,0.6)" borderWidth={2} />
         : <Ionicons name="person-circle-outline" size={30} color="#fff" />
       }
     </TouchableOpacity>
@@ -47,7 +48,7 @@ export default function AdminTabsLayout() {
               </TouchableOpacity>
               <TouchableOpacity onPress={() => router.push('/(admin)/(admin-tabs)/profile')} hitSlop={8}>
                 {avatarUrl
-                  ? <Image source={{ uri: avatarUrl }} style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)' }} />
+                  ? <AvatarImage avatarUrl={avatarUrl} size={32} borderColor="rgba(255,255,255,0.6)" borderWidth={2} />
                   : <Ionicons name="person-circle-outline" size={30} color="#fff" />
                 }
               </TouchableOpacity>

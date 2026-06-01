@@ -31,9 +31,9 @@ export const shadow = {
     web: { boxShadow: '0 2px 8px rgba(0,0,0,0.10)' } as any,
   })!,
 
-  // Brand — purple glow, used for primary action cards/buttons
+  // Brand — indigo glow, used for primary action cards/buttons
   brand: Platform.select({
-    native: nat('#534AB7', 0.30, 10, 4),
-    web: { boxShadow: '0 4px 10px rgba(83,74,183,0.30)' } as any,
+    native: nat('#1A237E', 0.30, 10, 4),
+    web: { boxShadow: '0 4px 10px rgba(26,35,126,0.30)' } as any,
   })!,
 }

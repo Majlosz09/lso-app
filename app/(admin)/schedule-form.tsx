@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
-import { MassTemplate, ScheduleCategory, CATEGORY_CONFIG } from '../../types/database'
+import { MassTemplate, ScheduleCategory, CATEGORY_CONFIG, getCatColors } from '../../types/database'
 import { DatePickerModal } from '../../components/DatePickerModal'
 import { TimePickerModal } from '../../components/TimePickerModal'
 import { useTheme } from '../../lib/ThemeContext'
@@ -18,7 +18,7 @@ export default function ScheduleForm() {
   const router = useRouter()
   const { profile } = useAuthStore()
   const insets = useSafeAreaInsets()
-  const { colors: c } = useTheme()
+  const { colors: c, isDark } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
   const { date: initDate, time: initTime, title: initTitle } = useLocalSearchParams<{
     date?: string; time?: string; title?: string
@@ -133,18 +133,21 @@ export default function ScheduleForm() {
 
         <Text style={styles.label}>Kategoria *</Text>
         <View style={styles.categoryRow}>
-          {(Object.entries(CATEGORY_CONFIG) as [ScheduleCategory, typeof CATEGORY_CONFIG[ScheduleCategory]][]).map(([key, cfg]) => (
-            <TouchableOpacity
-              key={key}
-              style={[styles.categoryChip, category === key && { backgroundColor: cfg.bg, borderColor: cfg.color }]}
-              onPress={() => setCategory(key)}
-            >
-              <View style={[styles.categoryDot, { backgroundColor: cfg.color }]} />
-              <Text style={[styles.categoryChipText, category === key && { color: cfg.color, fontWeight: '700' }]}>
-                {cfg.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {(Object.keys(CATEGORY_CONFIG) as ScheduleCategory[]).map(key => {
+            const catCfg = getCatColors(key, isDark)
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[styles.categoryChip, category === key && { backgroundColor: catCfg.bg, borderColor: catCfg.color }]}
+                onPress={() => setCategory(key)}
+              >
+                <View style={[styles.categoryDot, { backgroundColor: catCfg.color }]} />
+                <Text style={[styles.categoryChipText, category === key && { color: catCfg.color, fontWeight: '700' }]}>
+                  {catCfg.label}
+                </Text>
+              </TouchableOpacity>
+            )
+          })}
         </View>
 
         <Text style={styles.label}>Notatki (opcjonalnie)</Text>

@@ -63,7 +63,7 @@ function AuthGate() {
     const inRegister = segments[1] === 'register'
 
     if (!session && !inAuth) {
-      router.replace('/(auth)/login')
+      router.replace('/(auth)/welcome')
       return
     }
     if (session && profile === null) return
@@ -87,6 +87,7 @@ function AuthGate() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(auth)/welcome" />
       <Stack.Screen name="(auth)/login" />
       <Stack.Screen name="(auth)/register" />
       <Stack.Screen name="(auth)/parish-setup" />

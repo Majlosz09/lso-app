@@ -11,6 +11,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import type { AttendanceMode } from '../../types/database'
+import GpsLocationPicker from '../../components/GpsLocationPicker'
 
 type Tab = 'join' | 'create'
 
@@ -200,12 +201,15 @@ export default function ParishSetupScreen() {
 
             {attendanceMode === 'gps' && (
               <View style={styles.gpsBox}>
-                <Text style={styles.gpsLabel}>Współrzędne kościoła</Text>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <TextInput style={[styles.input, { flex: 1 }]} placeholder="Szerokość (lat)" placeholderTextColor={c.textTertiary} value={lat} onChangeText={setLat} keyboardType="numeric" />
-                  <TextInput style={[styles.input, { flex: 1 }]} placeholder="Długość (lng)" placeholderTextColor={c.textTertiary} value={lng} onChangeText={setLng} keyboardType="numeric" />
-                </View>
-                <TextInput style={styles.input} placeholder="Promień w metrach (domyślnie 200)" placeholderTextColor={c.textTertiary} value={gpsRadius} onChangeText={setGpsRadius} keyboardType="numeric" />
+                <Text style={styles.gpsLabel}>Lokalizacja kościoła</Text>
+                <GpsLocationPicker
+                  lat={lat}
+                  lng={lng}
+                  gpsRadius={gpsRadius}
+                  onLatChange={setLat}
+                  onLngChange={setLng}
+                  onGpsRadiusChange={setGpsRadius}
+                />
               </View>
             )}
 

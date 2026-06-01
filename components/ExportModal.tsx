@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import {
   Modal, View, Text, StyleSheet,
-  TouchableOpacity, ActivityIndicator, Alert,
+  TouchableOpacity, ActivityIndicator, Alert, Platform,
 } from 'react-native'
 import * as FileSystem from 'expo-file-system'
 import * as Print from 'expo-print'
@@ -11,7 +11,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useTheme } from '../lib/ThemeContext'
 import { Colors } from '../lib/theme'
 import { DatePickerModal } from './DatePickerModal'
-import { buildExportData, generateCSV, generateHTML, shareFile } from '../lib/export'
+import { buildExportData, generateCSV, generateHTML, generateXLS, shareFile } from '../lib/export'
 
 type Format = 'csv' | 'pdf'
 type PresetPeriod = 7 | 30 | 90 | 365
@@ -51,6 +51,8 @@ export function ExportModal({ visible, onClose }: Props) {
 
   useEffect(() => {
     if (visible) {
+      setFormat('pdf')
+      setPreset(30)
       setCustomFrom(subtractDays(30))
       setCustomTo(localDateStr(new Date()))
       setDateError('')
@@ -89,14 +91,37 @@ export function ExportModal({ visible, onClose }: Props) {
       const data = await buildExportData(supabase, profile.parish_id, parish.name, from, to)
 
       if (format === 'csv') {
-        const csv = generateCSV(data)
-        const uri = (FileSystem.cacheDirectory ?? '') + `raport-${from}-${to}.csv`
-        await FileSystem.writeAsStringAsync(uri, csv, { encoding: FileSystem.EncodingType.UTF8 })
-        await shareFile(uri)
+        if (Platform.OS === 'web') {
+          const xls = generateXLS(data)
+          const blob = new Blob([xls], { type: 'application/vnd.ms-excel;charset=utf-8' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = `raport-${from}-${to}.xls`
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+        } else {
+          const csv = generateCSV(data)
+          const uri = (FileSystem.cacheDirectory ?? '') + `raport-${from}-${to}.csv`
+          await FileSystem.writeAsStringAsync(uri, csv, { encoding: FileSystem.EncodingType.UTF8 })
+          await shareFile(uri)
+        }
       } else {
         const html = generateHTML(data)
-        const { uri } = await Print.printToFileAsync({ html })
-        await shareFile(uri)
+        if (Platform.OS === 'web') {
+          const printBar = `<div class="no-print" style="position:sticky;top:0;z-index:99;background:#1A237E;padding:10px 20px;display:flex;justify-content:space-between;align-items:center"><span style="color:#fff;font-size:13px;font-weight:600">Podgląd raportu</span><button onclick="window.print()" style="background:#fff;color:#1A237E;border:none;padding:7px 18px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">🖨 Drukuj / Zapisz PDF</button></div><style>@media print{.no-print{display:none!important}}</style>`
+          const win = window.open('', '_blank')
+          if (win) {
+            win.document.write(html.replace('<div class="hdr">', printBar + '<div class="hdr">'))
+            win.document.close()
+            win.focus()
+          }
+        } else {
+          const { uri } = await Print.printToFileAsync({ html })
+          await shareFile(uri)
+        }
       }
       onClose()
     } catch {
