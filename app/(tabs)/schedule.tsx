@@ -370,6 +370,7 @@ function ScheduleTile({
       {assignment && !alreadyCheckedIn && !windowOpen && !['excused', 'absent', 'confirmed'].includes(status ?? '') && (
         <TouchableOpacity style={styles.absenceLink} onPress={onReportAbsence} disabled={reporting}>
           <Text style={styles.absenceLinkText}>Zgłoś nieobecność</Text>
+          <Text style={styles.actionHint}>Poinformuje admina, że nie możesz przyjść.</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -724,8 +725,11 @@ function MemberScheduleView() {
 
         {daySchedules.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="calendar-outline" size={40} color={c.iconMuted} />
-            <Text style={styles.emptyText}>Brak służb w tym dniu</Text>
+            <Ionicons name="calendar-outline" size={48} color={c.iconMuted} />
+            <Text style={styles.emptyTitle}>Brak służb w tym dniu</Text>
+            <Text style={styles.emptySubtitle}>
+              Nie masz przypisanych służb w tym dniu. Sprawdź inny dzień lub tydzień.
+            </Text>
           </View>
         ) : (
           daySchedules.map((schedule: any) => (
@@ -959,9 +963,12 @@ function createStyles(c: Colors) {
     segmentText: { fontSize: 14, fontWeight: '500', color: c.subtext },
     segmentTextActive: { color: c.text },
 
-    empty: { alignItems: 'center', marginTop: 80, gap: 10 },
+    empty: { alignItems: 'center', marginTop: 60, gap: 10 },
     emptyText: { color: c.textTertiary, fontSize: 16 },
+    emptyTitle: { color: c.text, fontSize: 16, fontWeight: '600' },
+    emptySubtitle: { color: c.textTertiary, fontSize: 14, textAlign: 'center', maxWidth: 260, lineHeight: 20 },
     emptyLink: { color: c.primary, fontSize: 14, fontWeight: '500' },
+    actionHint: { fontSize: 11, color: c.textTertiary, marginTop: 2 },
 
     card: {
       backgroundColor: c.surface, borderRadius: 12, padding: 12, gap: 4,

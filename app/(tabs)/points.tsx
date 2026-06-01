@@ -145,8 +145,11 @@ export default function PointsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="star-outline" size={48} color={c.iconMuted} />
-              <Text style={styles.emptyText}>Brak punktów</Text>
+              <Ionicons name="trophy-outline" size={48} color={c.iconMuted} />
+              <Text style={styles.emptyTitle}>Brak historii punktów</Text>
+              <Text style={styles.emptySubtitle}>
+                Punkty zdobywasz za każdą potwierdzoną służbę przy ołtarzu.
+              </Text>
             </View>
           }
           renderItem={({ item }) => <PointCard point={item} styles={styles} colors={c} />}
@@ -422,5 +425,7 @@ function createStyles(c: Colors) {
 
     empty: { alignItems: 'center', marginTop: 60, gap: 12 },
     emptyText: { color: c.textTertiary, fontSize: 15 },
+    emptyTitle: { color: c.text, fontSize: 16, fontWeight: '600' },
+    emptySubtitle: { color: c.textTertiary, fontSize: 14, textAlign: 'center', maxWidth: 260, lineHeight: 20 },
   })
 }
