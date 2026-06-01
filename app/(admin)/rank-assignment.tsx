@@ -64,22 +64,34 @@ export default function RankAssignmentScreen() {
 
   useEffect(() => { if (parishId) fetchData() }, [parishId])
 
-  const handleSetRank = async (memberId: string, rankId: string | null) => {
+  const handleSetRank = (memberId: string, rankId: string | null) => {
     const rankName = rankId ? ranks.find(r => r.id === rankId)?.name ?? null : null
-    setMembers(prev =>
-      prev.map(m => m.id === memberId ? { ...m, rank_id: rankId, rank_name: rankName } : m)
+    const memberName = members.find(m => m.id === memberId)?.full_name ?? 'ministranta'
+    const rankDisplay = rankName ? `rangę „${rankName}"` : 'brak rangi'
+    Alert.alert(
+      'Zmień rangę',
+      `Przypisać ${rankDisplay} ministrancowi ${memberName}?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Przypisz',
+          onPress: async () => {
+            setMembers(prev =>
+              prev.map(m => m.id === memberId ? { ...m, rank_id: rankId, rank_name: rankName } : m)
+            )
+            setPickerTarget(null)
+            const { error } = await supabase
+              .from('profiles')
+              .update({ rank_id: rankId })
+              .eq('id', memberId)
+            if (error) {
+              Alert.alert('Błąd', error.message)
+              fetchData()
+            }
+          },
+        },
+      ]
     )
-    setPickerTarget(null)
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ rank_id: rankId })
-      .eq('id', memberId)
-
-    if (error) {
-      Alert.alert('Błąd', error.message)
-      fetchData()
-    }
   }
 
   if (loading) {
