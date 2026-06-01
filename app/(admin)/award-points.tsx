@@ -57,30 +57,41 @@ export default function AwardPoints() {
     m.full_name.toLowerCase().includes(search.toLowerCase())
   )
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!selected) { Alert.alert('Błąd', 'Wybierz ministranta.'); return }
     const amt = parseInt(amount)
     if (isNaN(amt) || amt === 0) { Alert.alert('Błąd', 'Wpisz prawidłową liczbę punktów (np. 1 lub -1).'); return }
     if (!reason.trim()) { Alert.alert('Błąd', 'Wpisz powód przyznania punktów.'); return }
 
-    setSubmitting(true)
-    const { error } = await supabase.from('points').insert({
-      profile_id: selected.id,
-      amount: amt,
-      reason: reason.trim(),
-      awarded_by: adminProfile?.id,
-      parish_id: adminProfile?.parish_id,
-    })
-    setSubmitting(false)
-
-    if (error) {
-      Alert.alert('Błąd', 'Nie udało się przyznać punktów: ' + error.message)
-    } else {
-      const sign = amt > 0 ? '+' : ''
-      Alert.alert('Sukces', `Przyznano ${sign}${amt} pkt dla ${selected.full_name}!`, [
-        { text: 'OK', onPress: () => { setSelected(null); setAmount(''); setReason('') } },
-      ])
-    }
+    const sign = amt > 0 ? '+' : ''
+    Alert.alert(
+      'Przyznaj punkty',
+      `Przyznać ${sign}${amt} pkt dla ${selected.full_name}?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Przyznaj',
+          onPress: async () => {
+            setSubmitting(true)
+            const { error } = await supabase.from('points').insert({
+              profile_id: selected.id,
+              amount: amt,
+              reason: reason.trim(),
+              awarded_by: adminProfile?.id,
+              parish_id: adminProfile?.parish_id,
+            })
+            setSubmitting(false)
+            if (error) {
+              Alert.alert('Błąd', 'Nie udało się przyznać punktów: ' + error.message)
+            } else {
+              Alert.alert('Sukces', `Przyznano ${sign}${amt} pkt dla ${selected.full_name}!`, [
+                { text: 'OK', onPress: () => { setSelected(null); setAmount(''); setReason('') } },
+              ])
+            }
+          },
+        },
+      ]
+    )
   }
 
   return (

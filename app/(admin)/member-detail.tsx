@@ -190,6 +190,7 @@ export default function MemberDetailScreen() {
   const handleChangeRank = (rankId: string | null) => {
     const rankName = rankId ? (ranksList.find(r => r.id === rankId)?.name ?? 'nieznaną rangę') : null
     const rankDisplay = rankName ? `rangę „${rankName}"` : 'brak rangi'
+    setRankModalVisible(false)
     Alert.alert(
       'Zmień rangę',
       `Przypisać ${rankDisplay} ministrancowi ${profile!.full_name}?`,
@@ -207,7 +208,6 @@ export default function MemberDetailScreen() {
             } else {
               setProfile(prev => prev ? { ...prev, rank_id: rankId } : prev)
             }
-            setRankModalVisible(false)
           },
         },
       ]

@@ -68,6 +68,7 @@ export default function RankAssignmentScreen() {
     const rankName = rankId ? ranks.find(r => r.id === rankId)?.name ?? null : null
     const memberName = members.find(m => m.id === memberId)?.full_name ?? 'ministranta'
     const rankDisplay = rankName ? `rangę „${rankName}"` : 'brak rangi'
+    setPickerTarget(null)
     Alert.alert(
       'Zmień rangę',
       `Przypisać ${rankDisplay} ministrancowi ${memberName}?`,
@@ -79,7 +80,6 @@ export default function RankAssignmentScreen() {
             setMembers(prev =>
               prev.map(m => m.id === memberId ? { ...m, rank_id: rankId, rank_name: rankName } : m)
             )
-            setPickerTarget(null)
             const { error } = await supabase
               .from('profiles')
               .update({ rank_id: rankId })
