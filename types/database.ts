@@ -79,6 +79,7 @@ export interface Profile {
   rank_id: string | null
   parish_id: string | null
   push_token: string | null
+  onboarding_completed: boolean
   created_at: string
 }
 
