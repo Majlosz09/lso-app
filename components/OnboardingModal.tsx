@@ -16,7 +16,7 @@ interface Slide {
   description: string
 }
 
-const SLIDES: Slide[] = [
+const MEMBER_SLIDES: Slide[] = [
   {
     emoji: '📅',
     title: 'Grafik służb',
@@ -44,6 +44,62 @@ const SLIDES: Slide[] = [
   },
 ]
 
+const ADMIN_SLIDES: Slide[] = [
+  {
+    emoji: '👥',
+    title: 'Ministranci',
+    description: 'Zarządzasz bazą ministrantów swojej parafii — możesz dodawać, przeglądać profile, przyznawać rangi i śledzić aktywność.',
+  },
+  {
+    emoji: '📅',
+    title: 'Grafik służb',
+    description: 'Tworzysz grafik — dodajesz służby jednorazowe lub cykliczne, przypisujesz ministrantów i zarządzasz kategoriami (Msza, Nabożeństwo, Zbiórka).',
+  },
+  {
+    emoji: '✅',
+    title: 'Zaznaczanie obecności',
+    description: 'Po każdej służbie zaznaczasz obecność ministrantów. Możesz też wybrać tryb potwierdzania — przycisk, GPS lub kod QR dla całej parafii.',
+  },
+  {
+    emoji: '🏆',
+    title: 'Punkty',
+    description: 'System automatycznie przyznaje punkty za potwierdzone służby. Możesz też ręcznie dodawać lub odejmować punkty i śledzić ranking parafii.',
+  },
+  {
+    emoji: '📢',
+    title: 'Ogłoszenia',
+    description: 'Publikujesz ogłoszenia dla ministrantów i rodziców. Możesz je przypiąć na górze listy, aby ważne informacje były zawsze widoczne.',
+  },
+]
+
+const PARENT_SLIDES: Slide[] = [
+  {
+    emoji: '👶',
+    title: 'Twoje dzieci',
+    description: 'W profilu widzisz listę powiązanych kont dzieci — ich rangę, odznaki i postępy. Możesz kliknąć profil dziecka, aby zobaczyć szczegóły.',
+  },
+  {
+    emoji: '📅',
+    title: 'Grafik służb',
+    description: 'Śledzisz nadchodzące służby swoich dzieci. Widzisz daty, godziny i status każdego dyżuru, aby zawsze wiedzieć kiedy dziecko służy.',
+  },
+  {
+    emoji: '🏆',
+    title: 'Punkty i postępy',
+    description: 'Obserwujesz ile punktów i służb zebrało każde z Twoich dzieci. Możesz też zobaczyć ranking całej parafii.',
+  },
+  {
+    emoji: '📢',
+    title: 'Ogłoszenia',
+    description: 'Tutaj pojawiają się ważne informacje od administratora — zmiany w grafiku, wyjazdy, uroczystości parafialne. Sprawdzaj regularnie!',
+  },
+  {
+    emoji: '📚',
+    title: 'Wiedza',
+    description: 'Znajdziesz tu modlitwy ministranta, słowniczek liturgiczny, życiorysy patronów i strukturę Mszy Świętej — pomocne materiały dla całej rodziny.',
+  },
+]
+
 interface Props {
   visible: boolean
   onClose: () => void
@@ -56,8 +112,14 @@ export function OnboardingModal({ visible, onClose }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [completing, setCompleting] = useState(false)
 
-  const isLast = currentIndex === SLIDES.length - 1
-  const slide = SLIDES[currentIndex]
+  const slides = profile?.role === 'admin'
+    ? ADMIN_SLIDES
+    : profile?.role === 'parent'
+      ? PARENT_SLIDES
+      : MEMBER_SLIDES
+
+  const isLast = currentIndex === slides.length - 1
+  const slide = slides[currentIndex]
 
   const handleNext = () => {
     if (isLast) {
@@ -102,7 +164,7 @@ export function OnboardingModal({ visible, onClose }: Props) {
           </View>
 
           <View style={styles.dots}>
-            {SLIDES.map((_, i) => (
+            {slides.map((_, i) => (
               <View
                 key={i}
                 style={[styles.dot, i === currentIndex && styles.dotActive]}
