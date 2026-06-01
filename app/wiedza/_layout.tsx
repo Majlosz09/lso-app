@@ -8,7 +8,7 @@ export default function WiedzaLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: c.header },
         headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '700' },
+        headerTitleStyle: { fontWeight: '600' },
       }}
     />
   )

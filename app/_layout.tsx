@@ -93,7 +93,7 @@ function AuthGate() {
       <Stack.Screen name="(auth)/parish-setup" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(admin)" />
-      <Stack.Screen name="wiedza" />
+      <Stack.Screen name="wiedza" options={{ headerShown: false }} />
     </Stack>
   )
 }
