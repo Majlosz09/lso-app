@@ -4,6 +4,7 @@ import {
   ActivityIndicator, TouchableOpacity, Modal, TextInput,
   KeyboardAvoidingView, Platform, Alert, Switch, ScrollView
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
 import { shadow } from '../../lib/shadows'
@@ -74,8 +75,9 @@ export default function AnnouncementsScreen() {
     setSubmitting(false)
 
     if (error) {
-      Alert.alert('Błąd', 'Nie udało się dodać ogłoszenia: ' + error.message)
+      Toast.show({ type: 'error', text1: 'Błąd', text2: 'Nie udało się dodać ogłoszenia.' })
     } else {
+      Toast.show({ type: 'success', text1: 'Dodano ogłoszenie' })
       setModalVisible(false)
       setNewTitle('')
       setNewContent('')
@@ -94,7 +96,8 @@ export default function AnnouncementsScreen() {
           text: 'Usuń', style: 'destructive',
           onPress: async () => {
             const { error } = await supabase.from('announcements').delete().eq('id', item.id)
-            if (error) { Alert.alert('Błąd', error.message); return }
+            if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+            Toast.show({ type: 'success', text1: 'Ogłoszenie usunięte' })
             fetchAnnouncements()
           },
         },
@@ -116,7 +119,12 @@ export default function AnnouncementsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="megaphone-outline" size={48} color={c.iconMuted} />
-            <Text style={styles.emptyText}>Brak ogłoszeń</Text>
+            <Text style={styles.emptyTitle}>Brak ogłoszeń</Text>
+            <Text style={styles.emptySubtitle}>
+              {isAdmin
+                ? 'Kliknij + aby dodać pierwsze ogłoszenie.'
+                : 'Administrator nie dodał jeszcze żadnych ogłoszeń.'}
+            </Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -245,7 +253,8 @@ function createStyles(c: Colors) {
     container: { flex: 1, backgroundColor: c.bg },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     empty: { alignItems: 'center', marginTop: 80, gap: 12 },
-    emptyText: { color: c.textTertiary, fontSize: 16 },
+    emptyTitle: { color: c.text, fontSize: 16, fontWeight: '600' },
+    emptySubtitle: { color: c.textTertiary, fontSize: 14, textAlign: 'center', maxWidth: 260 },
 
     card: {
       backgroundColor: c.surface, borderRadius: 12, padding: 16, gap: 8,

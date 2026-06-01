@@ -4,6 +4,7 @@ import {
   ActivityIndicator, Alert, TouchableOpacity,
   Modal, TextInput, Platform, KeyboardAvoidingView
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -135,7 +136,12 @@ export default function ScheduleDetailScreen() {
           p_profile_id: profileId,
           p_parish_id: adminProfile.parish_id,
         })
-        if (error) { Alert.alert('Błąd', error.message); setSaving(false); fetchSchedule(); return }
+        if (error) {
+          Toast.show({ type: 'error', text1: 'Błąd zapisu', text2: error.message })
+          setSaving(false)
+          fetchSchedule()
+          return
+        }
         await supabase.from('schedule_assignments')
           .update({ status: 'present' })
           .eq('profile_id', profileId)
@@ -147,7 +153,12 @@ export default function ScheduleDetailScreen() {
       if (!draftIds.has(profileId)) {
         const { error } = await supabase.from('attendance').delete()
           .eq('schedule_id', id).eq('profile_id', profileId)
-        if (error) { Alert.alert('Błąd', error.message); setSaving(false); fetchSchedule(); return }
+        if (error) {
+          Toast.show({ type: 'error', text1: 'Błąd zapisu', text2: error.message })
+          setSaving(false)
+          fetchSchedule()
+          return
+        }
         await supabase.from('schedule_assignments')
           .update({ status: 'absent' })
           .eq('profile_id', profileId)
@@ -158,6 +169,11 @@ export default function ScheduleDetailScreen() {
     setAttendanceIds(new Set(draftIds))
     setSaving(false)
     setAttendanceSheetVisible(false)
+    Toast.show({
+      type: 'success',
+      text1: 'Obecność zapisana',
+      text2: `${draftIds.size} ministrantów oznaczonych jako obecnych`,
+    })
     fetchSchedule()
   }
 
@@ -178,8 +194,13 @@ export default function ScheduleDetailScreen() {
       schedule_id: schedule.id, profile_id: member.id, role: 'ministrant', status: 'assigned',
     })
     setAdding(false)
-    if (error) Alert.alert('Błąd', error.message)
-    else { setAddModalVisible(false); fetchSchedule() }
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+    } else {
+      setAddModalVisible(false)
+      fetchSchedule()
+      Toast.show({ type: 'success', text1: 'Dodano ministranta' })
+    }
   }
 
   const handleRemove = (assignmentId: string, name: string) => {

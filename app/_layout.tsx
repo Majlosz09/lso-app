@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Platform } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
+import Toast from 'react-native-toast-message'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as Notifications from 'expo-notifications'
 import { supabase } from '../lib/supabase'
@@ -86,14 +87,17 @@ function AuthGate() {
   }, [session, isLoading, profile, segments])
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)/welcome" />
-      <Stack.Screen name="(auth)/login" />
-      <Stack.Screen name="(auth)/register" />
-      <Stack.Screen name="(auth)/parish-setup" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="(admin)" />
-      <Stack.Screen name="wiedza" options={{ headerShown: false }} />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)/welcome" />
+        <Stack.Screen name="(auth)/login" />
+        <Stack.Screen name="(auth)/register" />
+        <Stack.Screen name="(auth)/parish-setup" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(admin)" />
+        <Stack.Screen name="wiedza" options={{ headerShown: false }} />
+      </Stack>
+      <Toast />
+    </>
   )
 }
