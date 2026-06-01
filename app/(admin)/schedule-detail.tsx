@@ -187,20 +187,32 @@ export default function ScheduleDetailScreen() {
     setAddModalVisible(true)
   }
 
-  const handleAdd = async (member: MemberOption) => {
+  const handleAdd = (member: MemberOption) => {
     if (!schedule) return
-    setAdding(true)
-    const { error } = await supabase.from('schedule_assignments').insert({
-      schedule_id: schedule.id, profile_id: member.id, role: 'ministrant', status: 'assigned',
-    })
-    setAdding(false)
-    if (error) {
-      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
-    } else {
-      setAddModalVisible(false)
-      fetchSchedule()
-      Toast.show({ type: 'success', text1: `Dodano ${member.full_name}` })
-    }
+    Alert.alert(
+      'Dodaj do służby',
+      `Dodać ${member.full_name} do tej służby?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Dodaj',
+          onPress: async () => {
+            setAdding(true)
+            const { error } = await supabase.from('schedule_assignments').insert({
+              schedule_id: schedule.id, profile_id: member.id, role: 'ministrant', status: 'assigned',
+            })
+            setAdding(false)
+            if (error) {
+              Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+            } else {
+              setAddModalVisible(false)
+              fetchSchedule()
+              Toast.show({ type: 'success', text1: `Dodano ${member.full_name}` })
+            }
+          },
+        },
+      ]
+    )
   }
 
   const handleRemove = (assignmentId: string, name: string) => {
