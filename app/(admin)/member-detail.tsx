@@ -187,17 +187,31 @@ export default function MemberDetailScreen() {
     loadBadges()
   }, [id])
 
-  const handleChangeRank = async (rankId: string | null) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ rank_id: rankId })
-      .eq('id', id)
-    if (error) {
-      Alert.alert('Błąd', error.message)
-    } else {
-      setProfile(prev => prev ? { ...prev, rank_id: rankId } : prev)
-    }
-    setRankModalVisible(false)
+  const handleChangeRank = (rankId: string | null) => {
+    const rankName = rankId ? (ranksList.find(r => r.id === rankId)?.name ?? 'nieznaną rangę') : null
+    const rankDisplay = rankName ? `rangę „${rankName}"` : 'brak rangi'
+    Alert.alert(
+      'Zmień rangę',
+      `Przypisać ${rankDisplay} ministrancowi ${profile.full_name}?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Przypisz',
+          onPress: async () => {
+            const { error } = await supabase
+              .from('profiles')
+              .update({ rank_id: rankId })
+              .eq('id', id)
+            if (error) {
+              Alert.alert('Błąd', error.message)
+            } else {
+              setProfile(prev => prev ? { ...prev, rank_id: rankId } : prev)
+            }
+            setRankModalVisible(false)
+          },
+        },
+      ]
+    )
   }
 
   const openParentPicker = async () => {
@@ -240,27 +254,39 @@ export default function MemberDetailScreen() {
     setAwardSheetVisible(true)
   }
 
-  const handleAwardBadge = async () => {
+  const handleAwardBadge = () => {
     if (!selectedBadgeDef) return
-    setAwarding(true)
-    const { error } = await supabase.from('member_badges').insert({
-      profile_id: id,
-      badge_definition_id: selectedBadgeDef.id,
-      awarded_by: adminProfile!.id,
-      note: awardNote.trim() || null,
-      is_active: true,
-    })
-    setAwarding(false)
-    if (error) {
-      Alert.alert('Błąd', error.message === 'duplicate key value violates unique constraint "member_badges_profile_id_badge_definition_id_key"'
-        ? 'Ta odznaka została już wcześniej przyznana.'
-        : error.message)
-      return
-    }
-    setAwardSheetVisible(false)
-    setAwardNote('')
-    setSelectedBadgeDef(null)
-    loadBadges()
+    Alert.alert(
+      'Przyznaj odznakę',
+      `Przyznać odznakę „${selectedBadgeDef.name}" ministrancowi ${profile.full_name}?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Przyznaj',
+          onPress: async () => {
+            setAwarding(true)
+            const { error } = await supabase.from('member_badges').insert({
+              profile_id: id,
+              badge_definition_id: selectedBadgeDef.id,
+              awarded_by: adminProfile!.id,
+              note: awardNote.trim() || null,
+              is_active: true,
+            })
+            setAwarding(false)
+            if (error) {
+              Alert.alert('Błąd', error.message === 'duplicate key value violates unique constraint "member_badges_profile_id_badge_definition_id_key"'
+                ? 'Ta odznaka została już wcześniej przyznana.'
+                : error.message)
+              return
+            }
+            setAwardSheetVisible(false)
+            setAwardNote('')
+            setSelectedBadgeDef(null)
+            loadBadges()
+          },
+        },
+      ]
+    )
   }
 
   if (loading || !profile) {
