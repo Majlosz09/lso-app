@@ -49,32 +49,60 @@ export default function AbsenceRequestsScreen() {
 
   useEffect(() => { fetchRequests() }, [])
 
-  const handleApprove = async (id: string) => {
-    setProcessingId(id)
-    try {
-      const { error } = await supabase
-        .from('schedule_assignments')
-        .update({ status: 'confirmed', admin_note: null })
-        .eq('id', id)
-      if (error) { Alert.alert('Błąd', error.message); return }
-      setRequests(prev => prev.filter(r => r.id !== id))
-    } finally {
-      setProcessingId(null)
-    }
+  const handleApprove = (request: AbsenceRequest) => {
+    const dateStr = new Date(request.schedule.date + 'T12:00:00').toLocaleDateString('pl-PL', {
+      weekday: 'short', day: 'numeric', month: 'long',
+    })
+    Alert.alert(
+      'Zatwierdź nieobecność',
+      `Zatwierdzić nieobecność ${request.profile.full_name} na służbie ${dateStr}?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Zatwierdź',
+          onPress: async () => {
+            setProcessingId(request.id)
+            try {
+              const { error } = await supabase
+                .from('schedule_assignments')
+                .update({ status: 'confirmed', admin_note: null })
+                .eq('id', request.id)
+              if (error) { Alert.alert('Błąd', error.message); return }
+              setRequests(prev => prev.filter(r => r.id !== request.id))
+            } finally {
+              setProcessingId(null)
+            }
+          },
+        },
+      ]
+    )
   }
 
-  const handleReject = async (id: string) => {
-    setProcessingId(id)
-    try {
-      const { error } = await supabase
-        .from('schedule_assignments')
-        .update({ status: 'absent', admin_note: REJECTION_NOTE })
-        .eq('id', id)
-      if (error) { Alert.alert('Błąd', error.message); return }
-      setRequests(prev => prev.filter(r => r.id !== id))
-    } finally {
-      setProcessingId(null)
-    }
+  const handleReject = (request: AbsenceRequest) => {
+    Alert.alert(
+      'Odrzuć nieobecność',
+      `Odrzucić zgłoszenie nieobecności ${request.profile.full_name}?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Odrzuć',
+          style: 'destructive',
+          onPress: async () => {
+            setProcessingId(request.id)
+            try {
+              const { error } = await supabase
+                .from('schedule_assignments')
+                .update({ status: 'absent', admin_note: REJECTION_NOTE })
+                .eq('id', request.id)
+              if (error) { Alert.alert('Błąd', error.message); return }
+              setRequests(prev => prev.filter(r => r.id !== request.id))
+            } finally {
+              setProcessingId(null)
+            }
+          },
+        },
+      ]
+    )
   }
 
   const handleApproveAll = () => {
@@ -143,8 +171,8 @@ export default function AbsenceRequestsScreen() {
           <AbsenceCard
             request={item}
             processing={processingId === item.id}
-            onApprove={() => handleApprove(item.id)}
-            onReject={() => handleReject(item.id)}
+            onApprove={() => handleApprove(item)}
+            onReject={() => handleReject(item)}
             styles={styles}
             colors={c}
           />
