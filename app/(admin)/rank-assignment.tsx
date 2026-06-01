@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   Modal, ActivityIndicator, Alert
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
@@ -77,16 +78,15 @@ export default function RankAssignmentScreen() {
         {
           text: 'Przypisz',
           onPress: async () => {
-            setMembers(prev =>
-              prev.map(m => m.id === memberId ? { ...m, rank_id: rankId, rank_name: rankName } : m)
-            )
             const { error } = await supabase
               .from('profiles')
               .update({ rank_id: rankId })
               .eq('id', memberId)
             if (error) {
               Alert.alert('Błąd', error.message)
+            } else {
               fetchData()
+              Toast.show({ type: 'success', text1: 'Ranga zmieniona' })
             }
           },
         },

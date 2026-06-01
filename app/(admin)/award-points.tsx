@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, TextInput, StyleSheet, ScrollView,
-  TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform
+  TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard
 } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -63,6 +63,7 @@ export default function AwardPoints() {
     if (isNaN(amt) || amt === 0) { Alert.alert('Błąd', 'Wpisz prawidłową liczbę punktów (np. 1 lub -1).'); return }
     if (!reason.trim()) { Alert.alert('Błąd', 'Wpisz powód przyznania punktów.'); return }
 
+    Keyboard.dismiss()
     const sign = amt > 0 ? '+' : ''
     Alert.alert(
       'Przyznaj punkty',
