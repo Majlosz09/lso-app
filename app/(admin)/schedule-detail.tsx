@@ -199,7 +199,7 @@ export default function ScheduleDetailScreen() {
     } else {
       setAddModalVisible(false)
       fetchSchedule()
-      Toast.show({ type: 'success', text1: 'Dodano ministranta' })
+      Toast.show({ type: 'success', text1: `Dodano ${member.full_name}` })
     }
   }
 
