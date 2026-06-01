@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../../lib/supabase'
 import { useAuthStore } from '../../../stores/authStore'
 import { Profile, PointRule, ServiceType, SERVICE_TYPE_LABELS } from '../../../types/database'
+import { useRealtimeTable } from '../../../hooks/useRealtimeTable'
 import { shadow } from '../../../lib/shadows'
 import { useTheme } from '../../../lib/ThemeContext'
 import { Colors } from '../../../lib/theme'
@@ -61,6 +62,8 @@ export default function PointsTab() {
   }
 
   useEffect(() => { loadRanking() }, [])
+  useRealtimeTable('points', loadRanking)
+  useRealtimeTable('attendance', loadRanking)
 
   useEffect(() => {
     supabase

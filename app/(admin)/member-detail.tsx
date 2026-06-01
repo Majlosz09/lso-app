@@ -170,7 +170,16 @@ export default function MemberDetailScreen() {
       .eq('is_active', true)
       .order('awarded_at', { ascending: false })
     if (error) { console.error('[member-detail] loadBadges error:', error); return }
-    setBadges((data ?? []).filter((b: any) => b.badge_definition !== null) as BadgeRow[])
+    const seen = new Set<string>()
+    const deduped = (data ?? [])
+      .filter((b: any) => b.badge_definition !== null)
+      .filter((b: any) => {
+        const key = b.badge_definition.id
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      }) as BadgeRow[]
+    setBadges(deduped)
   }
 
   useEffect(() => {
