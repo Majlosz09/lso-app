@@ -31,6 +31,13 @@ export default function RankAssignmentScreen() {
   const [ranks, setRanks] = useState<RankOption[]>([])
   const [loading, setLoading] = useState(true)
   const [pickerTarget, setPickerTarget] = useState<MemberRow | null>(null)
+  const [ranksExpanded, setRanksExpanded] = useState(false)
+  const [newRankName, setNewRankName] = useState('')
+  const [addingRank, setAddingRank] = useState(false)
+  const [editingRankId, setEditingRankId] = useState<string | null>(null)
+  const [editingRankName, setEditingRankName] = useState('')
+  const [renamingRank, setRenamingRank] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const fetchData = async () => {
     const [membersRes, ranksRes] = await Promise.all([
@@ -76,6 +83,62 @@ export default function RankAssignmentScreen() {
     } else {
       fetchData()
       Toast.show({ type: 'success', text1: 'Ranga zmieniona' })
+    }
+  }
+
+  const handleAddRank = async () => {
+    if (!newRankName.trim()) return
+    setAddingRank(true)
+    const maxOrder = ranks.length > 0 ? Math.max(...ranks.map(r => r.order)) + 1 : 1
+    const { error } = await supabase.from('ranks').insert({
+      name: newRankName.trim(),
+      order: maxOrder,
+      is_system: false,
+      parish_id: parishId,
+    })
+    setAddingRank(false)
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+    } else {
+      setNewRankName('')
+      fetchData()
+    }
+  }
+
+  const handleStartEditRank = (rank: RankOption) => {
+    setEditingRankId(rank.id)
+    setEditingRankName(rank.name)
+  }
+
+  const handleRenameRank = async () => {
+    if (!editingRankId || !editingRankName.trim()) return
+    setRenamingRank(true)
+    const { error } = await supabase
+      .from('ranks')
+      .update({ name: editingRankName.trim() })
+      .eq('id', editingRankId)
+    setRenamingRank(false)
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+    } else {
+      setEditingRankId(null)
+      setEditingRankName('')
+      fetchData()
+    }
+  }
+
+  const handleCancelEditRank = () => {
+    setEditingRankId(null)
+    setEditingRankName('')
+  }
+
+  const handleDeleteRank = async (rankId: string) => {
+    const { error } = await supabase.from('ranks').delete().eq('id', rankId)
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+    } else {
+      setConfirmDeleteId(null)
+      fetchData()
     }
   }
 
