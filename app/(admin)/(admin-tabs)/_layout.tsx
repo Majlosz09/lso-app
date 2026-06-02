@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from 'expo-router'
-import { TouchableOpacity, View } from 'react-native'
+import { TouchableOpacity } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useAuthStore } from '../../../stores/authStore'
 import { CustomTabBar } from '../../../components/CustomTabBar'
@@ -41,19 +41,7 @@ export default function AdminTabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
           ),
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 16 }}>
-              <TouchableOpacity onPress={() => router.push('/(admin)/rank-management')} hitSlop={8}>
-                <Ionicons name="ribbon-outline" size={22} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/(admin)/(admin-tabs)/profile')} hitSlop={8}>
-                {avatarUrl
-                  ? <AvatarImage avatarUrl={avatarUrl} size={32} borderColor="rgba(255,255,255,0.6)" borderWidth={2} />
-                  : <Ionicons name="person-circle-outline" size={30} color="#fff" />
-                }
-              </TouchableOpacity>
-            </View>
-          ),
+          headerRight: avatarButton,
         }}
       />
       <Tabs.Screen
