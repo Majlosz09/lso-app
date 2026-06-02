@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  Modal, ActivityIndicator, Alert
+  Modal, ActivityIndicator, TextInput
 } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
@@ -12,7 +12,7 @@ import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 
 type MemberRow = { id: string; full_name: string; rank_id: string | null; rank_name: string | null }
-type RankOption = { id: string; name: string; order: number }
+type RankOption = { id: string; name: string; order: number; is_system: boolean; parish_id: string | null }
 type RawMemberRow = {
   id: string
   full_name: string
@@ -43,7 +43,7 @@ export default function RankAssignmentScreen() {
         .order('full_name'),
       supabase
         .from('ranks')
-        .select('id, name, order')
+        .select('id, name, order, is_system, parish_id')
         .or(`parish_id.is.null,parish_id.eq.${parishId}`)
         .order('order'),
     ])
@@ -65,33 +65,18 @@ export default function RankAssignmentScreen() {
 
   useEffect(() => { if (parishId) fetchData() }, [parishId])
 
-  const handleSetRank = (memberId: string, rankId: string | null) => {
-    const rankName = rankId ? ranks.find(r => r.id === rankId)?.name ?? null : null
-    const memberName = members.find(m => m.id === memberId)?.full_name ?? 'ministranta'
-    const rankDisplay = rankName ? `rangę „${rankName}"` : 'brak rangi'
+  const handleSetRank = async (memberId: string, rankId: string | null) => {
     setPickerTarget(null)
-    Alert.alert(
-      'Zmień rangę',
-      `Przypisać ${rankDisplay} ministrancowi ${memberName}?`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Przypisz',
-          onPress: async () => {
-            const { error } = await supabase
-              .from('profiles')
-              .update({ rank_id: rankId })
-              .eq('id', memberId)
-            if (error) {
-              Alert.alert('Błąd', error.message)
-            } else {
-              fetchData()
-              Toast.show({ type: 'success', text1: 'Ranga zmieniona' })
-            }
-          },
-        },
-      ]
-    )
+    const { error } = await supabase
+      .from('profiles')
+      .update({ rank_id: rankId })
+      .eq('id', memberId)
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+    } else {
+      fetchData()
+      Toast.show({ type: 'success', text1: 'Ranga zmieniona' })
+    }
   }
 
   if (loading) {
@@ -144,7 +129,8 @@ export default function RankAssignmentScreen() {
         animationType="slide"
         onRequestClose={() => setPickerTarget(null)}
       >
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setPickerTarget(null)}>
+        <View style={styles.overlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setPickerTarget(null)} />
           <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
             <View style={styles.handle} />
             <Text style={styles.sheetTitle}>{pickerTarget?.full_name}</Text>
@@ -172,7 +158,7 @@ export default function RankAssignmentScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </>
   )
@@ -209,7 +195,7 @@ function createStyles(c: Colors) {
     rankChipTextEmpty: { color: c.textTertiary },
     separator: { height: 1, backgroundColor: c.primarySurface, marginLeft: 64 },
 
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
     sheet: {
       backgroundColor: c.surface,
       borderTopLeftRadius: 20, borderTopRightRadius: 20,
