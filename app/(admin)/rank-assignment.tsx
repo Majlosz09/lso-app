@@ -38,6 +38,7 @@ export default function RankAssignmentScreen() {
   const [editingRankName, setEditingRankName] = useState('')
   const [renamingRank, setRenamingRank] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingRank, setDeletingRank] = useState(false)
 
   const fetchData = async () => {
     const [membersRes, ranksRes] = await Promise.all([
@@ -107,6 +108,7 @@ export default function RankAssignmentScreen() {
   }
 
   const handleStartEditRank = (rank: RankOption) => {
+    setConfirmDeleteId(null)
     setEditingRankId(rank.id)
     setEditingRankName(rank.name)
   }
@@ -139,12 +141,15 @@ export default function RankAssignmentScreen() {
   const handleDeleteRank = async (rankId: string) => {
     const target = ranks.find(r => r.id === rankId)
     if (target?.is_system) return
+    setDeletingRank(true)
     const { error } = await supabase.from('ranks').delete().eq('id', rankId)
+    setDeletingRank(false)
     if (error) {
       Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
     } else {
       setConfirmDeleteId(null)
       fetchData()
+      Toast.show({ type: 'success', text1: 'Ranga usunięta' })
     }
   }
 
@@ -201,7 +206,7 @@ export default function RankAssignmentScreen() {
                   <>
                     <Text style={[styles.rankMgmtName, { flex: 1 }]}>{rank.name}</Text>
                     <Text style={styles.deleteConfirmLabel}>Usuń?</Text>
-                    <TouchableOpacity onPress={() => handleDeleteRank(rank.id)} hitSlop={8}>
+                    <TouchableOpacity onPress={() => handleDeleteRank(rank.id)} hitSlop={8} disabled={deletingRank}>
                       <Ionicons name="checkmark" size={22} color="#DC2626" />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => setConfirmDeleteId(null)} hitSlop={8}>
@@ -220,7 +225,7 @@ export default function RankAssignmentScreen() {
                         <TouchableOpacity onPress={() => handleStartEditRank(rank)} hitSlop={8}>
                           <Ionicons name="pencil-outline" size={20} color={c.primary} />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setConfirmDeleteId(rank.id)} hitSlop={8}>
+                        <TouchableOpacity onPress={() => { setEditingRankId(null); setEditingRankName(''); setConfirmDeleteId(rank.id) }} hitSlop={8}>
                           <Ionicons name="trash-outline" size={20} color="#DC2626" />
                         </TouchableOpacity>
                       </View>
