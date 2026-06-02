@@ -102,6 +102,7 @@ export default function RankAssignmentScreen() {
     } else {
       setNewRankName('')
       fetchData()
+      Toast.show({ type: 'success', text1: 'Ranga dodana' })
     }
   }
 
@@ -112,6 +113,8 @@ export default function RankAssignmentScreen() {
 
   const handleRenameRank = async () => {
     if (!editingRankId || !editingRankName.trim()) return
+    const target = ranks.find(r => r.id === editingRankId)
+    if (target?.is_system) return
     setRenamingRank(true)
     const { error } = await supabase
       .from('ranks')
@@ -124,6 +127,7 @@ export default function RankAssignmentScreen() {
       setEditingRankId(null)
       setEditingRankName('')
       fetchData()
+      Toast.show({ type: 'success', text1: 'Ranga zmieniona' })
     }
   }
 
@@ -133,6 +137,8 @@ export default function RankAssignmentScreen() {
   }
 
   const handleDeleteRank = async (rankId: string) => {
+    const target = ranks.find(r => r.id === rankId)
+    if (target?.is_system) return
     const { error } = await supabase.from('ranks').delete().eq('id', rankId)
     if (error) {
       Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
