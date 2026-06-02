@@ -153,9 +153,111 @@ export default function RankAssignmentScreen() {
   }
 
   return (
-    <>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+
+      {/* ── Sekcja rang (zwijalna) ── */}
+      <View style={styles.ranksSection}>
+        <TouchableOpacity
+          style={styles.ranksSectionHeader}
+          onPress={() => setRanksExpanded(v => !v)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.ranksSectionHeaderLeft}>
+            <Ionicons name="ribbon" size={16} color={c.primary} />
+            <Text style={styles.ranksSectionTitle}>RANGI MINISTRANCKIE</Text>
+            <View style={styles.ranksCountBadge}>
+              <Text style={styles.ranksCountText}>{ranks.length}</Text>
+            </View>
+          </View>
+          <Ionicons name={ranksExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={c.textTertiary} />
+        </TouchableOpacity>
+
+        {ranksExpanded && (
+          <>
+            {ranks.map(rank => (
+              <View key={rank.id} style={styles.rankMgmtRow}>
+                <View style={[styles.rankMgmtIcon, rank.is_system && styles.rankMgmtIconSystem]}>
+                  <Ionicons name="ribbon" size={14} color={rank.is_system ? c.primary : c.subtext} />
+                </View>
+
+                {editingRankId === rank.id ? (
+                  <>
+                    <TextInput
+                      style={styles.rankEditInput}
+                      value={editingRankName}
+                      onChangeText={setEditingRankName}
+                      onSubmitEditing={handleRenameRank}
+                      returnKeyType="done"
+                      autoFocus
+                    />
+                    <TouchableOpacity onPress={handleRenameRank} hitSlop={8} disabled={renamingRank}>
+                      <Ionicons name="checkmark" size={22} color="#16A34A" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleCancelEditRank} hitSlop={8}>
+                      <Ionicons name="close" size={22} color={c.textTertiary} />
+                    </TouchableOpacity>
+                  </>
+                ) : confirmDeleteId === rank.id ? (
+                  <>
+                    <Text style={[styles.rankMgmtName, { flex: 1 }]}>{rank.name}</Text>
+                    <Text style={styles.deleteConfirmLabel}>Usuń?</Text>
+                    <TouchableOpacity onPress={() => handleDeleteRank(rank.id)} hitSlop={8}>
+                      <Ionicons name="checkmark" size={22} color="#DC2626" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setConfirmDeleteId(null)} hitSlop={8}>
+                      <Ionicons name="close" size={22} color={c.textTertiary} />
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <Text style={[styles.rankMgmtName, { flex: 1 }]}>{rank.name}</Text>
+                    {rank.is_system ? (
+                      <View style={styles.systemBadge}>
+                        <Text style={styles.systemBadgeText}>systemowa</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.rankMgmtActions}>
+                        <TouchableOpacity onPress={() => handleStartEditRank(rank)} hitSlop={8}>
+                          <Ionicons name="pencil-outline" size={20} color={c.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setConfirmDeleteId(rank.id)} hitSlop={8}>
+                          <Ionicons name="trash-outline" size={20} color="#DC2626" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            ))}
+
+            <View style={styles.addRankRow}>
+              <TextInput
+                style={styles.addRankInput}
+                placeholder="Nazwa nowej rangi..."
+                placeholderTextColor={c.textTertiary}
+                value={newRankName}
+                onChangeText={setNewRankName}
+                onSubmitEditing={handleAddRank}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={[styles.addRankButton, (!newRankName.trim() || addingRank) && { opacity: 0.4 }]}
+                onPress={handleAddRank}
+                disabled={!newRankName.trim() || addingRank}
+              >
+                {addingRank
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Ionicons name="add" size={22} color="#fff" />
+                }
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </View>
+
+      {/* ── Lista ministrantów ── */}
       <FlatList
-        style={styles.container}
+        style={styles.list}
         contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 20) }]}
         data={members}
         keyExtractor={item => item.id}
@@ -192,6 +294,7 @@ export default function RankAssignmentScreen() {
         }
       />
 
+      {/* ── Picker rangi (modal) ── */}
       <Modal
         visible={pickerTarget !== null}
         transparent
@@ -229,19 +332,82 @@ export default function RankAssignmentScreen() {
           </View>
         </View>
       </Modal>
-    </>
+    </View>
   )
 }
 
 function createStyles(c: Colors) {
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    content: { padding: 0 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+    // ── Sekcja rang ──
+    ranksSection: {
+      backgroundColor: c.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: c.primarySurface,
+    },
+    ranksSectionHeader: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 12,
+    },
+    ranksSectionHeaderLeft: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+    },
+    ranksSectionTitle: {
+      fontSize: 11, fontWeight: '700', color: c.textTertiary,
+      textTransform: 'uppercase', letterSpacing: 0.8,
+    },
+    ranksCountBadge: {
+      backgroundColor: c.primaryAlpha08, borderRadius: 10,
+      paddingHorizontal: 6, paddingVertical: 2,
+    },
+    ranksCountText: { fontSize: 11, fontWeight: '700', color: c.primary },
+
+    rankMgmtRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      paddingHorizontal: 16, paddingVertical: 12,
+      borderTopWidth: 1, borderTopColor: c.primarySurface,
+    },
+    rankMgmtIcon: {
+      width: 28, height: 28, borderRadius: 8,
+      backgroundColor: c.primarySurface, justifyContent: 'center', alignItems: 'center',
+    },
+    rankMgmtIconSystem: { backgroundColor: c.primaryAlpha08 },
+    rankMgmtName: { fontSize: 14, fontWeight: '500', color: c.text },
+    rankMgmtActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+    rankEditInput: {
+      flex: 1, fontSize: 14, color: c.text,
+      backgroundColor: c.bg, borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 5,
+      borderWidth: 1, borderColor: c.primary,
+    },
+    systemBadge: {
+      backgroundColor: c.primaryAlpha08, borderRadius: 6,
+      paddingHorizontal: 7, paddingVertical: 3,
+    },
+    systemBadgeText: { fontSize: 10, color: c.primary, fontWeight: '600' },
+    deleteConfirmLabel: { fontSize: 13, color: '#DC2626', fontWeight: '600', marginRight: 4 },
+    addRankRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      paddingHorizontal: 16, paddingVertical: 10,
+      borderTopWidth: 1, borderTopColor: c.primarySurface,
+    },
+    addRankInput: {
+      flex: 1, backgroundColor: c.bg, borderRadius: 10,
+      paddingHorizontal: 12, paddingVertical: 9,
+      fontSize: 14, color: c.text,
+    },
+    addRankButton: {
+      width: 40, height: 40, borderRadius: 10,
+      backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center',
+    },
+
+    // ── Lista ministrantów ──
+    list: { flex: 1, backgroundColor: c.bg },
+    content: { padding: 0 },
     hint: { fontSize: 13, color: c.textTertiary, padding: 16, paddingBottom: 8 },
     empty: { alignItems: 'center', padding: 32 },
     emptyText: { fontSize: 14, color: c.textTertiary },
-
     memberRow: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       backgroundColor: c.surface, paddingHorizontal: 16, paddingVertical: 14,
@@ -264,6 +430,7 @@ function createStyles(c: Colors) {
     rankChipTextEmpty: { color: c.textTertiary },
     separator: { height: 1, backgroundColor: c.primarySurface, marginLeft: 64 },
 
+    // ── Picker modal ──
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
     sheet: {
       backgroundColor: c.surface,
