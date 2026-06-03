@@ -43,6 +43,7 @@ export interface Parish {
   lng: number | null
   gps_radius: number
   attendance_mode: AttendanceMode
+  allow_member_dm: boolean
 }
 
 export interface PointRule {
