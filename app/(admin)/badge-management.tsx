@@ -142,6 +142,7 @@ export default function BadgeManagementScreen() {
   }
 
   const fetchMembers = async () => {
+    setMembers([])
     setMembersLoading(true)
     const { data, error } = await supabase
       .from('profiles')
@@ -149,7 +150,10 @@ export default function BadgeManagementScreen() {
       .eq('parish_id', parishId)
       .eq('role', 'member')
       .order('full_name')
-    if (error) console.error('[badge-management] members error:', error)
+    if (error) {
+      console.error('[badge-management] members error:', error)
+      Alert.alert('Błąd', 'Nie udało się załadować listy ministrantów.')
+    }
     setMembers(data ?? [])
     setMembersLoading(false)
   }
@@ -299,7 +303,7 @@ export default function BadgeManagementScreen() {
           <TouchableOpacity style={StyleSheet.absoluteFill} onPress={closeWizard} activeOpacity={1} />
           <View style={styles.sheet}>
             <View style={styles.sheetHandle} />
-            <Text style={{ color: '#fff' }}>Wizard placeholder</Text>
+            <Text style={{ color: c.text }}>Wizard placeholder</Text>
           </View>
         </KeyboardAvoidingView>
       </Modal>
