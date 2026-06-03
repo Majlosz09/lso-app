@@ -167,6 +167,72 @@ export default function BadgeManagementScreen() {
     setMemberSearch('')
   }
 
+  const filteredMembers = members.filter(m =>
+    m.full_name.toLowerCase().includes(memberSearch.toLowerCase())
+  )
+
+  const renderStep1 = () => (
+    <View style={{ flex: 1 }}>
+      <Text style={styles.stepTitle}>KROK 1 / 3 — Wybierz ministranta</Text>
+      <View style={styles.searchBox}>
+        <Ionicons name="search-outline" size={16} color={c.textTertiary} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Szukaj po imieniu..."
+          placeholderTextColor={c.textTertiary}
+          value={memberSearch}
+          onChangeText={setMemberSearch}
+          autoFocus
+        />
+      </View>
+      {membersLoading ? (
+        <ActivityIndicator style={{ marginTop: 20 }} color={c.primary} />
+      ) : (
+        <FlatList
+          data={filteredMembers}
+          keyExtractor={m => m.id}
+          style={styles.pickerList}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => {
+            const isSelected = selectedMember?.id === item.id
+            return (
+              <TouchableOpacity
+                style={[styles.pickerRow, isSelected && styles.pickerRowSelected]}
+                onPress={() => setSelectedMember(item)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.memberAvatar}>
+                  <Text style={styles.memberAvatarText}>
+                    {item.full_name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
+                  </Text>
+                </View>
+                <Text style={[styles.pickerRowName, isSelected && { color: '#FFC107' }]}>
+                  {item.full_name}
+                </Text>
+                {isSelected && <Ionicons name="checkmark" size={18} color="#FFC107" />}
+              </TouchableOpacity>
+            )
+          }}
+        />
+      )}
+      <View style={styles.btnRow}>
+        <TouchableOpacity style={styles.btnBack} onPress={closeWizard}>
+          <Text style={styles.btnBackText}>Anuluj</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.btnNext, !selectedMember && { opacity: 0.4 }]}
+          onPress={() => setWizardStep(2)}
+          disabled={!selectedMember}
+        >
+          <Text style={styles.btnNextText}>Dalej →</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  )
+
+  const renderStep2 = () => <View />
+  const renderStep3 = () => <View />
+
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
   }
@@ -303,7 +369,10 @@ export default function BadgeManagementScreen() {
           <TouchableOpacity style={StyleSheet.absoluteFill} onPress={closeWizard} activeOpacity={1} />
           <View style={styles.sheet}>
             <View style={styles.sheetHandle} />
-            <Text style={{ color: c.text }}>Wizard placeholder</Text>
+            <StepDots current={wizardStep} />
+            {wizardStep === 1 && renderStep1()}
+            {wizardStep === 2 && renderStep2()}
+            {wizardStep === 3 && renderStep3()}
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -450,5 +519,45 @@ function createStyles(c: Colors) {
       width: 36, height: 4, borderRadius: 2,
       backgroundColor: c.border, alignSelf: 'center', marginBottom: 14,
     },
+
+    stepTitle: {
+      fontSize: 11, fontWeight: '700', color: '#FFC107',
+      textTransform: 'uppercase', letterSpacing: 0.5,
+      textAlign: 'center', marginBottom: 12,
+    },
+    searchBox: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: c.bg, borderRadius: 10,
+      paddingHorizontal: 12, paddingVertical: 8,
+      marginBottom: 10, borderWidth: 1, borderColor: c.border,
+    },
+    searchInput: { flex: 1, fontSize: 14, color: c.text },
+    pickerList: { maxHeight: 240 },
+    pickerRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      paddingVertical: 10, paddingHorizontal: 4,
+      borderBottomWidth: 1, borderBottomColor: c.primarySurface,
+    },
+    pickerRowSelected: { backgroundColor: '#FFC10710', borderRadius: 8 },
+    pickerRowName: { flex: 1, fontSize: 14, color: c.text },
+    memberAvatar: {
+      width: 30, height: 30, borderRadius: 15,
+      backgroundColor: c.primarySurface,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    memberAvatarText: { fontSize: 11, fontWeight: '700', color: c.textTertiary },
+    btnRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
+    btnBack: {
+      flex: 1, backgroundColor: c.bg, borderRadius: 12,
+      paddingVertical: 12, alignItems: 'center',
+      borderWidth: 1, borderColor: c.border,
+    },
+    btnBackText: { fontSize: 14, color: c.subtext, fontWeight: '600' },
+    btnNext: {
+      flex: 1.5, borderRadius: 12,
+      paddingVertical: 12, alignItems: 'center',
+      backgroundColor: '#FFC107',
+    },
+    btnNextText: { fontSize: 14, color: '#000', fontWeight: '700' },
   })
 }
