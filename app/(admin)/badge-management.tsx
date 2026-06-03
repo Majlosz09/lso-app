@@ -171,6 +171,8 @@ export default function BadgeManagementScreen() {
     m.full_name.toLowerCase().includes(memberSearch.toLowerCase())
   )
 
+  const manualBadges = allBadges.filter(b => b.type === 'manual')
+
   const renderStep1 = () => (
     <View style={{ flex: 1 }}>
       <Text style={styles.stepTitle}>KROK 1 / 3 — Wybierz ministranta</Text>
@@ -230,7 +232,47 @@ export default function BadgeManagementScreen() {
     </View>
   )
 
-  const renderStep2 = () => <View />
+  const renderStep2 = () => (
+    <View style={{ flex: 1 }}>
+      <Text style={styles.stepTitle}>KROK 2 / 3 — Wybierz odznakę</Text>
+      <Text style={styles.stepSub}>
+        Dla: <Text style={{ color: c.text, fontWeight: '700' }}>{selectedMember?.full_name}</Text>
+      </Text>
+      <FlatList
+        data={manualBadges}
+        keyExtractor={b => b.id}
+        style={styles.pickerList}
+        renderItem={({ item }) => {
+          const isSelected = selectedBadge?.id === item.id
+          return (
+            <TouchableOpacity
+              style={[styles.pickerRow, isSelected && styles.pickerRowSelected]}
+              onPress={() => setSelectedBadge(item)}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 22 }}>{item.icon}</Text>
+              <Text style={[styles.pickerRowName, isSelected && { color: '#FFC107' }]}>
+                {item.name}
+              </Text>
+              {isSelected && <Ionicons name="checkmark" size={18} color="#FFC107" />}
+            </TouchableOpacity>
+          )
+        }}
+      />
+      <View style={styles.btnRow}>
+        <TouchableOpacity style={styles.btnBack} onPress={() => setWizardStep(1)}>
+          <Text style={styles.btnBackText}>← Wstecz</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.btnNext, !selectedBadge && { opacity: 0.4 }]}
+          onPress={() => setWizardStep(3)}
+          disabled={!selectedBadge}
+        >
+          <Text style={styles.btnNextText}>Dalej →</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  )
   const renderStep3 = () => <View />
 
   if (loading) {
@@ -525,6 +567,7 @@ function createStyles(c: Colors) {
       textTransform: 'uppercase', letterSpacing: 0.5,
       textAlign: 'center', marginBottom: 12,
     },
+    stepSub: { fontSize: 12, color: c.textTertiary, textAlign: 'center', marginBottom: 12 },
     searchBox: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       backgroundColor: c.bg, borderRadius: 10,
