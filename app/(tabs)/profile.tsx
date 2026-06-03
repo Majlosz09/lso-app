@@ -480,9 +480,10 @@ function AdminProfile() {
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0]
+    const in30days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     Promise.all([
       supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('parish_id', profile?.parish_id).eq('role', 'member').eq('is_active', true),
-      supabase.from('schedules').select('id', { count: 'exact', head: true }).eq('parish_id', profile?.parish_id).gte('date', today),
+      supabase.from('schedules').select('id', { count: 'exact', head: true }).eq('parish_id', profile?.parish_id).gte('date', today).lte('date', in30days),
     ]).then(([membersRes, schedulesRes]) => {
       setStats({ members: membersRes.count ?? 0, upcoming: schedulesRes.count ?? 0 })
       setLoading(false)
@@ -498,7 +499,7 @@ function AdminProfile() {
       ) : (
         <View style={styles.statsRow}>
           <StatCard icon="people" iconColor={c.primary} value={stats.members} label="Ministranci parafii" />
-          <StatCard icon="calendar" iconColor={c.success} value={stats.upcoming} label="Nadchodzące służby" />
+          <StatCard icon="calendar" iconColor={c.success} value={stats.upcoming} label="Służby (30 dni)" />
         </View>
       )}
 
