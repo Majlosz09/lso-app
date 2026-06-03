@@ -64,39 +64,45 @@ export default function BadgeManagementScreen() {
   const [awarding, setAwarding] = useState(false)
 
   const fetchData = async () => {
-    const [customRes, historyRes, allBadgesRes] = await Promise.all([
-      supabase.from('badge_definitions')
-        .select('id, name, icon, criteria_key')
-        .eq('parish_id', parishId)
-        .eq('type', 'manual')
-        .order('name'),
-      supabase.from('member_badges')
-        .select(`
-          id, awarded_at, note,
-          profile:profiles!profile_id(full_name),
-          awarder:profiles!awarded_by(full_name),
-          badge_definition:badge_definitions(name, icon)
-        `)
-        .not('awarded_by', 'is', null)
-        .order('awarded_at', { ascending: false })
-        .limit(10),
-      supabase.from('badge_definitions')
-        .select('id, name, icon, criteria_key, parish_id, type')
-        .or(`parish_id.is.null,parish_id.eq.${parishId}`)
-        .order('name'),
-    ])
-    if (customRes.error) {
-      console.error('[badge-management] custom badges error:', customRes.error)
-      Alert.alert('Błąd', 'Nie udało się załadować odznak parafii.')
+    try {
+      const [customRes, historyRes, allBadgesRes] = await Promise.all([
+        supabase.from('badge_definitions')
+          .select('id, name, icon, criteria_key')
+          .eq('parish_id', parishId)
+          .eq('type', 'manual')
+          .order('name'),
+        supabase.from('member_badges')
+          .select(`
+            id, awarded_at, note,
+            profile:profiles!profile_id(full_name),
+            awarder:profiles!awarded_by(full_name),
+            badge_definition:badge_definitions(name, icon)
+          `)
+          .not('awarded_by', 'is', null)
+          .order('awarded_at', { ascending: false })
+          .limit(10),
+        supabase.from('badge_definitions')
+          .select('id, name, icon, criteria_key, parish_id, type')
+          .or(`parish_id.is.null,parish_id.eq.${parishId}`)
+          .order('name'),
+      ])
+      if (customRes.error) {
+        console.error('[badge-management] custom badges error:', customRes.error)
+        Alert.alert('Błąd', 'Nie udało się załadować odznak parafii.')
+      }
+      if (historyRes.error) {
+        console.error('[badge-management] history error:', historyRes.error)
+        Alert.alert('Błąd', 'Nie udało się załadować historii przyznanych.')
+      }
+      setCustomBadges(customRes.data ?? [])
+      setHistory((historyRes.data ?? []).filter((h: any) => h.badge_definition !== null) as unknown as AwardHistoryRow[])
+      setAllBadges(allBadgesRes.data ?? [])
+    } catch (e) {
+      console.error('[badge-management] fetchData threw:', e)
+      Alert.alert('Błąd', 'Nie udało się załadować danych.')
+    } finally {
+      setLoading(false)
     }
-    if (historyRes.error) {
-      console.error('[badge-management] history error:', historyRes.error)
-      Alert.alert('Błąd', 'Nie udało się załadować historii przyznanych.')
-    }
-    setCustomBadges(customRes.data ?? [])
-    setHistory((historyRes.data ?? []).filter((h: any) => h.badge_definition !== null) as unknown as AwardHistoryRow[])
-    setAllBadges(allBadgesRes.data ?? [])
-    setLoading(false)
   }
 
   useEffect(() => { fetchData() }, [parishId])
@@ -168,7 +174,7 @@ export default function BadgeManagementScreen() {
   }
 
   const handleAward = async () => {
-    if (!selectedMember || !selectedBadge) return
+    if (!selectedMember || !selectedBadge || !profile?.id) return
     setAwarding(true)
     const { error } = await supabase.from('member_badges').upsert({
       profile_id: selectedMember.id,
@@ -476,7 +482,7 @@ export default function BadgeManagementScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <TouchableOpacity style={StyleSheet.absoluteFill} onPress={closeWizard} activeOpacity={1} />
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 16, 16) }]}>
             <View style={styles.sheetHandle} />
             <StepDots current={wizardStep} />
             {wizardStep === 1 && renderStep1()}
