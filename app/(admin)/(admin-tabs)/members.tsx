@@ -14,13 +14,14 @@ import { Colors } from '../../../lib/theme'
 type Member = {
   id: string
   full_name: string
-  role: 'member' | 'parent'
+  role: 'member' | 'parent' | 'admin'
   phone: string | null
   rocznik: number | null
   total_points?: number
+  role_before_admin?: string | null
 }
 
-type Filter = 'member' | 'parent'
+type Filter = 'member' | 'parent' | 'admin'
 
 export default function MembersTab() {
   const router = useRouter()
@@ -38,9 +39,9 @@ export default function MembersTab() {
       const [profilesRes, pointsRes] = await Promise.all([
         supabase
           .from('profiles')
-          .select('id, full_name, role, phone, rocznik')
+          .select('id, full_name, role, phone, rocznik, role_before_admin')
           .eq('parish_id', adminProfile!.parish_id)
-          .in('role', ['member', 'parent'])
+          .in('role', ['member', 'parent', 'admin'])
           .eq('is_active', true)
           .order('full_name'),
         supabase.from('points_summary').select('profile_id, total_points').eq('parish_id', adminProfile!.parish_id),
@@ -88,14 +89,14 @@ export default function MembersTab() {
           )}
         </View>
         <View style={styles.chipRow}>
-          {(['member', 'parent'] as Filter[]).map(f => (
+          {(['member', 'parent', 'admin'] as Filter[]).map(f => (
             <TouchableOpacity
               key={f}
               style={[styles.chip, filter === f && styles.chipActive]}
               onPress={() => setFilter(f)}
             >
               <Text style={[styles.chipText, filter === f && styles.chipTextActive]}>
-                {f === 'member' ? 'Ministranci' : 'Rodzice'}
+                {f === 'member' ? 'Ministranci' : f === 'parent' ? 'Rodzice' : 'Admini'}
               </Text>
             </TouchableOpacity>
           ))}
