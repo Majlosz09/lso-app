@@ -29,7 +29,7 @@ type AwardHistoryRow = {
 }
 
 type AllBadge = {
-  id: string; name: string; icon: string; criteria_key: string; parish_id: string | null
+  id: string; name: string; icon: string; criteria_key: string; parish_id: string | null; type: string
 }
 
 export default function BadgeManagementScreen() {
@@ -63,9 +63,9 @@ export default function BadgeManagementScreen() {
         `)
         .not('awarded_by', 'is', null)
         .order('awarded_at', { ascending: false })
-        .limit(30),
+        .limit(10),
       supabase.from('badge_definitions')
-        .select('id, name, icon, criteria_key, parish_id')
+        .select('id, name, icon, criteria_key, parish_id, type')
         .or(`parish_id.is.null,parish_id.eq.${parishId}`)
         .order('name'),
     ])
