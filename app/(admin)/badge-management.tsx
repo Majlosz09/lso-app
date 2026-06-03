@@ -130,112 +130,124 @@ export default function BadgeManagementScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 20) }]}
-    >
-      {/* Sekcja: Odznaki parafii */}
-      <SectionHeader label="Odznaki parafii" color="#FFC107" />
-      <View style={styles.card}>
-        {customBadges.length === 0 ? (
-          <View style={styles.emptyRow}>
-            <Text style={styles.emptyText}>Brak własnych odznak. Dodaj pierwszą poniżej.</Text>
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom + 72, 80) }]}
+      >
+        {/* Sekcja: Odznaki parafii */}
+        <SectionHeader label="Odznaki parafii" color="#FFC107" />
+        <View style={styles.card}>
+          {customBadges.length === 0 ? (
+            <View style={styles.emptyRow}>
+              <Text style={styles.emptyText}>Brak własnych odznak. Dodaj pierwszą poniżej.</Text>
+            </View>
+          ) : (
+            customBadges.map((b, i) => (
+              <View key={b.id} style={[styles.badgeRow, i < customBadges.length - 1 && styles.rowBorder]}>
+                <View style={styles.badgeIconTile}>
+                  <Text style={styles.badgeIcon}>{b.icon}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.badgeName}>{b.name}</Text>
+                  <Text style={styles.badgeSub}>Przyznawana ręcznie</Text>
+                </View>
+                <TouchableOpacity onPress={() => handleDelete(b)} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={20} color="#DC2626" />
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+          <View style={[styles.addRow, customBadges.length > 0 && styles.rowBorder]}>
+            <TextInput
+              style={[styles.addInput, { width: 52 }]}
+              placeholder="🏅"
+              placeholderTextColor={c.textTertiary}
+              value={newIcon}
+              onChangeText={setNewIcon}
+              maxLength={4}
+            />
+            <TextInput
+              style={[styles.addInput, { flex: 1 }]}
+              placeholder="Nazwa odznaki..."
+              placeholderTextColor={c.textTertiary}
+              value={newName}
+              onChangeText={setNewName}
+              onSubmitEditing={handleAdd}
+              returnKeyType="done"
+            />
+            <TouchableOpacity
+              style={[styles.addButton, (!newName.trim() || adding) && { opacity: 0.4 }]}
+              onPress={handleAdd}
+              disabled={!newName.trim() || adding}
+            >
+              {adding
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Ionicons name="add" size={22} color="#fff" />
+              }
+            </TouchableOpacity>
           </View>
-        ) : (
-          customBadges.map((b, i) => (
-            <View key={b.id} style={[styles.badgeRow, i < customBadges.length - 1 && styles.rowBorder]}>
-              <View style={styles.badgeIconTile}>
+        </View>
+
+        {/* Sekcja: Ostatnio przyznane */}
+        <SectionHeader label="Ostatnio przyznane" color="#30d158" />
+        <View style={styles.card}>
+          {history.length === 0 ? (
+            <View style={styles.emptyRow}>
+              <Text style={styles.emptyText}>Brak ręcznie przyznanych odznak.</Text>
+            </View>
+          ) : (
+            history.map((h, i) => (
+              <View key={h.id} style={[styles.historyRow, i < history.length - 1 && styles.rowBorder]}>
+                <Text style={styles.historyIcon}>{h.badge_definition?.icon ?? '🏅'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.historyBadgeName}>{h.badge_definition?.name ?? ''}</Text>
+                  <Text style={styles.historyMeta}>
+                    {h.profile?.full_name ?? '—'}
+                    {' · '}
+                    {new Date(h.awarded_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </Text>
+                  {h.awarder && (
+                    <Text style={styles.historyAwarder}>przez {h.awarder.full_name}</Text>
+                  )}
+                  {h.note && <Text style={styles.historyNote}>{h.note}</Text>}
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+        {/* Sekcja: Katalog systemowy */}
+        <SectionHeader label="Katalog systemowy" color="#636366" />
+        <View style={styles.card}>
+          {allBadges.filter(b => b.type === 'auto').map((b, i, arr) => (
+            <View key={b.id} style={[styles.catalogRow, i < arr.length - 1 && styles.rowBorder]}>
+              <View style={[styles.badgeIconTile, { backgroundColor: c.inputBg }]}>
                 <Text style={styles.badgeIcon}>{b.icon}</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.badgeName}>{b.name}</Text>
-                <Text style={styles.badgeSub}>Przyznawana ręcznie</Text>
-              </View>
-              <TouchableOpacity onPress={() => handleDelete(b)} hitSlop={8}>
-                <Ionicons name="trash-outline" size={20} color="#DC2626" />
-              </TouchableOpacity>
-            </View>
-          ))
-        )}
-        <View style={[styles.addRow, customBadges.length > 0 && styles.rowBorder]}>
-          <TextInput
-            style={[styles.addInput, { width: 52 }]}
-            placeholder="🏅"
-            placeholderTextColor={c.textTertiary}
-            value={newIcon}
-            onChangeText={setNewIcon}
-            maxLength={4}
-          />
-          <TextInput
-            style={[styles.addInput, { flex: 1 }]}
-            placeholder="Nazwa odznaki..."
-            placeholderTextColor={c.textTertiary}
-            value={newName}
-            onChangeText={setNewName}
-            onSubmitEditing={handleAdd}
-            returnKeyType="done"
-          />
-          <TouchableOpacity
-            style={[styles.addButton, (!newName.trim() || adding) && { opacity: 0.4 }]}
-            onPress={handleAdd}
-            disabled={!newName.trim() || adding}
-          >
-            {adding
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Ionicons name="add" size={22} color="#fff" />
-            }
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Sekcja: Ostatnio przyznane */}
-      <SectionHeader label="Ostatnio przyznane" color="#30d158" />
-      <View style={styles.card}>
-        {history.length === 0 ? (
-          <View style={styles.emptyRow}>
-            <Text style={styles.emptyText}>Brak ręcznie przyznanych odznak.</Text>
-          </View>
-        ) : (
-          history.map((h, i) => (
-            <View key={h.id} style={[styles.historyRow, i < history.length - 1 && styles.rowBorder]}>
-              <Text style={styles.historyIcon}>{h.badge_definition?.icon ?? '🏅'}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.historyBadgeName}>{h.badge_definition?.name ?? ''}</Text>
-                <Text style={styles.historyMeta}>
-                  {h.profile?.full_name ?? '—'}
-                  {' · '}
-                  {new Date(h.awarded_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                <Text style={styles.catalogDesc}>
+                  {BADGE_CATALOG[b.criteria_key] ?? '—'}
                 </Text>
-                {h.awarder && (
-                  <Text style={styles.historyAwarder}>przez {h.awarder.full_name}</Text>
-                )}
-                {h.note && <Text style={styles.historyNote}>{h.note}</Text>}
+              </View>
+              <View style={styles.autoChip}>
+                <Text style={styles.autoChipText}>Auto</Text>
               </View>
             </View>
-          ))
-        )}
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* FAB */}
+      <View style={[styles.fabWrap, { bottom: Math.max(insets.bottom + 16, 24) }]}>
+        <View style={styles.fabTip}>
+          <Text style={styles.fabTipText}>Przyznaj odznakę</Text>
+        </View>
+        <TouchableOpacity style={styles.fab} onPress={() => {}} activeOpacity={0.85}>
+          <Ionicons name="add" size={26} color="#fff" />
+        </TouchableOpacity>
       </View>
-      {/* Sekcja: Katalog systemowy */}
-      <SectionHeader label="Katalog systemowy" color="#636366" />
-      <View style={styles.card}>
-        {allBadges.filter(b => b.type === 'auto').map((b, i, arr) => (
-          <View key={b.id} style={[styles.catalogRow, i < arr.length - 1 && styles.rowBorder]}>
-            <View style={[styles.badgeIconTile, { backgroundColor: c.inputBg }]}>
-              <Text style={styles.badgeIcon}>{b.icon}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.badgeName}>{b.name}</Text>
-              <Text style={styles.catalogDesc}>
-                {BADGE_CATALOG[b.criteria_key] ?? '—'}
-              </Text>
-            </View>
-            <View style={styles.autoChip}>
-              <Text style={styles.autoChipText}>Auto</Text>
-            </View>
-          </View>
-        ))}
-      </View>
-    </ScrollView>
+    </View>
   )
 }
 
@@ -253,6 +265,7 @@ function SectionHeader({ label, color }: { label: string; color: string }) {
 function createStyles(c: Colors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg },
+    scroll: { flex: 1 },
     content: { padding: 16, gap: 12 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
@@ -323,5 +336,22 @@ function createStyles(c: Colors) {
       paddingHorizontal: 6, paddingVertical: 2,
     },
     autoChipText: { fontSize: 10, color: c.textTertiary },
+
+    fabWrap: {
+      position: 'absolute', right: 16,
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+    },
+    fabTip: {
+      backgroundColor: c.surface, borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 6,
+      ...shadow.xs,
+    },
+    fabTipText: { fontSize: 12, color: c.text, fontWeight: '500' },
+    fab: {
+      width: 52, height: 52, borderRadius: 26,
+      backgroundColor: '#FFC107',
+      justifyContent: 'center', alignItems: 'center',
+      ...shadow.xs,
+    },
   })
 }
