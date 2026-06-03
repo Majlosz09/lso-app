@@ -21,6 +21,9 @@ export default function RankManagementScreen() {
   const [loading, setLoading] = useState(true)
   const [newName, setNewName] = useState('')
   const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState('')
+  const [renaming, setRenaming] = useState(false)
 
   const fetchRanks = async () => {
     const parishId = profile?.parish_id
@@ -56,6 +59,33 @@ export default function RankManagementScreen() {
     }
   }
 
+  const handleStartEdit = (rank: RankRow) => {
+    setEditingId(rank.id)
+    setEditingName(rank.name)
+  }
+
+  const handleRename = async () => {
+    if (!editingId || !editingName.trim()) return
+    setRenaming(true)
+    const { error } = await supabase
+      .from('ranks')
+      .update({ name: editingName.trim() })
+      .eq('id', editingId)
+    setRenaming(false)
+    if (error) {
+      Alert.alert('Błąd', error.message)
+    } else {
+      setEditingId(null)
+      setEditingName('')
+      fetchRanks()
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingId(null)
+    setEditingName('')
+  }
+
   const handleDelete = (rank: RankRow) => {
     Alert.alert('Usuń rangę', `Usunąć rangę "${rank.name}"?`, [
       { text: 'Anuluj', style: 'cancel' },
@@ -86,15 +116,41 @@ export default function RankManagementScreen() {
             <View style={[styles.rankIcon, item.is_system && styles.rankIconSystem]}>
               <Ionicons name="ribbon" size={16} color={item.is_system ? c.primary : c.subtext} />
             </View>
-            <Text style={styles.rankName}>{item.name}</Text>
-            {item.is_system ? (
-              <View style={styles.systemBadge}>
-                <Text style={styles.systemBadgeText}>systemowa</Text>
-              </View>
+            {editingId === item.id ? (
+              <>
+                <TextInput
+                  style={styles.editInput}
+                  value={editingName}
+                  onChangeText={setEditingName}
+                  onSubmitEditing={handleRename}
+                  returnKeyType="done"
+                  autoFocus
+                />
+                <TouchableOpacity onPress={handleRename} hitSlop={8} disabled={renaming}>
+                  <Ionicons name="checkmark" size={22} color="#16A34A" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleCancelEdit} hitSlop={8}>
+                  <Ionicons name="close" size={22} color={c.textTertiary} />
+                </TouchableOpacity>
+              </>
             ) : (
-              <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={8}>
-                <Ionicons name="trash-outline" size={20} color="#DC2626" />
-              </TouchableOpacity>
+              <>
+                <Text style={styles.rankName}>{item.name}</Text>
+                {item.is_system ? (
+                  <View style={styles.systemBadge}>
+                    <Text style={styles.systemBadgeText}>systemowa</Text>
+                  </View>
+                ) : (
+                  <View style={styles.rowActions}>
+                    <TouchableOpacity onPress={() => handleStartEdit(item)} hitSlop={8}>
+                      <Ionicons name="pencil-outline" size={20} color={c.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={8}>
+                      <Ionicons name="trash-outline" size={20} color="#DC2626" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
             )}
           </View>
         )}
@@ -149,6 +205,13 @@ function createStyles(c: Colors) {
     },
     rankIconSystem: { backgroundColor: c.primaryAlpha08 },
     rankName: { flex: 1, fontSize: 15, fontWeight: '500', color: c.text },
+    editInput: {
+      flex: 1, fontSize: 15, color: c.text,
+      backgroundColor: c.bg, borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 6,
+      borderWidth: 1, borderColor: c.primary,
+    },
+    rowActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
     systemBadge: {
       backgroundColor: c.primaryAlpha08, borderRadius: 6,
       paddingHorizontal: 7, paddingVertical: 3,
