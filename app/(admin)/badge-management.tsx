@@ -220,7 +220,7 @@ export default function BadgeManagementScreen() {
       <View style={styles.card}>
         {allBadges.filter(b => b.type === 'auto').map((b, i, arr) => (
           <View key={b.id} style={[styles.catalogRow, i < arr.length - 1 && styles.rowBorder]}>
-            <View style={[styles.badgeIconTile, { backgroundColor: '#2c2c2e' }]}>
+            <View style={[styles.badgeIconTile, { backgroundColor: c.inputBg }]}>
               <Text style={styles.badgeIcon}>{b.icon}</Text>
             </View>
             <View style={{ flex: 1 }}>
@@ -282,7 +282,7 @@ function createStyles(c: Colors) {
     },
     badgeIconTile: {
       width: 32, height: 32, borderRadius: 8,
-      backgroundColor: '#FFC10720',
+      backgroundColor: c.goldAlpha,
       justifyContent: 'center', alignItems: 'center',
     },
     badgeIcon: { fontSize: 18 },
