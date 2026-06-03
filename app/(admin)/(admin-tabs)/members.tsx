@@ -107,6 +107,49 @@ export default function MembersTab() {
     )
   }
 
+  const handleOpenAssignModal = async () => {
+    setAssignLoading(true)
+    setAssignModalVisible(true)
+    setCandidateSearch('')
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, role, phone, rocznik, role_before_admin')
+      .eq('parish_id', adminProfile!.parish_id)
+      .in('role', ['member', 'parent'])
+      .eq('is_active', true)
+      .order('full_name')
+    setCandidates(data ?? [])
+    setAssignLoading(false)
+  }
+
+  const handleGrantAdmin = (candidate: Member) => {
+    Alert.alert(
+      'Nadaj uprawnienia admina',
+      `Nadać uprawnienia administratora dla ${candidate.full_name}?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Nadaj',
+          onPress: async () => {
+            const { error } = await supabase
+              .from('profiles')
+              .update({ role: 'admin', role_before_admin: candidate.role })
+              .eq('id', candidate.id)
+
+            if (error) {
+              Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+            } else {
+              setAssignModalVisible(false)
+              setCandidates([])
+              setMembers(prev => [...prev, { ...candidate, role: 'admin', role_before_admin: candidate.role }])
+              Toast.show({ type: 'success', text1: 'Uprawnienia nadane', text2: `${candidate.full_name} jest teraz administratorem` })
+            }
+          },
+        },
+      ]
+    )
+  }
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
     return members.filter(
@@ -220,6 +263,14 @@ export default function MembersTab() {
             )
           )}
           contentContainerStyle={{ padding: 16, gap: 8 }}
+          ListFooterComponent={
+            filter === 'admin' ? (
+              <TouchableOpacity style={styles.assignBtn} onPress={handleOpenAssignModal}>
+                <Ionicons name="person-add-outline" size={18} color="#fff" />
+                <Text style={styles.assignBtnText}>Przydziel prawa admina</Text>
+              </TouchableOpacity>
+            ) : null
+          }
         />
       )}
     </View>
@@ -264,6 +315,11 @@ function createStyles(c: Colors) {
     revokeBtn: {
       padding: 6,
     },
+    assignBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: c.primary, borderRadius: 12, padding: 14, marginTop: 8,
+    },
+    assignBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
     empty: { alignItems: 'center', marginTop: 60, gap: 12, paddingHorizontal: 32 },
     emptyText: { color: c.textTertiary, fontSize: 15 },
     emptyHint: { fontSize: 13, color: c.textTertiary, textAlign: 'center' },
