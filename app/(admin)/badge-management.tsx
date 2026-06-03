@@ -167,6 +167,25 @@ export default function BadgeManagementScreen() {
     setMemberSearch('')
   }
 
+  const handleAward = async () => {
+    if (!selectedMember || !selectedBadge) return
+    setAwarding(true)
+    const { error } = await supabase.from('member_badges').upsert({
+      profile_id: selectedMember.id,
+      badge_definition_id: selectedBadge.id,
+      awarded_by: profile?.id,
+      note: awardNote.trim() || null,
+      is_active: true,
+    }, { onConflict: 'profile_id,badge_definition_id' })
+    setAwarding(false)
+    if (error) {
+      Alert.alert('Błąd', error.message)
+      return
+    }
+    closeWizard()
+    fetchData()
+  }
+
   const filteredMembers = members.filter(m =>
     m.full_name.toLowerCase().includes(memberSearch.toLowerCase())
   )
@@ -278,7 +297,50 @@ export default function BadgeManagementScreen() {
       </View>
     </View>
   )
-  const renderStep3 = () => <View />
+  const renderStep3 = () => (
+    <View>
+      <Text style={styles.stepTitle}>KROK 3 / 3 — Potwierdź</Text>
+
+      <View style={styles.summaryCard}>
+        <Text style={{ fontSize: 32 }}>{selectedBadge?.icon}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.summaryBadgeName}>{selectedBadge?.name}</Text>
+          <Text style={styles.summaryFor}>
+            dla: <Text style={{ color: c.text, fontWeight: '700' }}>{selectedMember?.full_name}</Text>
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.noteLabel}>Notatka (opcjonalna)</Text>
+      <TextInput
+        style={styles.noteInput}
+        placeholder="Powód wyróżnienia..."
+        placeholderTextColor={c.textTertiary}
+        value={awardNote}
+        onChangeText={setAwardNote}
+        multiline
+        maxLength={200}
+        returnKeyType="done"
+        blurOnSubmit
+      />
+
+      <View style={styles.btnRow}>
+        <TouchableOpacity style={styles.btnBack} onPress={() => setWizardStep(2)}>
+          <Text style={styles.btnBackText}>← Wstecz</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.btnNext, awarding && { opacity: 0.6 }]}
+          onPress={handleAward}
+          disabled={awarding}
+        >
+          {awarding
+            ? <ActivityIndicator size="small" color="#000" />
+            : <Text style={styles.btnNextText}>🏅 Przyznaj</Text>
+          }
+        </TouchableOpacity>
+      </View>
+    </View>
+  )
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
@@ -607,5 +669,26 @@ function createStyles(c: Colors) {
       backgroundColor: '#FFC107',
     },
     btnNextText: { fontSize: 14, color: '#000', fontWeight: '700' },
+
+    summaryCard: {
+      flexDirection: 'row', alignItems: 'center', gap: 14,
+      backgroundColor: c.bg, borderRadius: 12,
+      padding: 14, marginBottom: 14,
+      borderWidth: 1, borderColor: '#FFC10740',
+    },
+    summaryBadgeName: { fontSize: 16, fontWeight: '700', color: c.text },
+    summaryFor: { fontSize: 12, color: c.textTertiary, marginTop: 3 },
+    noteLabel: {
+      fontSize: 11, fontWeight: '700', color: c.textTertiary,
+      textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6,
+    },
+    noteInput: {
+      backgroundColor: c.bg, borderRadius: 10,
+      paddingHorizontal: 12, paddingVertical: 10,
+      fontSize: 14, color: c.text,
+      borderWidth: 1, borderColor: c.border,
+      minHeight: 72, textAlignVertical: 'top',
+      marginBottom: 4,
+    },
   })
 }
