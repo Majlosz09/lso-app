@@ -91,6 +91,16 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Czat',
+          headerRight,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubbles-outline" size={size} color={color} />
+          ),
+        }}
+      />
       <Tabs.Screen name="profile" options={{ href: null, title: 'Profil' }} />
       <Tabs.Screen name="badge-catalog" options={{ href: null, title: 'Katalog odznak' }} />
       <Tabs.Screen name="member-profile" options={{ href: null, title: 'Profil ministranta' }} />
