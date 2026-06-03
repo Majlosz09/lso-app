@@ -59,8 +59,7 @@ export default function ChannelScreen() {
 
   useEffect(() => { markRead() }, [markRead])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (messages.length > 0) markRead() }, [messages[0]?.id])
+  useEffect(() => { if (messages.length > 0) markRead() }, [messages[0]?.id, markRead])
 
   const handleSend = async () => {
     if (!text.trim() || !profile?.id || sending) return
@@ -142,16 +141,18 @@ export default function ChannelScreen() {
               onLongPress={() => handleLongPress(item.id, item.sender_id)}
               activeOpacity={0.85}
             >
-              {showSender && (
-                <Text style={styles.senderName}>{item.sender?.full_name}</Text>
-              )}
-              <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
-                <Text style={[styles.messageText, isOwn && styles.messageTextOwn]}>
-                  {item.content}
-                </Text>
-                <Text style={[styles.messageTime, isOwn && styles.messageTimeOwn]}>
-                  {new Date(item.created_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
+              <View style={{ flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start' }}>
+                {showSender && (
+                  <Text style={styles.senderName}>{item.sender?.full_name}</Text>
+                )}
+                <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
+                  <Text style={[styles.messageText, isOwn && styles.messageTextOwn]}>
+                    {item.content}
+                  </Text>
+                  <Text style={[styles.messageTime, isOwn && styles.messageTimeOwn]}>
+                    {new Date(item.created_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
               </View>
             </TouchableOpacity>
           )
