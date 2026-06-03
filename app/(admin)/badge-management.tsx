@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator
+  TextInput, Alert, ActivityIndicator, Modal, FlatList,
+  KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -32,6 +33,11 @@ type AllBadge = {
   id: string; name: string; icon: string; criteria_key: string; parish_id: string | null; type: string
 }
 
+type Member = {
+  id: string
+  full_name: string
+}
+
 export default function BadgeManagementScreen() {
   const { profile } = useAuthStore()
   const parishId = profile?.parish_id!
@@ -46,6 +52,16 @@ export default function BadgeManagementScreen() {
   const [newName, setNewName] = useState('')
   const [newIcon, setNewIcon] = useState('')
   const [adding, setAdding] = useState(false)
+
+  const [wizardVisible, setWizardVisible] = useState(false)
+  const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1)
+  const [members, setMembers] = useState<Member[]>([])
+  const [membersLoading, setMembersLoading] = useState(false)
+  const [memberSearch, setMemberSearch] = useState('')
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  const [selectedBadge, setSelectedBadge] = useState<AllBadge | null>(null)
+  const [awardNote, setAwardNote] = useState('')
+  const [awarding, setAwarding] = useState(false)
 
   const fetchData = async () => {
     const [customRes, historyRes, allBadgesRes] = await Promise.all([
@@ -123,6 +139,28 @@ export default function BadgeManagementScreen() {
         },
       ]
     )
+  }
+
+  const fetchMembers = async () => {
+    setMembersLoading(true)
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('parish_id', parishId)
+      .eq('role', 'member')
+      .order('full_name')
+    if (error) console.error('[badge-management] members error:', error)
+    setMembers(data ?? [])
+    setMembersLoading(false)
+  }
+
+  const closeWizard = () => {
+    setWizardVisible(false)
+    setWizardStep(1)
+    setSelectedMember(null)
+    setSelectedBadge(null)
+    setAwardNote('')
+    setMemberSearch('')
   }
 
   if (loading) {
@@ -243,10 +281,49 @@ export default function BadgeManagementScreen() {
         <View style={styles.fabTip}>
           <Text style={styles.fabTipText}>Przyznaj odznakę</Text>
         </View>
-        <TouchableOpacity style={styles.fab} onPress={() => {}} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.fab} onPress={() => { setWizardVisible(true); fetchMembers() }} activeOpacity={0.85}>
           <Ionicons name="add" size={26} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={wizardVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={closeWizard}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={closeWizard} activeOpacity={1} />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={{ color: '#fff' }}>Wizard placeholder</Text>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </View>
+  )
+}
+
+function StepDots({ current }: { current: 1 | 2 | 3 }) {
+  const dot = (n: number) => {
+    const isActive = n === current
+    const isDone = n < current
+    return (
+      <View
+        key={n}
+        style={{
+          width: isActive ? 20 : 7, height: 7, borderRadius: 4,
+          backgroundColor: isDone ? '#30d158' : isActive ? '#FFC107' : '#3a3a3c',
+        }}
+      />
+    )
+  }
+  return (
+    <View style={{ flexDirection: 'row', gap: 4, justifyContent: 'center', marginBottom: 8 }}>
+      {[1, 2, 3].map(dot)}
     </View>
   )
 }
@@ -352,6 +429,22 @@ function createStyles(c: Colors) {
       backgroundColor: '#FFC107',
       justifyContent: 'center', alignItems: 'center',
       ...shadow.xs,
+    },
+
+    modalOverlay: {
+      flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'flex-end',
+    },
+    sheet: {
+      backgroundColor: c.surface,
+      borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      paddingHorizontal: 16, paddingBottom: 16,
+      paddingTop: 12,
+      maxHeight: '85%',
+    },
+    sheetHandle: {
+      width: 36, height: 4, borderRadius: 2,
+      backgroundColor: c.border, alignSelf: 'center', marginBottom: 14,
     },
   })
 }
