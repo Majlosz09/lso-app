@@ -135,7 +135,7 @@ export default function BadgeManagementScreen() {
       contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 20) }]}
     >
       {/* Sekcja: Odznaki parafii */}
-      <Text style={styles.sectionLabel}>ODZNAKI PARAFII</Text>
+      <SectionHeader label="Odznaki parafii" color="#FFC107" />
       <View style={styles.card}>
         {customBadges.length === 0 ? (
           <View style={styles.emptyRow}>
@@ -144,16 +144,19 @@ export default function BadgeManagementScreen() {
         ) : (
           customBadges.map((b, i) => (
             <View key={b.id} style={[styles.badgeRow, i < customBadges.length - 1 && styles.rowBorder]}>
-              <Text style={styles.badgeIcon}>{b.icon}</Text>
-              <Text style={styles.badgeName}>{b.name}</Text>
+              <View style={styles.badgeIconTile}>
+                <Text style={styles.badgeIcon}>{b.icon}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.badgeName}>{b.name}</Text>
+                <Text style={styles.badgeSub}>Przyznawana ręcznie</Text>
+              </View>
               <TouchableOpacity onPress={() => handleDelete(b)} hitSlop={8}>
                 <Ionicons name="trash-outline" size={20} color="#DC2626" />
               </TouchableOpacity>
             </View>
           ))
         )}
-
-        {/* Formularz dodawania */}
         <View style={[styles.addRow, customBadges.length > 0 && styles.rowBorder]}>
           <TextInput
             style={[styles.addInput, { width: 52 }]}
@@ -185,8 +188,8 @@ export default function BadgeManagementScreen() {
         </View>
       </View>
 
-      {/* Sekcja: Historia przyznanych */}
-      <Text style={[styles.sectionLabel, { marginTop: 8 }]}>HISTORIA PRZYZNANYCH</Text>
+      {/* Sekcja: Ostatnio przyznane */}
+      <SectionHeader label="Ostatnio przyznane" color="#30d158" />
       <View style={styles.card}>
         {history.length === 0 ? (
           <View style={styles.emptyRow}>
@@ -212,22 +215,38 @@ export default function BadgeManagementScreen() {
           ))
         )}
       </View>
-      {/* Sekcja: Katalog odznak */}
-      <Text style={[styles.sectionLabel, { marginTop: 8 }]}>KATALOG ODZNAK</Text>
+      {/* Sekcja: Katalog systemowy */}
+      <SectionHeader label="Katalog systemowy" color="#636366" />
       <View style={styles.card}>
-        {allBadges.map((b, i) => (
-          <View key={b.id} style={[styles.catalogRow, i < allBadges.length - 1 && styles.rowBorder]}>
-            <Text style={styles.badgeIcon}>{b.icon}</Text>
+        {allBadges.filter(b => b.type === 'auto').map((b, i, arr) => (
+          <View key={b.id} style={[styles.catalogRow, i < arr.length - 1 && styles.rowBorder]}>
+            <View style={[styles.badgeIconTile, { backgroundColor: '#2c2c2e' }]}>
+              <Text style={styles.badgeIcon}>{b.icon}</Text>
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.badgeName}>{b.name}</Text>
               <Text style={styles.catalogDesc}>
-                {BADGE_CATALOG[b.criteria_key] ?? 'Przyznawana ręcznie przez animatora'}
+                {BADGE_CATALOG[b.criteria_key] ?? '—'}
               </Text>
+            </View>
+            <View style={styles.autoChip}>
+              <Text style={styles.autoChipText}>Auto</Text>
             </View>
           </View>
         ))}
       </View>
     </ScrollView>
+  )
+}
+
+function SectionHeader({ label, color }: { label: string; color: string }) {
+  const { colors: c } = useTheme()
+  const styles = useMemo(() => createStyles(c), [c])
+  return (
+    <View style={styles.sectionHeaderRow}>
+      <View style={[styles.sectionAccent, { backgroundColor: color }]} />
+      <Text style={styles.sectionLabel}>{label}</Text>
+    </View>
   )
 }
 
@@ -237,10 +256,16 @@ function createStyles(c: Colors) {
     content: { padding: 16, gap: 12 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
+    sectionHeaderRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingHorizontal: 4, paddingBottom: 6,
+    },
+    sectionAccent: {
+      width: 3, height: 13, borderRadius: 2,
+    },
     sectionLabel: {
       fontSize: 12, fontWeight: '700', color: c.textTertiary,
       textTransform: 'uppercase', letterSpacing: 0.8,
-      paddingHorizontal: 4, paddingBottom: 6,
     },
     card: {
       backgroundColor: c.surface, borderRadius: 14,
@@ -253,10 +278,16 @@ function createStyles(c: Colors) {
 
     badgeRow: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
-      paddingHorizontal: 16, paddingVertical: 14,
+      paddingHorizontal: 16, paddingVertical: 12,
     },
-    badgeIcon: { fontSize: 22 },
-    badgeName: { flex: 1, fontSize: 15, fontWeight: '500', color: c.text },
+    badgeIconTile: {
+      width: 32, height: 32, borderRadius: 8,
+      backgroundColor: '#FFC10720',
+      justifyContent: 'center', alignItems: 'center',
+    },
+    badgeIcon: { fontSize: 18 },
+    badgeName: { fontSize: 15, fontWeight: '500', color: c.text },
+    badgeSub: { fontSize: 11, color: c.textTertiary, marginTop: 1 },
 
     addRow: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -283,9 +314,14 @@ function createStyles(c: Colors) {
     historyNote: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontStyle: 'italic' },
 
     catalogRow: {
-      flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+      flexDirection: 'row', alignItems: 'center', gap: 12,
       paddingHorizontal: 16, paddingVertical: 12,
     },
     catalogDesc: { fontSize: 12, color: c.subtext, marginTop: 2 },
+    autoChip: {
+      backgroundColor: c.primarySurface, borderRadius: 5,
+      paddingHorizontal: 6, paddingVertical: 2,
+    },
+    autoChipText: { fontSize: 10, color: c.textTertiary },
   })
 }
