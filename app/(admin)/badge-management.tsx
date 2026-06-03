@@ -203,7 +203,7 @@ export default function BadgeManagementScreen() {
               >
                 <View style={styles.memberAvatar}>
                   <Text style={styles.memberAvatarText}>
-                    {item.full_name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
+                    {item.full_name.split(' ').filter(w => w.length > 0).map((w: string) => w[0]).slice(0, 2).join('')}
                   </Text>
                 </View>
                 <Text style={[styles.pickerRowName, isSelected && { color: '#FFC107' }]}>
