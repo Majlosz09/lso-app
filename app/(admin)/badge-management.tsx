@@ -242,6 +242,11 @@ export default function BadgeManagementScreen() {
         data={manualBadges}
         keyExtractor={b => b.id}
         style={styles.pickerList}
+        ListEmptyComponent={
+          <View style={styles.emptyRow}>
+            <Text style={styles.emptyText}>Brak odznak ręcznych. Dodaj własną odznakę na ekranie Odznaki parafii.</Text>
+          </View>
+        }
         renderItem={({ item }) => {
           const isSelected = selectedBadge?.id === item.id
           return (
