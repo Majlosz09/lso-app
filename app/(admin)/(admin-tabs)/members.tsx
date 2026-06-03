@@ -78,7 +78,12 @@ export default function MembersTab() {
           text: 'Usuń',
           style: 'destructive',
           onPress: async () => {
-            const { count } = await supabase
+              if (item.id === adminProfile!.id) {
+                Alert.alert('Błąd', 'Nie możesz usunąć własnych uprawnień administratora.')
+                return
+              }
+
+              const { count } = await supabase
               .from('profiles')
               .select('id', { count: 'exact', head: true })
               .eq('parish_id', adminProfile!.parish_id)
@@ -98,7 +103,11 @@ export default function MembersTab() {
             if (error) {
               Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
             } else {
-              setMembers(prev => prev.filter(m => m.id !== item.id))
+              setMembers(prev => prev.map(m =>
+                m.id === item.id
+                  ? { ...m, role: restoredRole as Member['role'], role_before_admin: null }
+                  : m
+              ))
               Toast.show({ type: 'success', text1: 'Uprawnienia usunięte', text2: `${item.full_name} jest teraz ${restoredRole === 'parent' ? 'rodzicem' : 'ministrantem'}` })
             }
           },
@@ -111,13 +120,16 @@ export default function MembersTab() {
     setAssignLoading(true)
     setAssignModalVisible(true)
     setCandidateSearch('')
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name, role, phone, rocznik, role_before_admin')
       .eq('parish_id', adminProfile!.parish_id)
       .in('role', ['member', 'parent'])
       .eq('is_active', true)
       .order('full_name')
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: 'Nie udało się załadować listy członków.' })
+    }
     setCandidates(data ?? [])
     setAssignLoading(false)
   }
@@ -202,7 +214,7 @@ export default function MembersTab() {
               <Text style={styles.emptyText}>
                 {search !== '' ? 'Brak wyników wyszukiwania' : 'Brak użytkowników'}
               </Text>
-              {search === '' && (
+              {search === '' && filter !== 'admin' && (
                 <>
                   <Text style={styles.emptyHint}>
                     Zaproś ministrantów kodem:{' '}
