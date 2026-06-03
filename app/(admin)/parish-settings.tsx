@@ -40,6 +40,8 @@ export default function ParishSettingsScreen() {
   const [lng, setLng] = useState(parish?.lng?.toString() ?? '')
   const [gpsRadius, setGpsRadius] = useState(parish?.gps_radius?.toString() ?? '200')
   const [savingAttendance, setSavingAttendance] = useState(false)
+  const [allowMemberDm, setAllowMemberDm] = useState(parish?.allow_member_dm ?? false)
+  const [savingDm, setSavingDm] = useState(false)
   const [qrModalVisible, setQrModalVisible] = useState(false)
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -60,6 +62,7 @@ export default function ParishSettingsScreen() {
       setLat(parish.lat?.toString() ?? '')
       setLng(parish.lng?.toString() ?? '')
       setGpsRadius(parish.gps_radius?.toString() ?? '200')
+      setAllowMemberDm(parish.allow_member_dm ?? false)
     }
   }, [parish])
 
@@ -106,6 +109,18 @@ export default function ParishSettingsScreen() {
     if (error) { Alert.alert('Błąd', error.message); return }
     try { await fetchProfile() } catch (e) { console.error('[save] fetchProfile error:', e) }
     showToast('Ustawienia weryfikacji obecności zostały zaktualizowane.')
+  }
+
+  const handleSaveDm = async () => {
+    setSavingDm(true)
+    const { error } = await supabase
+      .from('parishes')
+      .update({ allow_member_dm: allowMemberDm })
+      .eq('id', parish?.id)
+    setSavingDm(false)
+    if (error) { Alert.alert('Błąd', error.message); return }
+    await fetchProfile()
+    showToast('Ustawienia czatu zostały zaktualizowane.')
   }
 
   const handleRegenerate = () => {
@@ -234,6 +249,45 @@ export default function ParishSettingsScreen() {
             {regenerating
               ? <ActivityIndicator color="#DC2626" size="small" />
               : <><Ionicons name="refresh-outline" size={16} color={c.danger} /><Text style={styles.regenButtonText}>Regeneruj kod</Text></>
+            }
+          </TouchableOpacity>
+        </View>
+
+        {/* Czat */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Czat</Text>
+          <Text style={styles.sectionSub}>
+            Zdecyduj czy ministranci mogą pisać prywatne wiadomości między sobą.
+            Admini zawsze mogą pisać z każdym.
+          </Text>
+          <TouchableOpacity
+            style={[styles.modeRow, allowMemberDm && { borderColor: c.primary, backgroundColor: c.primary + '0a' }]}
+            onPress={() => setAllowMemberDm(prev => !prev)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.modeIcon, { backgroundColor: c.primary + '18' }]}>
+              <Ionicons name="chatbubble-outline" size={20} color={c.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.modeLabel, allowMemberDm && { color: c.primary }]}>
+                Prywatne wiadomości między ministrantami
+              </Text>
+              <Text style={styles.modeSub}>
+                {allowMemberDm ? 'Włączone — ministranci mogą pisać między sobą' : 'Wyłączone — tylko admin może inicjować DM'}
+              </Text>
+            </View>
+            <View style={[styles.radioOuter, allowMemberDm && { borderColor: c.primary }]}>
+              {allowMemberDm && <View style={[styles.radioInner, { backgroundColor: c.primary }]} />}
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.saveButton, savingDm && { opacity: 0.6 }]}
+            onPress={handleSaveDm}
+            disabled={savingDm}
+          >
+            {savingDm
+              ? <ActivityIndicator color="#fff" size="small" />
+              : <Text style={styles.saveButtonText}>Zapisz ustawienia czatu</Text>
             }
           </TouchableOpacity>
         </View>
