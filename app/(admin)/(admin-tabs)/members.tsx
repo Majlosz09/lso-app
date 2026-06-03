@@ -176,29 +176,48 @@ export default function MembersTab() {
             </View>
           }
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() => router.push(`/(admin)/member-detail?id=${item.id}`)}
-              activeOpacity={0.75}
-            >
-              <View style={styles.avatar}>
-                <Ionicons name="person" size={18} color={c.primary} />
-              </View>
-              <View style={styles.rowInfo}>
-                <Text style={styles.name}>{item.full_name}</Text>
-                <Text style={styles.sub}>
-                  {item.phone ?? 'Brak telefonu'}
-                  {item.role === 'member' && item.rocznik ? ` · rocznik ${item.rocznik}` : ''}
-                </Text>
-              </View>
-              {item.role === 'member' && (
-                <View style={styles.pointsBadge}>
-                  <Ionicons name="trophy-outline" size={12} color={c.gold} />
-                  <Text style={styles.pointsText}>{item.total_points ?? 0}</Text>
+            filter === 'admin' ? (
+              <View style={styles.row}>
+                <View style={styles.avatar}>
+                  <Ionicons name="shield-checkmark" size={18} color={c.primary} />
                 </View>
-              )}
-              <Ionicons name="chevron-forward" size={16} color={c.border} />
-            </TouchableOpacity>
+                <View style={styles.rowInfo}>
+                  <Text style={styles.name}>{item.full_name}</Text>
+                  <Text style={styles.sub}>{item.phone ?? 'Brak telefonu'}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleRevokeAdmin(item)}
+                  hitSlop={8}
+                  style={styles.revokeBtn}
+                >
+                  <Ionicons name="person-remove-outline" size={20} color="#DC2626" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.row}
+                onPress={() => router.push(`/(admin)/member-detail?id=${item.id}`)}
+                activeOpacity={0.75}
+              >
+                <View style={styles.avatar}>
+                  <Ionicons name="person" size={18} color={c.primary} />
+                </View>
+                <View style={styles.rowInfo}>
+                  <Text style={styles.name}>{item.full_name}</Text>
+                  <Text style={styles.sub}>
+                    {item.phone ?? 'Brak telefonu'}
+                    {item.role === 'member' && item.rocznik ? ` · rocznik ${item.rocznik}` : ''}
+                  </Text>
+                </View>
+                {item.role === 'member' && (
+                  <View style={styles.pointsBadge}>
+                    <Ionicons name="trophy-outline" size={12} color={c.gold} />
+                    <Text style={styles.pointsText}>{item.total_points ?? 0}</Text>
+                  </View>
+                )}
+                <Ionicons name="chevron-forward" size={16} color={c.border} />
+              </TouchableOpacity>
+            )
           )}
           contentContainerStyle={{ padding: 16, gap: 8 }}
         />
@@ -242,6 +261,9 @@ function createStyles(c: Colors) {
       backgroundColor: c.gold + '15', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3,
     },
     pointsText: { fontSize: 12, fontWeight: '700', color: c.gold },
+    revokeBtn: {
+      padding: 6,
+    },
     empty: { alignItems: 'center', marginTop: 60, gap: 12, paddingHorizontal: 32 },
     emptyText: { color: c.textTertiary, fontSize: 15 },
     emptyHint: { fontSize: 13, color: c.textTertiary, textAlign: 'center' },
