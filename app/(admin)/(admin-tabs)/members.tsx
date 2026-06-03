@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, FlatList, StyleSheet,
-  TouchableOpacity, TextInput, ActivityIndicator
+  TouchableOpacity, TextInput, ActivityIndicator, Alert
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -10,6 +10,7 @@ import { useAuthStore } from '../../../stores/authStore'
 import { shadow } from '../../../lib/shadows'
 import { useTheme } from '../../../lib/ThemeContext'
 import { Colors } from '../../../lib/theme'
+import Toast from 'react-native-toast-message'
 
 type Member = {
   id: string
@@ -30,6 +31,10 @@ export default function MembersTab() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<Filter>('member')
+  const [assignModalVisible, setAssignModalVisible] = useState(false)
+  const [candidateSearch, setCandidateSearch] = useState('')
+  const [candidates, setCandidates] = useState<Member[]>([])
+  const [assignLoading, setAssignLoading] = useState(false)
 
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
@@ -62,6 +67,45 @@ export default function MembersTab() {
     }
     fetchAll()
   }, [])
+
+  const handleRevokeAdmin = (item: Member) => {
+    Alert.alert(
+      'Usuń uprawnienia admina',
+      `Czy na pewno chcesz usunąć uprawnienia administratora dla ${item.full_name}?`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Usuń',
+          style: 'destructive',
+          onPress: async () => {
+            const { count } = await supabase
+              .from('profiles')
+              .select('id', { count: 'exact', head: true })
+              .eq('parish_id', adminProfile!.parish_id)
+              .eq('role', 'admin')
+
+            if ((count ?? 0) <= 1) {
+              Alert.alert('Błąd', 'Nie można usunąć jedynego administratora parafii.')
+              return
+            }
+
+            const restoredRole = item.role_before_admin ?? 'member'
+            const { error } = await supabase
+              .from('profiles')
+              .update({ role: restoredRole, role_before_admin: null })
+              .eq('id', item.id)
+
+            if (error) {
+              Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+            } else {
+              setMembers(prev => prev.filter(m => m.id !== item.id))
+              Toast.show({ type: 'success', text1: 'Uprawnienia usunięte', text2: `${item.full_name} jest teraz ${restoredRole === 'parent' ? 'rodzicem' : 'ministrantem'}` })
+            }
+          },
+        },
+      ]
+    )
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
