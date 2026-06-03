@@ -22,11 +22,6 @@ const FEATURES = [
     label: 'System punktacji',
     sub: 'Rankingi i historia punktów motywujące do służby',
   },
-  {
-    icon: 'swap-horizontal-outline' as const,
-    label: 'Zastępstwa',
-    sub: 'Łatwa wymiana służb między ministrantami',
-  },
 ]
 
 export default function WelcomeScreen() {
