@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  Modal, TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
+  Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform,
   RefreshControl, ScrollView
 } from 'react-native'
+import Toast from 'react-native-toast-message'
+import { ConfirmDialog } from '../../../components/ConfirmDialog'
 import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams } from 'expo-router'
 import { supabase } from '../../../lib/supabase'
@@ -28,6 +30,7 @@ export default function AnnouncementsTab() {
   const [audience, setAudience] = useState('all')
   const [ranks, setRanks] = useState<Rank[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [deleteDialog, setDeleteDialog] = useState<{ id: string; title: string } | null>(null)
 
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
@@ -62,8 +65,8 @@ export default function AnnouncementsTab() {
   const onRefresh = () => { setRefreshing(true); fetchAnnouncements() }
 
   const handleAdd = async () => {
-    if (!title.trim()) { Alert.alert('Błąd', 'Podaj tytuł ogłoszenia.'); return }
-    if (!content.trim()) { Alert.alert('Błąd', 'Podaj treść ogłoszenia.'); return }
+    if (!title.trim()) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Podaj tytuł ogłoszenia.' }); return }
+    if (!content.trim()) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Podaj treść ogłoszenia.' }); return }
 
     setSubmitting(true)
     const { error } = await supabase.from('announcements').insert({
@@ -77,25 +80,26 @@ export default function AnnouncementsTab() {
     setSubmitting(false)
 
     if (error) {
-      Alert.alert('Błąd', error.message)
+      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
     } else {
       setTitle(''); setContent(''); setPinned(false); setAudience('all')
       setModalVisible(false)
       fetchAnnouncements()
+      Toast.show({ type: 'success', text1: 'Ogłoszenie opublikowane' })
     }
   }
 
   const handleDelete = (id: string, annoTitle: string) => {
-    Alert.alert('Usuń ogłoszenie', `Usunąć "${annoTitle}"?`, [
-      { text: 'Anuluj', style: 'cancel' },
-      {
-        text: 'Usuń', style: 'destructive', onPress: async () => {
-          const { error } = await supabase.from('announcements').delete().eq('id', id)
-          if (error) Alert.alert('Błąd', error.message)
-          else setAnnouncements(prev => prev.filter(a => a.id !== id))
-        },
-      },
-    ])
+    setDeleteDialog({ id, title: annoTitle })
+  }
+
+  const doDelete = async () => {
+    if (!deleteDialog) return
+    const { id } = deleteDialog
+    setDeleteDialog(null)
+    const { error } = await supabase.from('announcements').delete().eq('id', id)
+    if (error) Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+    else setAnnouncements(prev => prev.filter(a => a.id !== id))
   }
 
   return (
@@ -169,6 +173,16 @@ export default function AnnouncementsTab() {
           contentContainerStyle={{ padding: 16, gap: 10 }}
         />
       )}
+
+      <ConfirmDialog
+        visible={!!deleteDialog}
+        title="Usuń ogłoszenie"
+        message={`Usunąć "${deleteDialog?.title}"?`}
+        confirmText="Usuń"
+        destructive
+        onConfirm={doDelete}
+        onCancel={() => setDeleteDialog(null)}
+      />
 
       <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
         <KeyboardAvoidingView

@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  FlatList, ScrollView, ActivityIndicator, Alert,
-  KeyboardAvoidingView, Platform
+  FlatList, ScrollView, ActivityIndicator,
+  KeyboardAvoidingView, Platform, Keyboard
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../../lib/supabase'
@@ -13,6 +14,7 @@ import { useRealtimeTable } from '../../../hooks/useRealtimeTable'
 import { shadow } from '../../../lib/shadows'
 import { useTheme } from '../../../lib/ThemeContext'
 import { Colors } from '../../../lib/theme'
+import { ConfirmDialog } from '../../../components/ConfirmDialog'
 
 type RankedMember = { id: string; full_name: string; total_points: number; rank: number }
 
@@ -34,6 +36,7 @@ export default function PointsTab() {
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState(false)
 
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
@@ -89,37 +92,34 @@ export default function PointsTab() {
     m.full_name.toLowerCase().includes(search.toLowerCase())
   )
 
-  const handleSubmit = async () => {
-    if (!selected) { Alert.alert('Błąd', 'Wybierz ministranta.'); return }
+  const handleSubmit = () => {
+    if (!selected) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Wybierz ministranta.' }); return }
     const amt = parseInt(amount)
-    if (isNaN(amt) || amt === 0) {
-      Alert.alert('Błąd', 'Wpisz prawidłową liczbę punktów (np. 1 lub -1).')
-      return
-    }
-    if (!reason.trim()) { Alert.alert('Błąd', 'Wpisz powód.'); return }
+    if (isNaN(amt) || amt === 0) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Wpisz prawidłową liczbę punktów (np. 1 lub -1).' }); return }
+    if (!reason.trim()) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Wpisz powód.' }); return }
+    Keyboard.dismiss()
+    setConfirmDialog(true)
+  }
 
+  const doSubmit = async () => {
+    setConfirmDialog(false)
+    const amt = parseInt(amount)
+    const sign = amt > 0 ? '+' : ''
     setSubmitting(true)
     const { error } = await supabase.from('points').insert({
-      profile_id: selected.id,
+      profile_id: selected!.id,
       amount: amt,
       reason: reason.trim(),
       awarded_by: adminProfile?.id,
       parish_id: adminProfile?.parish_id,
     })
     setSubmitting(false)
-
     if (error) {
-      Alert.alert('Błąd', error.message)
+      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
     } else {
-      const sign = amt > 0 ? '+' : ''
-      Alert.alert('Sukces', `Przyznano ${sign}${amt} pkt dla ${selected.full_name}!`, [
-        {
-          text: 'OK', onPress: () => {
-            setSelected(null); setAmount(''); setReason(''); setSearch('')
-            loadRanking()
-          }
-        },
-      ])
+      Toast.show({ type: 'success', text1: `Przyznano ${sign}${amt} pkt`, text2: `dla ${selected!.full_name}` })
+      setSelected(null); setAmount(''); setReason(''); setSearch('')
+      loadRanking()
     }
   }
 
@@ -296,6 +296,14 @@ export default function PointsTab() {
           </ScrollView>
         </KeyboardAvoidingView>
       )}
+      <ConfirmDialog
+        visible={confirmDialog}
+        title="Przyznaj punkty"
+        message={`Przyznać ${parseInt(amount) > 0 ? '+' : ''}${parseInt(amount) || 0} pkt dla ${selected?.full_name ?? ''}?`}
+        confirmText="Przyznaj"
+        onConfirm={doSubmit}
+        onCancel={() => setConfirmDialog(false)}
+      />
     </View>
   )
 }

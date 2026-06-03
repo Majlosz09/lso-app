@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView,
   ActivityIndicator, TouchableOpacity, Modal, Alert, TextInput
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -187,31 +188,18 @@ export default function MemberDetailScreen() {
     loadBadges()
   }, [id])
 
-  const handleChangeRank = (rankId: string | null) => {
-    const rankName = rankId ? (ranksList.find(r => r.id === rankId)?.name ?? 'nieznaną rangę') : null
-    const rankDisplay = rankName ? `rangę „${rankName}"` : 'brak rangi'
+  const handleChangeRank = async (rankId: string | null) => {
     setRankModalVisible(false)
-    Alert.alert(
-      'Zmień rangę',
-      `Przypisać ${rankDisplay} ministrancowi ${profile!.full_name}?`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Przypisz',
-          onPress: async () => {
-            const { error } = await supabase
-              .from('profiles')
-              .update({ rank_id: rankId })
-              .eq('id', id)
-            if (error) {
-              Alert.alert('Błąd', error.message)
-            } else {
-              setProfile(prev => prev ? { ...prev, rank_id: rankId } : prev)
-            }
-          },
-        },
-      ]
-    )
+    const { error } = await supabase
+      .from('profiles')
+      .update({ rank_id: rankId })
+      .eq('id', id)
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+    } else {
+      setProfile(prev => prev ? { ...prev, rank_id: rankId } : prev)
+      Toast.show({ type: 'success', text1: 'Ranga zmieniona' })
+    }
   }
 
   const openParentPicker = async () => {
@@ -347,11 +335,8 @@ export default function MemberDetailScreen() {
         animationType="slide"
         onRequestClose={() => setParentModalVisible(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setParentModalVisible(false)}
-        >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setParentModalVisible(false)} />
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Wybierz rodzica</Text>
@@ -387,7 +372,7 @@ export default function MemberDetailScreen() {
               ))
             )}
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       <Modal
@@ -396,11 +381,8 @@ export default function MemberDetailScreen() {
         animationType="slide"
         onRequestClose={() => setRankModalVisible(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setRankModalVisible(false)}
-        >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setRankModalVisible(false)} />
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Wybierz rangę</Text>
@@ -435,7 +417,7 @@ export default function MemberDetailScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {/* Statystyki — tylko dla ministrancóin */}
@@ -539,11 +521,12 @@ export default function MemberDetailScreen() {
         animationType="slide"
         onRequestClose={() => { setAwardSheetVisible(false); setSelectedBadgeDef(null); setAwardNote('') }}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => { setAwardSheetVisible(false); setSelectedBadgeDef(null); setAwardNote('') }}
-        >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={() => { setAwardSheetVisible(false); setSelectedBadgeDef(null); setAwardNote('') }}
+          />
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Przyznaj odznakę</Text>
@@ -594,7 +577,7 @@ export default function MemberDetailScreen() {
               }
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </ScrollView>
   )
@@ -681,7 +664,7 @@ function createStyles(c: Colors) {
     },
     parentText: { fontSize: 12, color: '#0EA5E9', fontWeight: '600' },
 
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
     modalSheet: {
       backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
       padding: 20, paddingBottom: 36,

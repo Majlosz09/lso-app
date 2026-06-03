@@ -1,8 +1,10 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, TextInput, StyleSheet, ScrollView,
-  TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard
+  TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard
 } from 'react-native'
+import Toast from 'react-native-toast-message'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -11,6 +13,12 @@ import { useAuthStore } from '../../stores/authStore'
 import { Profile, PointRule, ServiceType, SERVICE_TYPE_LABELS } from '../../types/database'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+
+const ROLE_LABELS: Record<string, string> = {
+  member: 'Ministrant',
+  admin: 'Administrator',
+  parent: 'Rodzic',
+}
 
 export default function AwardPoints() {
   const { profile: adminProfile } = useAuthStore()
@@ -26,6 +34,7 @@ export default function AwardPoints() {
   const [reason, setReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [loadingMembers, setLoadingMembers] = useState(true)
+  const [confirmDialog, setConfirmDialog] = useState(false)
 
   useEffect(() => {
     supabase
@@ -58,41 +67,33 @@ export default function AwardPoints() {
   )
 
   const handleSubmit = () => {
-    if (!selected) { Alert.alert('Błąd', 'Wybierz ministranta.'); return }
+    if (!selected) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Wybierz ministranta.' }); return }
     const amt = parseInt(amount)
-    if (isNaN(amt) || amt === 0) { Alert.alert('Błąd', 'Wpisz prawidłową liczbę punktów (np. 1 lub -1).'); return }
-    if (!reason.trim()) { Alert.alert('Błąd', 'Wpisz powód przyznania punktów.'); return }
-
+    if (isNaN(amt) || amt === 0) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Wpisz prawidłową liczbę punktów (np. 1 lub -1).' }); return }
+    if (!reason.trim()) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Wpisz powód przyznania punktów.' }); return }
     Keyboard.dismiss()
+    setConfirmDialog(true)
+  }
+
+  const doSubmit = async () => {
+    setConfirmDialog(false)
+    const amt = parseInt(amount)
     const sign = amt > 0 ? '+' : ''
-    Alert.alert(
-      'Przyznaj punkty',
-      `Przyznać ${sign}${amt} pkt dla ${selected.full_name}?`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Przyznaj',
-          onPress: async () => {
-            setSubmitting(true)
-            const { error } = await supabase.from('points').insert({
-              profile_id: selected.id,
-              amount: amt,
-              reason: reason.trim(),
-              awarded_by: adminProfile?.id,
-              parish_id: adminProfile?.parish_id,
-            })
-            setSubmitting(false)
-            if (error) {
-              Alert.alert('Błąd', 'Nie udało się przyznać punktów: ' + error.message)
-            } else {
-              Alert.alert('Sukces', `Przyznano ${sign}${amt} pkt dla ${selected.full_name}!`, [
-                { text: 'OK', onPress: () => { setSelected(null); setAmount(''); setReason('') } },
-              ])
-            }
-          },
-        },
-      ]
-    )
+    setSubmitting(true)
+    const { error } = await supabase.from('points').insert({
+      profile_id: selected!.id,
+      amount: amt,
+      reason: reason.trim(),
+      awarded_by: adminProfile?.id,
+      parish_id: adminProfile?.parish_id,
+    })
+    setSubmitting(false)
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: 'Nie udało się przyznać punktów: ' + error.message })
+    } else {
+      Toast.show({ type: 'success', text1: `Przyznano ${sign}${amt} pkt`, text2: `dla ${selected!.full_name}` })
+      setSelected(null); setAmount(''); setReason('')
+    }
   }
 
   return (
@@ -105,7 +106,7 @@ export default function AwardPoints() {
               <Ionicons name="person-circle-outline" size={36} color={c.primary} />
               <View>
                 <Text style={styles.selectedName}>{selected.full_name}</Text>
-                <Text style={styles.selectedRole}>{selected.role}</Text>
+                <Text style={styles.selectedRole}>{ROLE_LABELS[selected.role] ?? selected.role}</Text>
               </View>
             </View>
             <TouchableOpacity onPress={() => setSelected(null)}>
@@ -207,6 +208,14 @@ export default function AwardPoints() {
           </>
         )}
       </ScrollView>
+    <ConfirmDialog
+      visible={confirmDialog}
+      title="Przyznaj punkty"
+      message={`Przyznać ${parseInt(amount) > 0 ? '+' : ''}${parseInt(amount) || 0} pkt dla ${selected?.full_name ?? ''}?`}
+      confirmText="Przyznaj"
+      onConfirm={doSubmit}
+      onCancel={() => setConfirmDialog(false)}
+    />
     </KeyboardAvoidingView>
   )
 }

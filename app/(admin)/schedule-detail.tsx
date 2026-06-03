@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  ActivityIndicator, Alert, TouchableOpacity,
-  Modal, TextInput, Platform, KeyboardAvoidingView
+  ActivityIndicator, TouchableOpacity,
+  Modal, TextInput, KeyboardAvoidingView, Platform
 } from 'react-native'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 import Toast from 'react-native-toast-message'
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -58,6 +59,8 @@ export default function ScheduleDetailScreen() {
   const [adding, setAdding] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteSheetVisible, setDeleteSheetVisible] = useState(false)
+  const [confirmAdd, setConfirmAdd] = useState<MemberOption | null>(null)
+  const [confirmRemove, setConfirmRemove] = useState<{ id: string; name: string } | null>(null)
   const [attendanceSheetVisible, setAttendanceSheetVisible] = useState(false)
   const [draftIds, setDraftIds] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
@@ -96,7 +99,7 @@ export default function ScheduleDetailScreen() {
       .update({ status: newStatus })
       .eq('id', assignmentId)
     setUpdatingId(null)
-    if (error) Alert.alert('Błąd', error.message)
+    if (error) Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
     else fetchSchedule()
   }
 
@@ -105,7 +108,7 @@ export default function ScheduleDetailScreen() {
     const assignment = schedule?.assignments.find(a => a.profile_id === profileId)
     if (attendanceIds.has(profileId)) {
       const { error } = await supabase.from('attendance').delete().eq('schedule_id', id).eq('profile_id', profileId)
-      if (error) { Alert.alert('Błąd', error.message); setTogglingAttendance(null); return }
+      if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); setTogglingAttendance(null); return }
       setAttendanceIds(prev => { const s = new Set(prev); s.delete(profileId); return s })
       if (assignment && ['assigned', 'present'].includes(assignment.status)) {
         await handleChangeStatus(assignment.id, 'absent')
@@ -116,7 +119,7 @@ export default function ScheduleDetailScreen() {
         p_profile_id: profileId,
         p_parish_id: adminProfile?.parish_id,
       })
-      if (error) { Alert.alert('Błąd', error.message); setTogglingAttendance(null); return }
+      if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); setTogglingAttendance(null); return }
       setAttendanceIds(prev => new Set([...prev, profileId]))
       if (assignment && assignment.status !== 'present') {
         await handleChangeStatus(assignment.id, 'present')
@@ -189,52 +192,47 @@ export default function ScheduleDetailScreen() {
 
   const handleAdd = (member: MemberOption) => {
     if (!schedule) return
-    Alert.alert(
-      'Dodaj do służby',
-      `Dodać ${member.full_name} do tej służby?`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Dodaj',
-          onPress: async () => {
-            setAdding(true)
-            const { error } = await supabase.from('schedule_assignments').insert({
-              schedule_id: schedule.id, profile_id: member.id, role: 'ministrant', status: 'assigned',
-            })
-            setAdding(false)
-            if (error) {
-              Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
-            } else {
-              setAddModalVisible(false)
-              fetchSchedule()
-              Toast.show({ type: 'success', text1: `Dodano ${member.full_name}` })
-            }
-          },
-        },
-      ]
-    )
+    setConfirmAdd(member)
+  }
+
+  const doAdd = async () => {
+    const member = confirmAdd
+    if (!member || !schedule) return
+    setConfirmAdd(null)
+    setAdding(true)
+    const { error } = await supabase.from('schedule_assignments').insert({
+      schedule_id: schedule.id, profile_id: member.id, role: 'ministrant', status: 'assigned',
+    })
+    setAdding(false)
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+    } else {
+      setAddModalVisible(false)
+      fetchSchedule()
+      Toast.show({ type: 'success', text1: `Dodano ${member.full_name}` })
+    }
   }
 
   const handleRemove = (assignmentId: string, name: string) => {
-    Alert.alert('Usuń zapis', `Usunąć zapis ${name} z tej służby?`, [
-      { text: 'Anuluj', style: 'cancel' },
-      {
-        text: 'Usuń', style: 'destructive', onPress: async () => {
-          setUpdatingId(assignmentId)
-          const { error } = await supabase.from('schedule_assignments').delete().eq('id', assignmentId)
-          setUpdatingId(null)
-          if (error) { Alert.alert('Błąd', error.message); return }
-          fetchSchedule()
-        },
-      },
-    ])
+    setConfirmRemove({ id: assignmentId, name })
+  }
+
+  const doRemove = async () => {
+    const item = confirmRemove
+    if (!item) return
+    setConfirmRemove(null)
+    setUpdatingId(item.id)
+    const { error } = await supabase.from('schedule_assignments').delete().eq('id', item.id)
+    setUpdatingId(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    fetchSchedule()
   }
 
   const doDeleteSchedule = async () => {
     setDeleting(true)
     const { error } = await supabase.from('schedules').delete().eq('id', id)
     setDeleting(false)
-    if (error) { Alert.alert('Błąd', error.message); return }
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
     router.back()
   }
 
@@ -243,32 +241,8 @@ export default function ScheduleDetailScreen() {
     setDeleting(true)
     const { error } = await supabase.from('schedules').delete().eq('series_id', schedule.series_id)
     setDeleting(false)
-    if (error) { Alert.alert('Błąd', error.message); return }
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
     router.replace('/(admin)/(admin-tabs)/schedules')
-  }
-
-  const confirmDeleteSchedule = () => {
-    setDeleteSheetVisible(false)
-    if (Platform.OS === 'web') {
-      if (window.confirm('Usunąć tę służbę?')) doDeleteSchedule()
-    } else {
-      Alert.alert('Usuń służbę', 'Usunąć tę służbę? Operacja jest nieodwracalna.', [
-        { text: 'Anuluj', style: 'cancel' },
-        { text: 'Usuń', style: 'destructive', onPress: doDeleteSchedule },
-      ])
-    }
-  }
-
-  const confirmDeleteSeries = () => {
-    setDeleteSheetVisible(false)
-    if (Platform.OS === 'web') {
-      if (window.confirm('Usunąć całą serię? Wszystkie terminy zostaną trwale usunięte.')) doDeleteSeries()
-    } else {
-      Alert.alert('Usuń całą serię', 'Wszystkie terminy z tej serii zostaną trwale usunięte.', [
-        { text: 'Anuluj', style: 'cancel' },
-        { text: 'Usuń wszystkie', style: 'destructive', onPress: doDeleteSeries },
-      ])
-    }
   }
 
   if (loading) {
@@ -530,7 +504,7 @@ export default function ScheduleDetailScreen() {
               {'  ·  '}{schedule?.time?.slice(0, 5)}
             </Text>
 
-            <TouchableOpacity style={styles.deleteOption} onPress={confirmDeleteSchedule}>
+            <TouchableOpacity style={styles.deleteOption} onPress={() => { setDeleteSheetVisible(false); doDeleteSchedule() }}>
               <View style={styles.deleteOptionIcon}>
                 <Ionicons name="trash-outline" size={20} color="#DC2626" />
               </View>
@@ -541,7 +515,7 @@ export default function ScheduleDetailScreen() {
             </TouchableOpacity>
 
             {schedule?.series_id && (
-              <TouchableOpacity style={[styles.deleteOption, styles.deleteOptionSeriesCard]} onPress={confirmDeleteSeries}>
+              <TouchableOpacity style={[styles.deleteOption, styles.deleteOptionSeriesCard]} onPress={() => { setDeleteSheetVisible(false); doDeleteSeries() }}>
                 <View style={[styles.deleteOptionIcon, { backgroundColor: '#c0392b18' }]}>
                   <Ionicons name="trash" size={20} color="#c0392b" />
                 </View>
@@ -558,6 +532,24 @@ export default function ScheduleDetailScreen() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      <ConfirmDialog
+        visible={!!confirmAdd}
+        title="Dodaj do służby"
+        message={`Dodać ${confirmAdd?.full_name} do tej służby?`}
+        confirmText="Dodaj"
+        onConfirm={doAdd}
+        onCancel={() => setConfirmAdd(null)}
+      />
+      <ConfirmDialog
+        visible={!!confirmRemove}
+        title="Usuń zapis"
+        message={`Usunąć zapis ${confirmRemove?.name} z tej służby?`}
+        confirmText="Usuń"
+        destructive
+        onConfirm={doRemove}
+        onCancel={() => setConfirmRemove(null)}
+      />
 
       {/* Attendance sheet */}
       <Modal
