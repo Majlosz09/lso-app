@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, ScrollView, Platform
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
@@ -58,6 +59,7 @@ export default function MassScheduleScreen() {
     if (error) {
       Alert.alert('Błąd', error.message)
     } else {
+      Toast.show({ type: 'success', text1: 'Msza dodana' })
       setTimeInput('')
       setLabelInput('')
       fetch()
@@ -69,7 +71,7 @@ export default function MassScheduleScreen() {
       .from('mass_templates').delete().eq('id', item.id).select('id')
     if (error) Alert.alert('Błąd', error.message)
     else if (!data?.length) Alert.alert('Błąd uprawnień', 'Brak polityki DELETE dla mass_templates.')
-    else fetch()
+    else { Toast.show({ type: 'success', text1: 'Msza usunięta' }); fetch() }
   }
 
   const handleDelete = (item: MassTemplate) => {

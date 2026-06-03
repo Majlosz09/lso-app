@@ -97,7 +97,15 @@ export async function computeAndSyncBadges(
   ])
   if (systemDefsRes.error) console.error('[badges] system defs error:', systemDefsRes.error)
   if (parishDefsRes.error) console.error('[badges] parish defs error:', parishDefsRes.error)
-  const defs = [...(systemDefsRes.data ?? []), ...(parishDefsRes.data ?? [])]
+  // Deduplicate by criteria_key — prefer parish-specific over global
+  const defsByKey = new Map<string, any>()
+  for (const def of [...(systemDefsRes.data ?? []), ...(parishDefsRes.data ?? [])]) {
+    const existing = defsByKey.get(def.criteria_key)
+    if (!existing || (existing.parish_id === null && def.parish_id !== null)) {
+      defsByKey.set(def.criteria_key, def)
+    }
+  }
+  const defs = Array.from(defsByKey.values())
 
   if (defs.length === 0) return
 

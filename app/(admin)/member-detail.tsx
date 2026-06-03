@@ -48,7 +48,7 @@ type BadgeRow = {
   awarded_at: string
   awarded_by: string | null
   note: string | null
-  badge_definition: { id: string; name: string; icon: string; type: string } | null
+  badge_definition: { id: string; name: string; icon: string; type: string; criteria_key: string } | null
   awarder: { full_name: string } | null
 }
 
@@ -164,7 +164,7 @@ export default function MemberDetailScreen() {
       .from('member_badges')
       .select(`
         id, awarded_at, awarded_by, note,
-        badge_definition:badge_definitions(id, name, icon, type),
+        badge_definition:badge_definitions(id, name, icon, type, criteria_key),
         awarder:profiles!awarded_by(full_name)
       `)
       .eq('profile_id', id)
@@ -175,7 +175,7 @@ export default function MemberDetailScreen() {
     const deduped = (data ?? [])
       .filter((b: any) => b.badge_definition !== null)
       .filter((b: any) => {
-        const key = b.badge_definition.id
+        const key = b.badge_definition.criteria_key ?? b.badge_definition.id
         if (seen.has(key)) return false
         seen.add(key)
         return true
@@ -225,6 +225,7 @@ export default function MemberDetailScreen() {
     } else {
       setProfile(prev => prev ? { ...prev, parent_id: parentId } : prev)
       setParentName(parentId ? (parentsList.find(p => p.id === parentId)?.full_name ?? null) : null)
+      Toast.show({ type: 'success', text1: 'Opiekun zaktualizowany' })
     }
     setParentModalVisible(false)
   }
@@ -460,10 +461,6 @@ export default function MemberDetailScreen() {
               </View>
             ))
           )}
-          <TouchableOpacity style={styles.awardBadgeBtn} onPress={openAwardSheet}>
-            <Ionicons name="ribbon-outline" size={16} color={c.primary} />
-            <Text style={styles.awardBadgeBtnText}>Przyznaj odznakę</Text>
-          </TouchableOpacity>
         </Section>
       )}
 

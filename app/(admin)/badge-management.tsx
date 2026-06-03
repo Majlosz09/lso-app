@@ -4,6 +4,7 @@ import {
   TextInput, Alert, ActivityIndicator, Modal, FlatList,
   KeyboardAvoidingView, Platform,
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
@@ -125,6 +126,7 @@ export default function BadgeManagementScreen() {
       Alert.alert('Błąd', error.message)
       return
     }
+    Toast.show({ type: 'success', text1: 'Odznaka dodana', text2: name })
     setNewName('')
     setNewIcon('')
     fetchData()
@@ -188,6 +190,7 @@ export default function BadgeManagementScreen() {
       Alert.alert('Błąd', error.message)
       return
     }
+    Toast.show({ type: 'success', text1: 'Odznaka przyznana', text2: `${selectedMember.full_name} — ${selectedBadge.name}` })
     closeWizard()
     fetchData()
   }

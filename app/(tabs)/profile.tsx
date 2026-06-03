@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, Alert, ActivityIndicator, Platform,
   Modal, TextInput, KeyboardAvoidingView
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
@@ -19,6 +20,7 @@ import {
   PRESET_ICONS, PRESET_COLORS, buildPresetUrl, parsePresetUrl, isPresetUrl,
 } from '../../lib/presetAvatar'
 import { FormationSection, BadgesSection, BadgeWithDef } from '../../components/FormationBadges'
+import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 import { OnboardingModal } from '../../components/OnboardingModal'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -36,7 +38,7 @@ export default function ProfileScreen() {
 
 // ─── Shared: Avatar Card ──────────────────────────────────────────────────────
 
-function AvatarCard() {
+function AvatarCard({ rankName }: { rankName?: string | null }) {
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
   const { profile, fetchProfile } = useAuthStore()
@@ -89,6 +91,7 @@ function AvatarCard() {
       if (error) { Alert.alert('Błąd', error.message); return }
       setLocalAvatarUrl(newUrl)
       fetchProfile()
+      Toast.show({ type: 'success', text1: 'Zdjęcie zapisane' })
     } catch (e: any) {
       Alert.alert('Błąd', e.message)
     } finally {
@@ -117,6 +120,7 @@ function AvatarCard() {
     if (error) { Alert.alert('Błąd', error.message); return }
     setLocalAvatarUrl(newUrl)
     fetchProfile()
+    Toast.show({ type: 'success', text1: 'Avatar zapisany' })
     setPresetVisible(false)
   }
 
@@ -135,6 +139,7 @@ function AvatarCard() {
     } else {
       setLocalAvatarUrl(null)
       fetchProfile()
+      Toast.show({ type: 'success', text1: 'Avatar usunięty' })
     }
     setBusy(false)
   }
@@ -154,6 +159,12 @@ function AvatarCard() {
       <View style={styles.roleBadge}>
         <Text style={styles.roleText}>{ROLE_LABELS[profile?.role ?? ''] ?? profile?.role}</Text>
       </View>
+      {rankName != null && (
+        <View style={styles.rankChip}>
+          <Ionicons name="ribbon-outline" size={13} color={c.primary} />
+          <Text style={styles.rankChipText}>{rankName}</Text>
+        </View>
+      )}
       <Text style={styles.email}>{useAuthStore.getState().session?.user.email}</Text>
 
       {/* Action menu */}
@@ -322,29 +333,47 @@ function MemberProfile() {
     }).catch(console.error).finally(() => setLoading(false))
   }, [profile?.id, profile?.rank_id])
 
+  const fetchBadges = useCallback(() => {
+    if (!profile?.id) return
+    supabase
+      .from('member_badges')
+      .select('id, awarded_at, badge_definition:badge_definitions(id, name, icon, criteria_key)')
+      .eq('profile_id', profile.id)
+      .eq('is_active', true)
+      .then(({ data }) => {
+        const seen = new Set<string>()
+        const deduped = (data ?? []).filter((b: any) => {
+          if (!b.badge_definition) return false
+          const key = b.badge_definition.criteria_key ?? b.badge_definition.id
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        setActiveBadges(deduped as unknown as BadgeWithDef[])
+      })
+      .catch(console.error)
+  }, [profile?.id])
+
   useEffect(() => {
     if (!profile?.id || !profile.parish_id) return
-    Promise.all([
-      supabase.from('ranks')
-        .select('id, name, order')
-        .or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`)
-        .order('order'),
-      supabase.from('member_badges')
-        .select('id, awarded_at, badge_definition:badge_definitions(id, name, icon, criteria_key)')
-        .eq('profile_id', profile.id)
-        .eq('is_active', true),
-    ]).then(([ranksRes, badgesRes]) => {
-      setAllRanks(ranksRes.data ?? [])
-      setActiveBadges((badgesRes.data ?? []).filter((b: any) => b.badge_definition !== null) as unknown as BadgeWithDef[])
-    }).catch(console.error)
+    supabase
+      .from('ranks')
+      .select('id, name, order')
+      .or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`)
+      .order('order')
+      .then(({ data }) => setAllRanks(data ?? []))
+      .catch(console.error)
+    fetchBadges()
     computeAndSyncBadges(supabase, profile.id, profile.parish_id).catch(console.error)
-  }, [profile?.id, profile?.parish_id])
+  }, [profile?.id, profile?.parish_id, fetchBadges])
+
+  useRealtimeTable('member_badges', fetchBadges, `profile_id=eq.${profile?.id}`)
 
   const rankName = allRanks.find(r => r.id === profile?.rank_id)?.name ?? null
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <AvatarCard />
+      <AvatarCard rankName={rankName} />
 
       {loading ? (
         <ActivityIndicator color={c.primary} style={{ marginVertical: 8 }} />
@@ -790,6 +819,7 @@ function EditProfileModal({ visible, onClose, showRocznik }: {
     setSaving(false)
     if (error) { Alert.alert('Błąd', error.message); return }
     await fetchProfile()
+    Toast.show({ type: 'success', text1: 'Profil zaktualizowany' })
     onClose()
   }
 
@@ -1023,6 +1053,13 @@ function createStyles(c: Colors) {
       paddingHorizontal: 12, paddingVertical: 4,
     },
     roleText: { fontSize: 13, color: c.primary, fontWeight: '600' },
+    rankChip: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      backgroundColor: c.primaryAlpha08, borderRadius: 12,
+      paddingHorizontal: 10, paddingVertical: 4,
+      borderWidth: 1, borderColor: c.primaryAlpha12,
+    },
+    rankChipText: { fontSize: 13, fontWeight: '600', color: c.primary },
     email: { fontSize: 13, color: c.textTertiary },
 
     statsRow: { flexDirection: 'row', gap: 12 },

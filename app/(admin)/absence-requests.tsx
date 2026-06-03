@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, StyleSheet,
   TouchableOpacity, ActivityIndicator, Alert,
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { Stack } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
@@ -69,6 +70,7 @@ export default function AbsenceRequestsScreen() {
                 .eq('id', request.id)
               if (error) { Alert.alert('Błąd', error.message); return }
               setRequests(prev => prev.filter(r => r.id !== request.id))
+              Toast.show({ type: 'success', text1: 'Nieobecność zatwierdzona', text2: request.profile.full_name })
             } finally {
               setProcessingId(null)
             }
@@ -96,6 +98,7 @@ export default function AbsenceRequestsScreen() {
                 .eq('id', request.id)
               if (error) { Alert.alert('Błąd', error.message); return }
               setRequests(prev => prev.filter(r => r.id !== request.id))
+              Toast.show({ type: 'info', text1: 'Nieobecność odrzucona', text2: request.profile.full_name })
             } finally {
               setProcessingId(null)
             }
@@ -122,6 +125,7 @@ export default function AbsenceRequestsScreen() {
                 .update({ status: 'confirmed', admin_note: null })
                 .in('id', ids)
               if (error) { Alert.alert('Błąd', error.message); return }
+              Toast.show({ type: 'success', text1: 'Wszystkie zatwierdzone', text2: `Zatwierdzono ${ids.length} zgłoszeń.` })
               setRequests([])
             } finally {
               setProcessingAll(false)

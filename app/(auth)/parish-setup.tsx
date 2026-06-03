@@ -30,6 +30,13 @@ export default function ParishSetupScreen() {
   const [loading, setLoading] = useState(false)
 
   const { colors: c } = useTheme()
+
+  const handleLogout = () => {
+    Alert.alert('Wyloguj', 'Czy na pewno chcesz się wylogować?', [
+      { text: 'Anuluj', style: 'cancel' },
+      { text: 'Wyloguj', style: 'destructive', onPress: () => supabase.auth.signOut() },
+    ])
+  }
   const styles = useMemo(() => createStyles(c), [c])
 
   const ATTENDANCE_OPTIONS: { mode: AttendanceMode; label: string; icon: string; color: string }[] = useMemo(() => [
@@ -120,6 +127,10 @@ export default function ParishSetupScreen() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView style={styles.container} contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
+          <Ionicons name="log-out-outline" size={18} color={c.textTertiary} />
+          <Text style={styles.logoutText}>Wyloguj</Text>
+        </TouchableOpacity>
         <View style={styles.iconWrapper}>
           <Ionicons name="business-outline" size={48} color={c.primary} />
         </View>
@@ -283,5 +294,7 @@ function createStyles(c: Colors) {
 
     gpsBox: { gap: 8, backgroundColor: '#EA580C10', borderRadius: 10, padding: 12, marginBottom: 4 },
     gpsLabel: { fontSize: 13, fontWeight: '600', color: '#EA580C' },
+    logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-end', paddingVertical: 8, marginBottom: 8 },
+    logoutText: { fontSize: 13, color: c.textTertiary },
   })
 }

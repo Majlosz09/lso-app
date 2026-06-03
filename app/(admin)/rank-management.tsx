@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, Alert, ActivityIndicator
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
@@ -54,6 +55,7 @@ export default function RankManagementScreen() {
     if (error) {
       Alert.alert('Błąd', error.message)
     } else {
+      Toast.show({ type: 'success', text1: 'Ranga dodana', text2: newName.trim() })
       setNewName('')
       fetchRanks()
     }
@@ -75,6 +77,7 @@ export default function RankManagementScreen() {
     if (error) {
       Alert.alert('Błąd', error.message)
     } else {
+      Toast.show({ type: 'success', text1: 'Nazwa zmieniona', text2: editingName.trim() })
       setEditingId(null)
       setEditingName('')
       fetchRanks()

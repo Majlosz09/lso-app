@@ -7,6 +7,7 @@ import { Profile, Parish } from '../types/database'
 import { registerForPushNotificationsAsync } from '../lib/notifications'
 
 let _coverageRunning = false
+let _profileChannel: ReturnType<typeof supabase.channel> | null = null
 
 async function ensureSchedulesCoverage(parishId: string) {
   if (_coverageRunning) return
@@ -74,7 +75,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (session) {
       set({ session, user: session.user, isLoading: false })
       get().fetchProfile()
+
+      if (_profileChannel) supabase.removeChannel(_profileChannel)
+      _profileChannel = supabase
+        .channel(`profile-sync-${session.user.id}`)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${session.user.id}`,
+        }, () => { get().fetchProfile() })
+        .subscribe()
     } else {
+      if (_profileChannel) {
+        supabase.removeChannel(_profileChannel)
+        _profileChannel = null
+      }
       set({ session: null, user: null, profile: null, parish: null, isLoading: false })
     }
   },
@@ -114,6 +130,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
+    if (_profileChannel) {
+      supabase.removeChannel(_profileChannel)
+      _profileChannel = null
+    }
     await supabase.auth.signOut({ scope: 'local' })
     set({ session: null, user: null, profile: null, parish: null })
     if (Platform.OS === 'web') {

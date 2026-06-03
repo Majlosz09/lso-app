@@ -474,6 +474,7 @@ function ParentHomeView() {
       <View style={styles.actionsRow}>
         <QuickAction icon="calendar-outline" color={c.primary} label="Dyżury dzieci" onPress={() => router.push('/(tabs)/schedule')} styles={styles} />
         <QuickAction icon="megaphone-outline" color={c.primary} label="Ogłoszenia" onPress={() => router.push('/(tabs)/announcements')} styles={styles} />
+        <QuickAction icon="trophy-outline" color={c.gold} label="Punkty" onPress={() => router.push('/(tabs)/points')} styles={styles} />
       </View>
     </ScrollView>
   )

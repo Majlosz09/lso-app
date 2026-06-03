@@ -515,7 +515,20 @@ export default function ScheduleDetailScreen() {
             </TouchableOpacity>
 
             {schedule?.series_id && (
-              <TouchableOpacity style={[styles.deleteOption, styles.deleteOptionSeriesCard]} onPress={() => { setDeleteSheetVisible(false); doDeleteSeries() }}>
+              <TouchableOpacity
+                style={[styles.deleteOption, styles.deleteOptionSeriesCard]}
+                onPress={() => {
+                  setDeleteSheetVisible(false)
+                  Alert.alert(
+                    'Usuń całą serię',
+                    'Czy na pewno chcesz usunąć WSZYSTKIE terminy z tej serii? Tej operacji nie można cofnąć.',
+                    [
+                      { text: 'Anuluj', style: 'cancel' },
+                      { text: 'Usuń serię', style: 'destructive', onPress: doDeleteSeries },
+                    ]
+                  )
+                }}
+              >
                 <View style={[styles.deleteOptionIcon, { backgroundColor: '#c0392b18' }]}>
                   <Ionicons name="trash" size={20} color="#c0392b" />
                 </View>

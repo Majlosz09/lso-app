@@ -625,6 +625,8 @@ function MemberScheduleView() {
         text1: 'Cykl aktywny',
         text2: `Zapisano cyklicznie na każd${dow === 0 || dow === 3 || dow === 6 ? 'ą' : 'y'} ${DAY_FULL_LOCAL[dow]} o ${timeSlot}. Objęto ${(data as any)?.count ?? 1} służb.`,
       })
+    } else {
+      Toast.show({ type: 'success', text1: 'Zapisano', text2: 'Zostałeś zapisany na tę służbę.' })
     }
     fetchWeekSchedules(weekDays)
   }
@@ -634,6 +636,7 @@ function MemberScheduleView() {
     const { error } = await supabase.from('schedule_assignments').delete().eq('id', assignmentId)
     setUnsigningId(null)
     if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    Toast.show({ type: 'success', text1: 'Wypisano', text2: 'Zostałeś wypisany z tej służby.' })
     fetchWeekSchedules(weekDays)
   }
 
@@ -645,6 +648,7 @@ function MemberScheduleView() {
     ])
     setUnsigningId(null)
     if (r1.error || r2.error) { Toast.show({ type: 'error', text1: 'Błąd', text2: (r1.error ?? r2.error)!.message }); return }
+    Toast.show({ type: 'success', text1: 'Cykl anulowany', text2: 'Wypisano z tej i wszystkich przyszłych służb w cyklu.' })
     fetchWeekSchedules(weekDays)
   }
 
@@ -680,6 +684,7 @@ function MemberScheduleView() {
       .eq('id', assignmentId)
     setReportingAbsenceId(null)
     if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    Toast.show({ type: 'success', text1: 'Zgłoszono nieobecność', text2: 'Oczekuje na zatwierdzenie przez animatora.' })
     setAbsenceModal({ visible: false, assignmentId: '', title: '', reason: '' })
     fetchWeekSchedules(weekDays)
   }

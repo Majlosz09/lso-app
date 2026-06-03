@@ -4,6 +4,7 @@ import {
   TouchableOpacity, Alert, ActivityIndicator, Platform,
   KeyboardAvoidingView,
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -135,6 +136,7 @@ export default function ScheduleSeriesScreen() {
     if (error) {
       if (Platform.OS === 'web') { window.alert('Błąd: ' + error.message) } else { Alert.alert('Błąd', error.message) }
     } else {
+      Toast.show({ type: 'success', text1: 'Cykl utworzony', text2: `Dodano ${rows.length} służb.` })
       router.replace('/(admin)/(admin-tabs)/schedules')
     }
   }

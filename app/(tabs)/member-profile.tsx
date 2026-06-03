@@ -1,12 +1,14 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   ActivityIndicator, Modal, TouchableOpacity
 } from 'react-native'
-import { useLocalSearchParams } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
+import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import { shadow } from '../../lib/shadows'
@@ -21,6 +23,7 @@ type MemberData = {
 }
 
 export default function MemberProfileScreen() {
+  const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
   const { profile } = useAuthStore()
   const { colors: c } = useTheme()
@@ -33,7 +36,7 @@ export default function MemberProfileScreen() {
   const [notFound, setNotFound] = useState(false)
   const [selectedBadge, setSelectedBadge] = useState<BadgeWithDef | null>(null)
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     if (!id || !profile?.parish_id) return
     Promise.all([
       supabase
@@ -64,8 +67,20 @@ export default function MemberProfileScreen() {
     }).catch(() => { setLoading(false); setNotFound(true) })
   }, [id, profile?.parish_id])
 
+  useEffect(() => { fetchData() }, [fetchData])
+
+  useRealtimeTable('profiles', fetchData, id ? `id=eq.${id}` : undefined)
+  useRealtimeTable('member_badges', fetchData, id ? `profile_id=eq.${id}` : undefined)
+
+  const seen = new Set<string>()
   const activeBadges = (member?.member_badges ?? [])
     .filter(b => b.is_active && b.badge_definition !== null)
+    .filter(b => {
+      const key = b.badge_definition?.criteria_key ?? b.id
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
@@ -74,7 +89,12 @@ export default function MemberProfileScreen() {
   if (notFound || !member) {
     return (
       <View style={styles.center}>
+        <Ionicons name="person-outline" size={48} color={c.iconMuted} />
         <Text style={styles.notFound}>Nie znaleziono profilu</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={16} color={c.primary} />
+          <Text style={styles.backBtnText}>Wróć</Text>
+        </TouchableOpacity>
       </View>
     )
   }
@@ -86,6 +106,10 @@ export default function MemberProfileScreen() {
       style={styles.container}
       contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 20) }]}
     >
+      <TouchableOpacity style={styles.backRow} onPress={() => router.back()} activeOpacity={0.7}>
+        <Ionicons name="arrow-back" size={20} color={c.primary} />
+        <Text style={styles.backRowText}>Wróć</Text>
+      </TouchableOpacity>
       <View style={styles.headerCard}>
         <View style={styles.avatar}>
           <Text style={styles.avatarInitials}>{initials}</Text>
@@ -143,7 +167,11 @@ function createStyles(c: Colors) {
     container: { flex: 1, backgroundColor: c.bg },
     content: { padding: 16, gap: 16 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    notFound: { fontSize: 16, color: c.textTertiary },
+    notFound: { fontSize: 16, color: c.textTertiary, marginTop: 12 },
+    backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: c.surface, borderRadius: 10 },
+    backBtnText: { fontSize: 15, color: c.primary, fontWeight: '500' },
+    backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingBottom: 8 },
+    backRowText: { fontSize: 15, color: c.primary, fontWeight: '500' },
 
     headerCard: {
       flexDirection: 'row', alignItems: 'center', gap: 16,

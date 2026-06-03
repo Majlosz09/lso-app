@@ -53,6 +53,7 @@ export default function SlowniczekScreen() {
           keyExtractor={t => t}
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={styles.tagsList}
           contentContainerStyle={styles.tagsRow}
           renderItem={({ item: tag }) => (
             <TouchableOpacity
@@ -69,6 +70,7 @@ export default function SlowniczekScreen() {
         <FlatList
           data={filtered}
           keyExtractor={item => item.id}
+          style={{ flex: 1 }}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
           ListEmptyComponent={
@@ -116,11 +118,13 @@ function createStyles(c: Colors) {
       borderWidth: 1.5, borderColor: c.primaryAlpha20, ...shadow.xs,
     },
     searchInput: { flex: 1, fontSize: 15, color: c.text },
-    tagsRow: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+    tagsList: { flexGrow: 0, flexShrink: 0 },
+    tagsRow: { paddingHorizontal: 16, paddingBottom: 12, gap: 8, alignItems: 'center' },
     tag: {
       paddingHorizontal: 14, paddingVertical: 7,
       borderRadius: 20, backgroundColor: c.surface,
       borderWidth: 1, borderColor: c.border,
+      alignSelf: 'flex-start',
     },
     tagActive: { backgroundColor: c.primary, borderColor: c.primary },
     tagText: { fontSize: 13, fontWeight: '500', color: c.subtext },

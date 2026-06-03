@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
-import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native'
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native'
+import { useRouter } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
@@ -17,6 +19,7 @@ type CatalogEntry = {
 }
 
 export default function BadgeCatalogScreen() {
+  const router = useRouter()
   const { profile } = useAuthStore()
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
@@ -44,7 +47,13 @@ export default function BadgeCatalogScreen() {
   return (
     <FlatList
       style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 20) }]}
+      contentContainerStyle={[styles.content, { paddingTop: 0, paddingBottom: Math.max(insets.bottom, 20) }]}
+      ListHeaderComponent={
+        <TouchableOpacity style={styles.backRow} onPress={() => router.back()} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={20} color={c.primary} />
+          <Text style={styles.backText}>Wróć</Text>
+        </TouchableOpacity>
+      }
       data={badges}
       keyExtractor={item => item.id}
       renderItem={({ item }) => (
@@ -83,5 +92,7 @@ function createStyles(c: Colors) {
     desc: { fontSize: 13, color: c.subtext, marginTop: 2 },
     empty: { alignItems: 'center', padding: 32 },
     emptyText: { fontSize: 14, color: c.textTertiary },
+    backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 12, paddingBottom: 8 },
+    backText: { fontSize: 15, color: c.primary, fontWeight: '500' },
   })
 }

@@ -4,6 +4,7 @@ import {
   StyleSheet, Alert, ActivityIndicator,
   KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { Link } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { shadow } from '../../lib/shadows'
@@ -174,6 +175,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
     }
 
     setLoading(false)
+    Toast.show({ type: 'success', text1: 'Witaj!', text2: 'Konto zostało utworzone. Trwa logowanie…' })
     await fetchProfile()
   }
 
@@ -351,6 +353,7 @@ function AdminForm({ onBack }: { onBack: () => void }) {
 
     setLoading(false)
     if (profileError) { Alert.alert('Błąd profilu', profileError.message); return }
+    Toast.show({ type: 'success', text1: 'Parafia utworzona!', text2: 'Konto administratora zostało aktywowane.' })
     await fetchProfile()
   }
 

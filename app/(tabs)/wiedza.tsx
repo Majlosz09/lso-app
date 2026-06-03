@@ -44,8 +44,8 @@ export default function WiedzaScreen() {
 function createStyles(c: Colors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg },
-    grid: { padding: 16 },
-    row: { gap: 12, marginBottom: 12 },
+    grid: { padding: 16, gap: 12 },
+    row: { columnGap: 12 },
     card: {
       flex: 1, backgroundColor: c.surface, borderRadius: 14,
       padding: 16, alignItems: 'center', gap: 6, ...shadow.md,

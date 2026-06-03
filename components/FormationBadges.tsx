@@ -24,49 +24,44 @@ export function FormationSection({
         <Text style={s.sectionTitle}>ŚCIEŻKA FORMACJI</Text>
       </View>
       <View style={s.formationCard}>
-        <View style={s.formationCirclesRow}>
-          {ranks.map((rank, idx) => {
+        <View style={s.formationRow}>
+          {ranks.flatMap((rank, idx) => {
             const isDone = currentIdx >= 0 && idx < currentIdx
             const isCurrent = idx === currentIdx
-            return [
-              idx > 0 ? (
+            const items = []
+            if (idx > 0) {
+              items.push(
                 <View
                   key={`conn-${rank.id}`}
                   style={[s.formationConnector, idx <= currentIdx ? s.formationConnectorDone : null]}
                 />
-              ) : null,
-              <View
-                key={rank.id}
-                style={[
-                  s.formationCircle,
-                  isDone ? s.formationCircleDone : isCurrent ? s.formationCircleCurrent : null,
-                ]}
-              >
-                {isDone
-                  ? <Ionicons name="checkmark" size={11} color="#fff" />
-                  : isCurrent ? <View style={s.formationDot} /> : null
-                }
-              </View>,
-            ]
-          })}
-        </View>
-        <View style={s.formationLabelsRow}>
-          {ranks.map((rank, idx) => {
-            const isDone = currentIdx >= 0 && idx < currentIdx
-            const isCurrent = idx === currentIdx
-            return [
-              idx > 0 ? <View key={`spacer-${idx}`} style={{ flex: 1 }} /> : null,
-              <Text
-                key={rank.id}
-                style={[
-                  s.formationLabel,
-                  isDone ? s.formationLabelDone : isCurrent ? s.formationLabelCurrent : null,
-                ]}
-                numberOfLines={2}
-              >
-                {rank.name}
-              </Text>,
-            ]
+              )
+            }
+            items.push(
+              <View key={rank.id} style={s.formationStep}>
+                <View
+                  style={[
+                    s.formationCircle,
+                    isDone ? s.formationCircleDone : isCurrent ? s.formationCircleCurrent : null,
+                  ]}
+                >
+                  {isDone
+                    ? <Ionicons name="checkmark" size={11} color="#fff" />
+                    : isCurrent ? <View style={s.formationDot} /> : null
+                  }
+                </View>
+                <Text
+                  style={[
+                    s.formationLabel,
+                    isDone ? s.formationLabelDone : isCurrent ? s.formationLabelCurrent : null,
+                  ]}
+                  numberOfLines={2}
+                >
+                  {rank.name}
+                </Text>
+              </View>
+            )
+            return items
           })}
         </View>
       </View>
@@ -112,9 +107,10 @@ function createFormationStyles(c: Colors) {
     sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     sectionTitle: { fontSize: 13, fontWeight: '600', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 },
     formationCard: { backgroundColor: c.surface, borderRadius: 14, padding: 16, ...shadow.xs },
-    formationCirclesRow: { flexDirection: 'row', alignItems: 'center' },
-    formationConnector: { flex: 1, height: 2, backgroundColor: c.border },
+    formationRow: { flexDirection: 'row', alignItems: 'flex-start' },
+    formationConnector: { flex: 1, height: 2, backgroundColor: c.border, marginTop: 11 },
     formationConnectorDone: { backgroundColor: c.success },
+    formationStep: { alignItems: 'center', width: 44 },
     formationCircle: {
       width: 24, height: 24, borderRadius: 12,
       justifyContent: 'center', alignItems: 'center',
@@ -123,8 +119,7 @@ function createFormationStyles(c: Colors) {
     formationCircleDone: { backgroundColor: c.success, borderColor: c.success },
     formationCircleCurrent: { backgroundColor: c.primary, borderColor: c.primary },
     formationDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
-    formationLabelsRow: { flexDirection: 'row', marginTop: 8 },
-    formationLabel: { width: 24, textAlign: 'center', fontSize: 9, lineHeight: 12, color: c.textTertiary, fontWeight: '400' },
+    formationLabel: { textAlign: 'center', fontSize: 9, lineHeight: 12, color: c.textTertiary, fontWeight: '400', marginTop: 4 },
     formationLabelDone: { color: c.success },
     formationLabelCurrent: { color: c.primary, fontWeight: '700' },
   })
