@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, FlatList, StyleSheet,
-  TouchableOpacity, TextInput, ActivityIndicator, Modal, Alert,
+  TouchableOpacity, TextInput, ActivityIndicator, Modal,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -11,6 +11,7 @@ import { shadow } from '../../../lib/shadows'
 import { useTheme } from '../../../lib/ThemeContext'
 import { Colors } from '../../../lib/theme'
 import Toast from 'react-native-toast-message'
+import { ConfirmDialog } from '../../../components/ConfirmDialog'
 
 type Member = {
   id: string
@@ -35,6 +36,8 @@ export default function MembersTab() {
   const [candidateSearch, setCandidateSearch] = useState('')
   const [candidates, setCandidates] = useState<Member[]>([])
   const [assignLoading, setAssignLoading] = useState(false)
+  const [pendingRevoke, setPendingRevoke] = useState<Member | null>(null)
+  const [pendingGrant, setPendingGrant] = useState<Member | null>(null)
 
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
@@ -69,51 +72,45 @@ export default function MembersTab() {
   }, [])
 
   const handleRevokeAdmin = (item: Member) => {
-    Alert.alert(
-      'Usuń uprawnienia admina',
-      `Czy na pewno chcesz usunąć uprawnienia administratora dla ${item.full_name}?`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Usuń',
-          style: 'destructive',
-          onPress: async () => {
-              if (item.id === adminProfile!.id) {
-                Alert.alert('Błąd', 'Nie możesz usunąć własnych uprawnień administratora.')
-                return
-              }
+    if (item.id === adminProfile!.id) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: 'Nie możesz usunąć własnych uprawnień administratora.' })
+      return
+    }
+    setPendingRevoke(item)
+  }
 
-              const { count } = await supabase
-              .from('profiles')
-              .select('id', { count: 'exact', head: true })
-              .eq('parish_id', adminProfile!.parish_id)
-              .eq('role', 'admin')
+  const doRevoke = async () => {
+    if (!pendingRevoke) return
+    const item = pendingRevoke
+    setPendingRevoke(null)
 
-            if ((count ?? 0) <= 1) {
-              Alert.alert('Błąd', 'Nie można usunąć jedynego administratora parafii.')
-              return
-            }
+    const { count } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('parish_id', adminProfile!.parish_id)
+      .eq('role', 'admin')
 
-            const restoredRole = item.role_before_admin ?? 'member'
-            const { error } = await supabase
-              .from('profiles')
-              .update({ role: restoredRole, role_before_admin: null })
-              .eq('id', item.id)
+    if ((count ?? 0) <= 1) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: 'Nie można usunąć jedynego administratora parafii.' })
+      return
+    }
 
-            if (error) {
-              Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
-            } else {
-              setMembers(prev => prev.map(m =>
-                m.id === item.id
-                  ? { ...m, role: restoredRole as Member['role'], role_before_admin: null }
-                  : m
-              ))
-              Toast.show({ type: 'success', text1: 'Uprawnienia usunięte', text2: `${item.full_name} jest teraz ${restoredRole === 'parent' ? 'rodzicem' : 'ministrantem'}` })
-            }
-          },
-        },
-      ]
-    )
+    const restoredRole = item.role_before_admin ?? 'member'
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: restoredRole, role_before_admin: null })
+      .eq('id', item.id)
+
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+    } else {
+      setMembers(prev => prev.map(m =>
+        m.id === item.id
+          ? { ...m, role: restoredRole as Member['role'], role_before_admin: null }
+          : m
+      ))
+      Toast.show({ type: 'success', text1: 'Uprawnienia usunięte', text2: `${item.full_name} jest teraz ${restoredRole === 'parent' ? 'rodzicem' : 'ministrantem'}` })
+    }
   }
 
   const handleOpenAssignModal = async () => {
@@ -135,31 +132,27 @@ export default function MembersTab() {
   }
 
   const handleGrantAdmin = (candidate: Member) => {
-    Alert.alert(
-      'Nadaj uprawnienia admina',
-      `Nadać uprawnienia administratora dla ${candidate.full_name}?`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Nadaj',
-          onPress: async () => {
-            const { error } = await supabase
-              .from('profiles')
-              .update({ role: 'admin', role_before_admin: candidate.role })
-              .eq('id', candidate.id)
+    setPendingGrant(candidate)
+  }
 
-            if (error) {
-              Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
-            } else {
-              setAssignModalVisible(false)
-              setCandidates([])
-              setMembers(prev => [...prev, { ...candidate, role: 'admin', role_before_admin: candidate.role }])
-              Toast.show({ type: 'success', text1: 'Uprawnienia nadane', text2: `${candidate.full_name} jest teraz administratorem` })
-            }
-          },
-        },
-      ]
-    )
+  const doGrant = async () => {
+    if (!pendingGrant) return
+    const candidate = pendingGrant
+    setPendingGrant(null)
+    setAssignModalVisible(false)
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: 'admin', role_before_admin: candidate.role })
+      .eq('id', candidate.id)
+
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+    } else {
+      setCandidates([])
+      setMembers(prev => [...prev, { ...candidate, role: 'admin', role_before_admin: candidate.role }])
+      Toast.show({ type: 'success', text1: 'Uprawnienia nadane', text2: `${candidate.full_name} jest teraz administratorem` })
+    }
   }
 
   const filtered = useMemo(() => {
@@ -321,10 +314,10 @@ export default function MembersTab() {
               <ActivityIndicator color={c.primary} style={{ padding: 24 }} />
             ) : (() => {
               const q = candidateSearch.toLowerCase()
-              const filtered = candidates.filter(p =>
+              const filteredCandidates = candidates.filter(p =>
                 q === '' || p.full_name.toLowerCase().includes(q)
               )
-              return filtered.length === 0 ? (
+              return filteredCandidates.length === 0 ? (
                 <View style={styles.modalEmpty}>
                   <Text style={styles.modalEmptyText}>
                     {candidates.length === 0
@@ -334,7 +327,7 @@ export default function MembersTab() {
                 </View>
               ) : (
                 <FlatList
-                  data={filtered}
+                  data={filteredCandidates}
                   keyExtractor={item => item.id}
                   renderItem={({ item }) => (
                     <TouchableOpacity
@@ -362,6 +355,25 @@ export default function MembersTab() {
           </View>
         </View>
       </Modal>
+
+      <ConfirmDialog
+        visible={pendingRevoke !== null}
+        title="Usuń uprawnienia admina"
+        message={`Czy na pewno chcesz usunąć uprawnienia administratora dla ${pendingRevoke?.full_name ?? ''}?`}
+        confirmText="Usuń"
+        destructive
+        onConfirm={doRevoke}
+        onCancel={() => setPendingRevoke(null)}
+      />
+
+      <ConfirmDialog
+        visible={pendingGrant !== null}
+        title="Nadaj uprawnienia admina"
+        message={`Nadać uprawnienia administratora dla ${pendingGrant?.full_name ?? ''}?`}
+        confirmText="Nadaj"
+        onConfirm={doGrant}
+        onCancel={() => setPendingGrant(null)}
+      />
     </View>
   )
 }
