@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, FlatList, StyleSheet,
-  TouchableOpacity, TextInput, ActivityIndicator, Alert
+  TouchableOpacity, TextInput, ActivityIndicator, Modal, Alert,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -273,6 +273,83 @@ export default function MembersTab() {
           }
         />
       )}
+
+      <Modal
+        visible={assignModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAssignModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={() => setAssignModalVisible(false)}
+          />
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Przydziel prawa admina</Text>
+              <TouchableOpacity onPress={() => setAssignModalVisible(false)} hitSlop={8}>
+                <Ionicons name="close" size={24} color={c.subtext} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalSearchBox}>
+              <Ionicons name="search-outline" size={16} color={c.textTertiary} />
+              <TextInput
+                style={styles.modalSearchInput}
+                placeholder="Szukaj po imieniu..."
+                placeholderTextColor={c.textTertiary}
+                value={candidateSearch}
+                onChangeText={setCandidateSearch}
+              />
+            </View>
+
+            {assignLoading ? (
+              <ActivityIndicator color={c.primary} style={{ padding: 24 }} />
+            ) : (() => {
+              const q = candidateSearch.toLowerCase()
+              const filtered = candidates.filter(p =>
+                q === '' || p.full_name.toLowerCase().includes(q)
+              )
+              return filtered.length === 0 ? (
+                <View style={styles.modalEmpty}>
+                  <Text style={styles.modalEmptyText}>
+                    {candidates.length === 0
+                      ? 'Brak ministrantów ani rodziców do promowania'
+                      : 'Brak wyników wyszukiwania'}
+                  </Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={filtered}
+                  keyExtractor={item => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.candidateOption}
+                      onPress={() => handleGrantAdmin(item)}
+                    >
+                      <Ionicons
+                        name={item.role === 'parent' ? 'people-outline' : 'person-outline'}
+                        size={20}
+                        color={c.primary}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.candidateName}>{item.full_name}</Text>
+                        <Text style={styles.candidateRole}>
+                          {item.role === 'parent' ? 'Rodzic' : 'Ministrant'}
+                        </Text>
+                      </View>
+                      <Ionicons name="shield-outline" size={16} color={c.textTertiary} />
+                    </TouchableOpacity>
+                  )}
+                  style={{ maxHeight: 360 }}
+                />
+              )
+            })()}
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -320,6 +397,29 @@ function createStyles(c: Colors) {
       backgroundColor: c.primary, borderRadius: 12, padding: 14, marginTop: 8,
     },
     assignBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+    modalSheet: {
+      backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      padding: 20, paddingBottom: 36,
+    },
+    modalHeader: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12,
+    },
+    modalTitle: { fontSize: 17, fontWeight: '700', color: c.text },
+    modalSearchBox: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: c.bg, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9,
+      marginBottom: 8,
+    },
+    modalSearchInput: { flex: 1, fontSize: 15, color: c.text },
+    candidateOption: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.primarySurface,
+    },
+    candidateName: { fontSize: 15, color: c.text, fontWeight: '500' },
+    candidateRole: { fontSize: 12, color: c.subtext, marginTop: 1 },
+    modalEmpty: { padding: 24, alignItems: 'center' },
+    modalEmptyText: { fontSize: 14, color: c.textTertiary, textAlign: 'center' },
     empty: { alignItems: 'center', marginTop: 60, gap: 12, paddingHorizontal: 32 },
     emptyText: { color: c.textTertiary, fontSize: 15 },
     emptyHint: { fontSize: 13, color: c.textTertiary, textAlign: 'center' },
