@@ -40,3 +40,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Superpowers brainstorming artifacts
+.superpowers/brainstorm/
+
+# Supabase temp files
+supabase/.temp/
