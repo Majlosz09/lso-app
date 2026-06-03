@@ -266,7 +266,7 @@ function createStyles(c: Colors) {
     cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
     cardTitleRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
     cardTitle: { fontSize: 15, fontWeight: '700', color: c.text, flex: 1 },
-    cardContent: { fontSize: 14, color: c.subtext, lineHeight: 21 },
+    cardContent: { fontSize: 14, color: c.text, lineHeight: 21 },
     expandText: { fontSize: 13, color: c.primary, fontWeight: '500' },
     cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
     cardMeta: { fontSize: 12, color: c.textTertiary },

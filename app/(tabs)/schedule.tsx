@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   View, Text, FlatList, ScrollView, StyleSheet, RefreshControl,
-  TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput
+  TouchableOpacity, ActivityIndicator, Modal, TextInput
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
 import { CameraView, useCameraPermissions } from 'expo-camera'
 import { supabase } from '../../lib/supabase'
@@ -11,7 +12,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { STATUS_COLORS, STATUS_LABELS } from '../../lib/status'
 import { CATEGORY_CONFIG, getCatColors, ScheduleCategory, AssignmentStatus } from '../../types/database'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
-import { validateGps, validateParishQr } from '../../lib/checkin'
+import { validateGps, validateParishQr, CheckInResult } from '../../lib/checkin'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 
@@ -520,7 +521,7 @@ function MemberScheduleView() {
       })
       if (signUpErr && !signUpErr.message.includes('Już jesteś zapisany')) {
         setCheckingInId(null)
-        Alert.alert('Błąd', signUpErr.message)
+        Toast.show({ type: 'error', text1: 'Błąd', text2: signUpErr.message })
         return
       }
       if (signUpData) {
@@ -533,7 +534,7 @@ function MemberScheduleView() {
           .gte('time', schedule.time.slice(0, 5) + ':00')
           .lt('time', schedule.time.slice(0, 5) + ':59')
           .maybeSingle()
-        if (!sch) { setCheckingInId(null); Alert.alert('Błąd', 'Nie znaleziono służby.'); return }
+        if (!sch) { setCheckingInId(null); Toast.show({ type: 'error', text1: 'Błąd', text2: 'Nie znaleziono służby.' }); return }
         scheduleId = sch.id
       }
     }
@@ -544,14 +545,14 @@ function MemberScheduleView() {
       p_parish_id: profile!.parish_id,
     })
     setCheckingInId(null)
-    if (error) { Alert.alert('Błąd', error.message); return }
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
     const result = data as any
     if (result.already_checked_in) {
-      Alert.alert('', 'Obecność już zaznaczona.')
+      Toast.show({ type: 'info', text1: 'Obecność już zaznaczona.' })
     } else if (result.points_awarded > 0) {
-      Alert.alert('', `+${result.points_awarded} pkt — ${result.reason}`)
+      Toast.show({ type: 'success', text1: `+${result.points_awarded} pkt`, text2: result.reason })
     } else {
-      Alert.alert('', 'Obecność zaznaczona.')
+      Toast.show({ type: 'success', text1: 'Obecność zaznaczona.' })
     }
     fetchWeekSchedules(weekDays)
   }
@@ -561,17 +562,29 @@ function MemberScheduleView() {
 
     if (mode === 'gps') {
       if (!parish?.lat || !parish?.lng) {
-        Alert.alert('Błąd konfiguracji', 'Admin nie skonfigurował lokalizacji kościoła w ustawieniach parafii.')
+        Toast.show({ type: 'error', text1: 'Błąd konfiguracji', text2: 'Admin nie skonfigurował lokalizacji kościoła w ustawieniach parafii.' })
         return
       }
       setCheckingInId(schedule.id)
-      const result = await validateGps({
-        parishLat: parish.lat,
-        parishLng: parish.lng,
-        parishRadius: parish.gps_radius ?? 200,
-      })
-      setCheckingInId(null)
-      if (!result.success) { Alert.alert('Nie można zameldować', (result as any).message); return }
+      let gpsResult: CheckInResult = { success: false, message: 'Nie można uzyskać lokalizacji.' }
+      try {
+        gpsResult = await Promise.race([
+          validateGps({
+            parishLat: parish.lat,
+            parishLng: parish.lng,
+            parishRadius: parish.gps_radius ?? 200,
+          }),
+          new Promise<CheckInResult>((resolve) =>
+            setTimeout(
+              () => resolve({ success: false, message: 'Przekroczono czas oczekiwania na lokalizację. Sprawdź czy GPS i uprawnienia są aktywne.' }),
+              25_000,
+            )
+          ),
+        ])
+      } finally {
+        setCheckingInId(null)
+      }
+      if (!gpsResult.success) { Toast.show({ type: 'error', text1: 'Nie można zameldować', text2: gpsResult.message }); return }
       await doCheckIn(schedule)
       return
     }
@@ -579,7 +592,7 @@ function MemberScheduleView() {
     if (mode === 'qr') {
       if (!cameraPermission?.granted) {
         const { granted } = await requestCameraPermission()
-        if (!granted) { Alert.alert('Brak dostępu', 'Zezwól aplikacji na dostęp do kamery.'); return }
+        if (!granted) { Toast.show({ type: 'error', text1: 'Brak dostępu', text2: 'Zezwól aplikacji na dostęp do kamery.' }); return }
       }
       qrScannedRef.current = false
       setQrPendingSchedule(schedule)
@@ -594,59 +607,34 @@ function MemberScheduleView() {
     setSignUpModal({ visible: true, schedule })
   }
 
-  const doSignUp = (scheduleId: string, date: string, timeSlot: string, mode: 'once' | 'recurring') => {
-    const dateStr = new Date(date + 'T12:00:00').toLocaleDateString('pl-PL', {
-      weekday: 'long', day: 'numeric', month: 'long',
+  const doSignUp = async (scheduleId: string, date: string, timeSlot: string, mode: 'once' | 'recurring') => {
+    const key = `${date}_${timeSlot}`
+    setSigningUpId(key)
+    const { data, error } = await supabase.rpc('sign_up_for_slot', {
+      p_date: date,
+      p_time_label: timeSlot,
+      p_mode: mode,
     })
-    Alert.alert(
-      'Zapisz na służbę',
-      `Zapisać się na służbę ${dateStr} o ${timeSlot}?`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Zapisz',
-          onPress: async () => {
-            const key = `${date}_${timeSlot}`
-            setSigningUpId(key)
-            const { data, error } = await supabase.rpc('sign_up_for_slot', {
-              p_date: date,
-              p_time_label: timeSlot,
-              p_mode: mode,
-            })
-            setSigningUpId(null)
-            if (error) { Alert.alert('Błąd', error.message); return }
-            if (mode === 'recurring') {
-              const dow = new Date(date + 'T12:00:00').getDay()
-              const DAY_FULL_LOCAL = ['Niedzielę', 'Poniedziałek', 'Wtorek', 'Środę', 'Czwartek', 'Piątek', 'Sobotę']
-              Alert.alert('Cykl aktywny',
-                `Zapisano cyklicznie na każd${dow === 0 || dow === 3 || dow === 6 ? 'ą' : 'y'} ${DAY_FULL_LOCAL[dow]} o ${timeSlot}. Objęto ${(data as any)?.count ?? 1} służb.`
-              )
-            }
-            fetchWeekSchedules(weekDays)
-          },
-        },
-      ]
-    )
+    setSigningUpId(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    if (mode === 'recurring') {
+      const dow = new Date(date + 'T12:00:00').getDay()
+      const DAY_FULL_LOCAL = ['Niedzielę', 'Poniedziałek', 'Wtorek', 'Środę', 'Czwartek', 'Piątek', 'Sobotę']
+      Toast.show({
+        type: 'success',
+        text1: 'Cykl aktywny',
+        text2: `Zapisano cyklicznie na każd${dow === 0 || dow === 3 || dow === 6 ? 'ą' : 'y'} ${DAY_FULL_LOCAL[dow]} o ${timeSlot}. Objęto ${(data as any)?.count ?? 1} służb.`,
+      })
+    }
+    fetchWeekSchedules(weekDays)
   }
 
-  const unsignOne = (assignmentId: string) => {
-    Alert.alert(
-      'Wypisz ze służby',
-      'Wypisać się z tej służby?',
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Wypisz',
-          onPress: async () => {
-            setUnsigningId(assignmentId)
-            const { error } = await supabase.from('schedule_assignments').delete().eq('id', assignmentId)
-            setUnsigningId(null)
-            if (error) { Alert.alert('Błąd', error.message); return }
-            fetchWeekSchedules(weekDays)
-          },
-        },
-      ]
-    )
+  const unsignOne = async (assignmentId: string) => {
+    setUnsigningId(assignmentId)
+    const { error } = await supabase.from('schedule_assignments').delete().eq('id', assignmentId)
+    setUnsigningId(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    fetchWeekSchedules(weekDays)
   }
 
   const unsignCycle = async (assignmentId: string, commitmentId: string) => {
@@ -656,7 +644,7 @@ function MemberScheduleView() {
       supabase.from('recurring_commitments').delete().eq('id', commitmentId),
     ])
     setUnsigningId(null)
-    if (r1.error || r2.error) { Alert.alert('Błąd', (r1.error ?? r2.error)!.message); return }
+    if (r1.error || r2.error) { Toast.show({ type: 'error', text1: 'Błąd', text2: (r1.error ?? r2.error)!.message }); return }
     fetchWeekSchedules(weekDays)
   }
 
@@ -684,28 +672,16 @@ function MemberScheduleView() {
     })
   }
 
-  const reportAbsence = (assignmentId: string, reason: string) => {
-    Alert.alert(
-      'Zgłoś nieobecność',
-      'Zgłosić nieobecność na tej służbie?',
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Zgłoś',
-          onPress: async () => {
-            setReportingAbsenceId(assignmentId)
-            const { error } = await supabase
-              .from('schedule_assignments')
-              .update({ status: 'excused', absence_reason: reason })
-              .eq('id', assignmentId)
-            setReportingAbsenceId(null)
-            if (error) { Alert.alert('Błąd', error.message); return }
-            setAbsenceModal({ visible: false, assignmentId: '', title: '', reason: '' })
-            fetchWeekSchedules(weekDays)
-          },
-        },
-      ]
-    )
+  const reportAbsence = async (assignmentId: string, reason: string) => {
+    setReportingAbsenceId(assignmentId)
+    const { error } = await supabase
+      .from('schedule_assignments')
+      .update({ status: 'excused', absence_reason: reason })
+      .eq('id', assignmentId)
+    setReportingAbsenceId(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    setAbsenceModal({ visible: false, assignmentId: '', title: '', reason: '' })
+    fetchWeekSchedules(weekDays)
   }
 
   // --- Derived data ---
@@ -912,7 +888,7 @@ function MemberScheduleView() {
               if (qrScannedRef.current) return
               const value = e.data
               if (!validateParishQr(value, profile!.parish_id!)) {
-                Alert.alert('Nieprawidłowy kod', 'Ten kod QR nie należy do Twojej parafii.')
+                Toast.show({ type: 'error', text1: 'Nieprawidłowy kod', text2: 'Ten kod QR nie należy do Twojej parafii.' })
                 return
               }
               qrScannedRef.current = true
