@@ -17,6 +17,9 @@ export default function TabsLayout() {
     if (profile?.role === 'admin') {
       router.replace('/(admin)/(admin-tabs)')
     }
+    if (profile?.role === 'parent') {
+      router.replace('/(parent)/(parent-tabs)')
+    }
   }, [profile])
 
   const headerRight = () => (
@@ -52,12 +55,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="announcements"
+        name="points"
         options={{
-          title: 'Ogłoszenia',
+          title: 'Punkty',
           headerRight,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="megaphone-outline" size={size} color={color} />
+            <Ionicons name="trophy-outline" size={size} color={color} />
           ),
         }}
       />
@@ -68,16 +71,6 @@ export default function TabsLayout() {
           headerRight,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="points"
-        options={{
-          title: 'Punkty',
-          headerRight,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="trophy-outline" size={size} color={color} />
           ),
         }}
       />
@@ -101,6 +94,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="announcements" options={{ href: null, title: 'Ogłoszenia', headerRight }} />
       <Tabs.Screen name="profile" options={{ href: null, title: 'Profil' }} />
       <Tabs.Screen name="badge-catalog" options={{ href: null, title: 'Katalog odznak' }} />
       <Tabs.Screen name="member-profile" options={{ href: null, title: 'Profil ministranta' }} />
