@@ -418,21 +418,6 @@ function createStyles(c: Colors) {
     emptyText: { fontSize: 13, color: c.textTertiary },
     emptyLink: { fontSize: 13, color: c.primary, fontWeight: '600', marginTop: 2 },
 
-    childCard: {
-      backgroundColor: c.surface, borderRadius: 12, padding: 14,
-      gap: 8, ...shadow.xs,
-    },
-    childCardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    childAvatarSmall: {
-      width: 32, height: 32, borderRadius: 16,
-      backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center',
-    },
-    childCardName: { fontSize: 15, fontWeight: '700', color: c.text },
-    childCardMeta: { fontSize: 12, color: c.subtext, marginTop: 1 },
-    childCardArrow: { padding: 4 },
-    childNextDuty: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.bg },
-    childNextDutyText: { flex: 1, fontSize: 12, color: c.primary, fontWeight: '500' },
-
     eventRow: {
       backgroundColor: c.surface, borderRadius: 10, borderLeftWidth: 3,
       padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10,

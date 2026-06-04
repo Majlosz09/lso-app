@@ -907,21 +907,6 @@ function createStyles(c: Colors) {
     infoLabel: { fontSize: 12, color: c.textTertiary },
     infoValue: { fontSize: 15, color: c.text, marginTop: 1 },
 
-    childRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-    childRowBorder: { borderBottomWidth: 1, borderBottomColor: c.primarySurface },
-    childAvatar: {
-      width: 32, height: 32, borderRadius: 16,
-      backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center',
-    },
-    childName: { flex: 1, fontSize: 15, fontWeight: '500', color: c.text },
-    childBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    childBadgeText: { fontSize: 13, color: c.success, fontWeight: '500' },
-    childRank: { fontSize: 12, color: c.primary, fontWeight: '500' },
-    moreBadges: { fontSize: 11, color: c.textTertiary },
-
-    emptyChildren: { alignItems: 'center', padding: 24, gap: 8 },
-    emptyChildrenText: { fontSize: 14, color: c.textTertiary, textAlign: 'center' },
-
     instructionBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       backgroundColor: c.primaryAlpha08, borderRadius: 12, padding: 14,

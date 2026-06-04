@@ -947,8 +947,6 @@ function createStyles(c: Colors) {
     liturgyTypeLabel: { fontSize: 12, color: c.gold, fontWeight: '600' },
     liturgyName: { fontSize: 13, color: c.text, flex: 1 },
 
-    parentHeader: { fontSize: 17, fontWeight: '700', color: c.text, marginBottom: 4 },
-
     todaySection: {
       backgroundColor: c.primarySurface, borderRadius: 12,
       borderLeftWidth: 3, borderLeftColor: c.primary,
