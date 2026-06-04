@@ -49,7 +49,7 @@ export function MessageBubble({
       activeOpacity={0.85}
     >
       <View style={{ flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start' }}>
-        {showSender && (
+        {showSender && !isOwn && (
           <Text style={styles.senderName}>{item.sender?.full_name}</Text>
         )}
         {item.reply_to && (
