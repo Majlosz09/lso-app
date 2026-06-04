@@ -1,4 +1,3 @@
-// __tests__/hooks/useChatMessages.test.ts
 import { renderHook, waitFor } from '@testing-library/react-native'
 import { useChatMessages } from '../../hooks/useChatMessages'
 
@@ -26,16 +25,20 @@ describe('useChatMessages', () => {
     expect(result.current.messages).toEqual([])
   })
 
-  it('subscribes to realtime on mount', async () => {
+  it('subscribes to 3 realtime channels on mount', async () => {
     const { supabase } = require('../../lib/supabase')
     renderHook(() => useChatMessages('channel-abc'))
-    await waitFor(() => expect(supabase.channel).toHaveBeenCalledWith('chat-messages-channel-abc'))
+    await waitFor(() =>
+      expect(supabase.channel).toHaveBeenCalledWith('chat-messages-channel-abc')
+    )
+    expect(supabase.channel).toHaveBeenCalledWith('chat-reactions-channel-abc')
+    expect(supabase.channel).toHaveBeenCalledWith('chat-votes-channel-abc')
   })
 
-  it('unsubscribes on unmount', async () => {
+  it('unsubscribes all channels on unmount', async () => {
     const { supabase } = require('../../lib/supabase')
     const { unmount } = renderHook(() => useChatMessages('channel-xyz'))
     unmount()
-    expect(supabase.removeChannel).toHaveBeenCalled()
+    expect(supabase.removeChannel).toHaveBeenCalledTimes(3)
   })
 })
