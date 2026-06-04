@@ -12,21 +12,24 @@ export function useChatMessages(channelId: string) {
   const votesRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   const fetchMessages = async () => {
-    const { data } = await supabase
-      .from('chat_messages')
-      .select(`
-        *,
-        sender:profiles(id, full_name, avatar_url, role),
-        reply_to:chat_messages!reply_to_id(id, content, deleted_at, sender:profiles(full_name)),
-        reactions:chat_reactions(*),
-        poll:chat_polls(*, options:chat_poll_options(*, votes:chat_poll_votes(*)))
-      `)
-      .eq('channel_id', channelId)
-      .is('deleted_at', null)
-      .order('created_at', { ascending: false })
-      .limit(PAGE_SIZE)
-    if (data) setMessages(data as ChatMessageWithSender[])
-    setLoading(false)
+    try {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select(`
+          *,
+          sender:profiles(id, full_name, avatar_url, role),
+          reply_to:chat_messages!reply_to_id(id, content, deleted_at, sender:profiles(full_name)),
+          reactions:chat_reactions(*),
+          poll:chat_polls(*, options:chat_poll_options(*, votes:chat_poll_votes(*)))
+        `)
+        .eq('channel_id', channelId)
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(PAGE_SIZE)
+      if (data) setMessages(data as ChatMessageWithSender[])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
