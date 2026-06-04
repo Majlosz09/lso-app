@@ -11,7 +11,13 @@ import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import { useChatMessages } from '../../hooks/useChatMessages'
-import { ChatChannel } from '../../types/chat'
+import { useChatReactions } from '../../hooks/useChatReactions'
+import { useChatPolls } from '../../hooks/useChatPolls'
+import { ChatChannel, ChatMessageWithSender, ChatPoll, ChatReaction } from '../../types/chat'
+import { MessageBubble } from '../../components/chat/MessageBubble'
+import { MessageActionSheet } from '../../components/chat/MessageActionSheet'
+import { ReplyPreview } from '../../components/chat/ReplyPreview'
+import { CreatePollModal } from '../../components/chat/CreatePollModal'
 
 export default function ChannelScreen() {
   const { channelId } = useLocalSearchParams<{ channelId: string }>()
@@ -23,17 +29,21 @@ export default function ChannelScreen() {
   const [channel, setChannel] = useState<ChatChannel | null>(null)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [actionSheetMessage, setActionSheetMessage] = useState<ChatMessageWithSender | null>(null)
+  const [replyTo, setReplyTo] = useState<ChatMessageWithSender | null>(null)
+  const [editingMessage, setEditingMessage] = useState<ChatMessageWithSender | null>(null)
+  const [showPollModal, setShowPollModal] = useState(false)
 
   const { messages, loading } = useChatMessages(channelId)
+  const { toggleReaction } = useChatReactions(profile?.id ?? '')
+  const { vote, closePoll } = useChatPolls(profile?.id ?? '')
 
-  // Pobierz metadane kanału i ustaw tytuł
+  const isAdmin = profile?.role === 'admin' || !!profile?.is_admin
+
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase
-        .from('chat_channels')
-        .select('*')
-        .eq('id', channelId)
-        .single()
+        .from('chat_channels').select('*').eq('id', channelId).single()
       if (data) setChannel(data)
     }
     if (channelId) init()
@@ -47,30 +57,40 @@ export default function ChannelScreen() {
     }
   }, [channel, navigation])
 
-  // Oznacz jako przeczytane przy wejściu i przy nowych wiadomościach
   const markRead = useCallback(async () => {
     if (!profile?.id || !channelId) return
-    await supabase
-      .from('chat_members')
+    await supabase.from('chat_members')
       .update({ last_read_at: new Date().toISOString() })
-      .eq('channel_id', channelId)
-      .eq('user_id', profile.id)
+      .eq('channel_id', channelId).eq('user_id', profile.id)
   }, [channelId, profile?.id])
 
   useEffect(() => { markRead() }, [markRead])
-
   useEffect(() => { if (messages.length > 0) markRead() }, [messages[0]?.id, markRead])
 
   const handleSend = async () => {
     if (!text.trim() || !profile?.id || sending) return
     const content = text.trim()
+
+    if (editingMessage) {
+      setText('')
+      setEditingMessage(null)
+      const { error } = await supabase.from('chat_messages')
+        .update({ content, edited_at: new Date().toISOString() })
+        .eq('id', editingMessage.id).eq('sender_id', profile.id)
+      if (error) Alert.alert('Błąd', 'Nie udało się edytować wiadomości.')
+      return
+    }
+
     setText('')
     setSending(true)
     const { error } = await supabase.from('chat_messages').insert({
       channel_id: channelId,
       sender_id: profile.id,
       content,
+      type: 'text',
+      reply_to_id: replyTo?.id ?? null,
     })
+    setReplyTo(null)
     if (error) {
       setText(content)
       Alert.alert('Błąd', 'Nie udało się wysłać wiadomości.')
@@ -78,23 +98,55 @@ export default function ChannelScreen() {
     setSending(false)
   }
 
-  const handleLongPress = (messageId: string, senderId: string) => {
-    const isOwn = senderId === profile?.id
-    const isAdmin = profile?.role === 'admin' || profile?.is_admin
-    if (!isOwn && !isAdmin) return
-
+  const handleDelete = async (message: ChatMessageWithSender) => {
     Alert.alert('Usuń wiadomość', 'Tej operacji nie można cofnąć.', [
       { text: 'Anuluj', style: 'cancel' },
       {
         text: 'Usuń', style: 'destructive',
         onPress: () =>
-          supabase
-            .from('chat_messages')
-            .update({ deleted_at: new Date().toISOString() })
-            .eq('id', messageId),
+          supabase.from('chat_messages')
+            .update({ deleted_at: new Date().toISOString() }).eq('id', message.id),
       },
     ])
   }
+
+  const handleCreatePoll = async (question: string, options: string[], allowMultiple: boolean) => {
+    if (!profile?.id) return
+    const { data: poll, error: pollError } = await supabase
+      .from('chat_polls')
+      .insert({ channel_id: channelId, creator_id: profile.id, question, allow_multiple: allowMultiple })
+      .select().single()
+    if (pollError || !poll) { Alert.alert('Błąd', 'Nie udało się utworzyć ankiety.'); return }
+
+    await Promise.all(
+      options.map((text, position) =>
+        supabase.from('chat_poll_options').insert({ poll_id: poll.id, text, position })
+      )
+    )
+
+    await supabase.from('chat_messages').insert({
+      channel_id: channelId,
+      sender_id: profile.id,
+      content: question,
+      type: 'poll',
+      poll_id: poll.id,
+    })
+  }
+
+  const handleReaction = async (messageId: string, emoji: string, reactions: ChatReaction[]) => {
+    const result = await toggleReaction(messageId, emoji, reactions)
+    if (result?.error) Alert.alert('Błąd', 'Nie udało się dodać reakcji.')
+  }
+
+  // Web: Enter sends, Shift+Enter = new line
+  const handleKeyPress = (e: any) => {
+    if (Platform.OS === 'web' && e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
+      e.preventDefault?.()
+      handleSend()
+    }
+  }
+
+  const insertNewline = () => setText((t) => t + '\n')
 
   if (loading) {
     return (
@@ -121,54 +173,59 @@ export default function ChannelScreen() {
           </View>
         }
         renderItem={({ item, index }) => {
-          const isOwn = item.sender_id === profile?.id
           const prevItem = messages[index + 1]
-          const showSender = !isOwn && (!prevItem || prevItem.sender_id !== item.sender_id)
-
-          if (item.deleted_at) {
-            return (
-              <View style={[styles.bubbleRow, isOwn ? styles.rowRight : styles.rowLeft]}>
-                <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
-                  <Text style={styles.deletedText}>Wiadomość usunięta</Text>
-                </View>
-              </View>
-            )
-          }
-
+          const showSender = item.sender_id !== profile?.id &&
+            (!prevItem || prevItem.sender_id !== item.sender_id)
           return (
-            <TouchableOpacity
-              style={[styles.bubbleRow, isOwn ? styles.rowRight : styles.rowLeft]}
-              onLongPress={() => handleLongPress(item.id, item.sender_id)}
-              activeOpacity={0.85}
-            >
-              <View style={{ flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start' }}>
-                {showSender && (
-                  <Text style={styles.senderName}>{item.sender?.full_name}</Text>
-                )}
-                <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
-                  <Text style={[styles.messageText, isOwn && styles.messageTextOwn]}>
-                    {item.content}
-                  </Text>
-                  <Text style={[styles.messageTime, isOwn && styles.messageTimeOwn]}>
-                    {new Date(item.created_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
+            <MessageBubble
+              item={item}
+              currentUserId={profile?.id ?? ''}
+              isAdmin={isAdmin}
+              showSender={showSender}
+              onLongPress={setActionSheetMessage}
+              onReactionPress={handleReaction}
+              onVote={async (poll: ChatPoll, optionId: string) => {
+                await vote(poll, optionId)
+              }}
+              onClosePoll={closePoll}
+            />
           )
         }}
       />
+
+      {(replyTo || editingMessage) && (
+        <ReplyPreview
+          message={(replyTo ?? editingMessage)!}
+          mode={editingMessage ? 'edit' : 'reply'}
+          onCancel={() => { setReplyTo(null); setEditingMessage(null); setText('') }}
+        />
+      )}
+
       <View style={[styles.inputRow, { borderTopColor: c.border }]}>
         <TextInput
           style={[styles.input, { color: c.text, backgroundColor: c.surface, borderColor: c.border }]}
           value={text}
           onChangeText={setText}
-          placeholder="Napisz wiadomość..."
+          placeholder={editingMessage ? 'Edytuj wiadomość...' : 'Napisz wiadomość...'}
           placeholderTextColor={c.subtext}
           multiline
           maxLength={1000}
-          returnKeyType="default"
+          returnKeyType="send"
+          blurOnSubmit={false}
+          onSubmitEditing={Platform.OS !== 'web' ? handleSend : undefined}
+          onKeyPress={Platform.OS === 'web' ? handleKeyPress : undefined}
         />
+        {Platform.OS !== 'web' && (
+          <TouchableOpacity style={[styles.newlineBtn, { borderColor: c.border }]} onPress={insertNewline}>
+            <Text style={{ color: c.subtext, fontSize: 14 }}>⏎</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.pollBtn, { borderColor: c.border }]}
+          onPress={() => setShowPollModal(true)}
+        >
+          <Text style={{ fontSize: 18 }}>📊</Text>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.sendBtn, { backgroundColor: text.trim() ? c.primary : c.border }]}
           onPress={handleSend}
@@ -177,6 +234,34 @@ export default function ChannelScreen() {
           <Ionicons name="send" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      <MessageActionSheet
+        visible={!!actionSheetMessage}
+        message={actionSheetMessage}
+        currentUserId={profile?.id ?? ''}
+        isAdmin={isAdmin}
+        onClose={() => setActionSheetMessage(null)}
+        onReact={(emoji) => {
+          if (actionSheetMessage)
+            handleReaction(actionSheetMessage.id, emoji, actionSheetMessage.reactions)
+        }}
+        onReply={() => {
+          setReplyTo(actionSheetMessage)
+          setEditingMessage(null)
+        }}
+        onEdit={() => {
+          setEditingMessage(actionSheetMessage)
+          setText(actionSheetMessage?.content ?? '')
+          setReplyTo(null)
+        }}
+        onDelete={() => { if (actionSheetMessage) handleDelete(actionSheetMessage) }}
+      />
+
+      <CreatePollModal
+        visible={showPollModal}
+        onClose={() => setShowPollModal(false)}
+        onSubmit={handleCreatePoll}
+      />
     </KeyboardAvoidingView>
   )
 }
@@ -187,18 +272,6 @@ function createStyles(c: Colors) {
     center: { justifyContent: 'center', alignItems: 'center' },
     empty: { alignItems: 'center', padding: 40 },
     emptyText: { color: c.subtext, fontSize: 14, textAlign: 'center' },
-    bubbleRow: { marginVertical: 2 },
-    rowRight: { alignItems: 'flex-end' },
-    rowLeft: { alignItems: 'flex-start' },
-    senderName: { fontSize: 11, color: c.subtext, marginBottom: 2, marginLeft: 4 },
-    bubble: { maxWidth: '80%', borderRadius: 16, padding: 10, paddingHorizontal: 14 },
-    bubbleOwn: { backgroundColor: c.primary, borderBottomRightRadius: 4 },
-    bubbleOther: { backgroundColor: c.surface, borderBottomLeftRadius: 4 },
-    messageText: { fontSize: 15, color: c.text, lineHeight: 20 },
-    messageTextOwn: { color: '#fff' },
-    deletedText: { fontSize: 13, color: c.subtext, fontStyle: 'italic' },
-    messageTime: { fontSize: 10, color: c.subtext, alignSelf: 'flex-end', marginTop: 4 },
-    messageTimeOwn: { color: 'rgba(255,255,255,0.7)' },
     inputRow: {
       flexDirection: 'row', alignItems: 'flex-end',
       padding: 8, paddingHorizontal: 12,
@@ -208,6 +281,14 @@ function createStyles(c: Colors) {
       flex: 1, borderRadius: 20, borderWidth: 1,
       paddingHorizontal: 14, paddingVertical: 8,
       fontSize: 15, maxHeight: 100, minHeight: 40,
+    },
+    newlineBtn: {
+      width: 36, height: 36, borderRadius: 18, borderWidth: 1,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    pollBtn: {
+      width: 36, height: 36, borderRadius: 18, borderWidth: 1,
+      justifyContent: 'center', alignItems: 'center',
     },
     sendBtn: {
       width: 40, height: 40, borderRadius: 20,
