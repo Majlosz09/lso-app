@@ -629,7 +629,7 @@ function MemberScheduleView() {
       />
       <ScrollView
         style={{ flex: 1, backgroundColor: c.bg }}
-        contentContainerStyle={{ padding: 16, gap: 10 }}
+        contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -863,6 +863,7 @@ function createStyles(c: Colors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    listContent: { padding: 16, gap: 10 },
 
     segmentBar: {
       flexDirection: 'row', margin: 16, marginBottom: 0,

@@ -154,7 +154,7 @@ function MemberHomeView() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 6, paddingBottom: 4 }}
+          contentContainerStyle={styles.daySelectorContent}
         >
           {days.map(d => {
             const date = new Date(d + 'T12:00:00')
@@ -307,7 +307,7 @@ function MemberHomeView() {
             <View style={styles.wideLeft}>{churchSection}</View>
             <View style={styles.wideRight}>
               {dutiesSection}
-              <View style={{ gap: 10, marginTop: 6 }}>{actionsSection}</View>
+              <View style={styles.actionsWrap}>{actionsSection}</View>
             </View>
           </View>
         ) : (
@@ -388,6 +388,9 @@ function createStyles(c: Colors) {
       fontSize: 12, fontWeight: '700', color: c.textTertiary,
       textTransform: 'uppercase', letterSpacing: 0.8,
     },
+
+    daySelectorContent: { gap: 6, paddingBottom: 4 },
+    actionsWrap: { gap: 10, marginTop: 6 },
 
     // Day scroller
     dayStripWrap: {
