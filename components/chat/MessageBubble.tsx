@@ -48,7 +48,7 @@ export function MessageBubble({
       onLongPress={() => onLongPress(item)}
       activeOpacity={0.85}
     >
-      <View style={{ flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start' }}>
+      <View style={{ flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start', maxWidth: '92%' }}>
         {showSender && !isOwn && (
           <Text style={styles.senderName}>{item.sender?.full_name}</Text>
         )}
@@ -110,7 +110,7 @@ export function MessageBubble({
 
 function createStyles(c: Colors) {
   return StyleSheet.create({
-    row: { marginVertical: 2 },
+    row: { marginVertical: 2, width: '100%' },
     rowRight: { alignItems: 'flex-end' },
     rowLeft: { alignItems: 'flex-start' },
     senderName: { fontSize: 11, color: c.subtext, marginBottom: 2, marginLeft: 4 },
@@ -121,7 +121,7 @@ function createStyles(c: Colors) {
     },
     quoteName: { fontSize: 11, fontWeight: '600' },
     quoteText: { fontSize: 11 },
-    bubble: { maxWidth: '92%', borderRadius: 16, padding: 10, paddingHorizontal: 14 },
+    bubble: { borderRadius: 16, padding: 10, paddingHorizontal: 14 },
     bubbleOwn: { backgroundColor: c.primary, borderBottomRightRadius: 4 },
     bubbleOther: { backgroundColor: c.surface, borderBottomLeftRadius: 4 },
     messageText: { fontSize: 15, color: c.text, lineHeight: 20 },
