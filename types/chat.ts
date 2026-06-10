@@ -84,3 +84,16 @@ export interface ChatChannelWithMeta extends ChatChannel {
   last_message: ChatMessageWithSender | null
   unread_count: number
 }
+
+export interface ChatChannelListItem {
+  id: string
+  parish_id: string
+  type: ChatChannelType
+  name: string | null
+  slug: string | null
+  created_at: string
+  last_message_content: string | null
+  last_message_at: string | null
+  last_message_type: 'text' | 'poll' | null
+  unread_count: number
+}
