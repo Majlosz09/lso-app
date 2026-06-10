@@ -208,8 +208,8 @@ export default function AdminHome() {
           onPress={() => router.push('/(admin)/schedule-form')} styles={styles} />
         <QuickAction icon="trophy-outline" color={c.gold} label="Przyznaj punkty"
           onPress={() => router.push('/(admin)/award-points')} styles={styles} />
-        <QuickAction icon="megaphone-outline" color={c.danger} label="Nowe ogłoszenie"
-          onPress={() => router.push('/(admin)/(admin-tabs)/announcements?openModal=true')} styles={styles} />
+        <QuickAction icon="megaphone-outline" color={c.danger} label="Ogłoszenia"
+          onPress={() => router.push('/(admin)/(admin-tabs)/announcements')} styles={styles} />
       </View>
 
       <Text style={styles.sectionLabel}>Ustawienia</Text>

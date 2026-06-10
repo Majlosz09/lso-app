@@ -25,6 +25,12 @@ export default function AdminTabsLayout() {
     </TouchableOpacity>
   )
 
+  const backButton = () => (
+    <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 8 }} hitSlop={8}>
+      <Ionicons name="chevron-back" size={28} color="#fff" />
+    </TouchableOpacity>
+  )
+
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
@@ -67,13 +73,7 @@ export default function AdminTabsLayout() {
       />
       <Tabs.Screen
         name="announcements"
-        options={{
-          title: 'Ogłoszenia',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="megaphone-outline" size={size} color={color} />
-          ),
-          headerRight: avatarButton,
-        }}
+        options={{ href: null, title: 'Ogłoszenia', headerRight: avatarButton, headerLeft: backButton }}
       />
       <Tabs.Screen
         name="points"
@@ -81,6 +81,16 @@ export default function AdminTabsLayout() {
           title: 'Punkty',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="trophy-outline" size={size} color={color} />
+          ),
+          headerRight: avatarButton,
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Czat',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
           headerRight: avatarButton,
         }}
