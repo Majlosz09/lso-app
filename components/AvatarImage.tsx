@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { View, Image } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { parsePresetUrl } from '../lib/presetAvatar'
@@ -11,7 +12,7 @@ interface AvatarImageProps {
   placeholderIconSize?: number
 }
 
-export function AvatarImage({
+function AvatarImageComponent({
   avatarUrl,
   size = 80,
   borderColor,
@@ -45,3 +46,5 @@ export function AvatarImage({
     </View>
   )
 }
+
+export const AvatarImage = memo(AvatarImageComponent)
