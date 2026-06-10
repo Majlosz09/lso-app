@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import {
   View, Text, FlatList, StyleSheet,
   TouchableOpacity, TextInput, ActivityIndicator, Modal,
@@ -12,6 +12,7 @@ import { useTheme } from '../../../lib/ThemeContext'
 import { Colors } from '../../../lib/theme'
 import Toast from 'react-native-toast-message'
 import { ConfirmDialog } from '../../../components/ConfirmDialog'
+import { MemberRow, MemberRowData } from '../../../components/MemberRow'
 
 type Member = {
   id: string
@@ -162,6 +163,39 @@ export default function MembersTab() {
     )
   }, [members, filter, search])
 
+  const handleMemberPress = useCallback((id: string) => {
+    router.push(`/(admin)/member-detail?id=${id}`)
+  }, [router])
+
+  const renderItem = useCallback(({ item }: { item: Member }) => {
+    if (filter === 'admin') {
+      return (
+        <View style={styles.row}>
+          <View style={styles.avatar}>
+            <Ionicons name="shield-checkmark" size={18} color={c.primary} />
+          </View>
+          <View style={styles.rowInfo}>
+            <Text style={styles.name}>{item.full_name}</Text>
+            <Text style={styles.sub}>{item.phone ?? 'Brak telefonu'}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => handleRevokeAdmin(item)}
+            hitSlop={8}
+            style={styles.revokeBtn}
+          >
+            <Ionicons name="person-remove-outline" size={20} color="#DC2626" />
+          </TouchableOpacity>
+        </View>
+      )
+    }
+    return (
+      <MemberRow
+        member={item as MemberRowData}
+        onPress={() => handleMemberPress(item.id)}
+      />
+    )
+  }, [filter, styles, c.primary, handleRevokeAdmin, handleMemberPress])
+
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
@@ -223,51 +257,8 @@ export default function MembersTab() {
               )}
             </View>
           }
-          renderItem={({ item }) => (
-            filter === 'admin' ? (
-              <View style={styles.row}>
-                <View style={styles.avatar}>
-                  <Ionicons name="shield-checkmark" size={18} color={c.primary} />
-                </View>
-                <View style={styles.rowInfo}>
-                  <Text style={styles.name}>{item.full_name}</Text>
-                  <Text style={styles.sub}>{item.phone ?? 'Brak telefonu'}</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => handleRevokeAdmin(item)}
-                  hitSlop={8}
-                  style={styles.revokeBtn}
-                >
-                  <Ionicons name="person-remove-outline" size={20} color="#DC2626" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.row}
-                onPress={() => router.push(`/(admin)/member-detail?id=${item.id}`)}
-                activeOpacity={0.75}
-              >
-                <View style={styles.avatar}>
-                  <Ionicons name="person" size={18} color={c.primary} />
-                </View>
-                <View style={styles.rowInfo}>
-                  <Text style={styles.name}>{item.full_name}</Text>
-                  <Text style={styles.sub}>
-                    {item.phone ?? 'Brak telefonu'}
-                    {item.role === 'member' && item.rocznik ? ` · rocznik ${item.rocznik}` : ''}
-                  </Text>
-                </View>
-                {item.role === 'member' && (
-                  <View style={styles.pointsBadge}>
-                    <Ionicons name="trophy-outline" size={12} color={c.gold} />
-                    <Text style={styles.pointsText}>{item.total_points ?? 0}</Text>
-                  </View>
-                )}
-                <Ionicons name="chevron-forward" size={16} color={c.border} />
-              </TouchableOpacity>
-            )
-          )}
-          contentContainerStyle={{ padding: 16, gap: 8 }}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
           ListFooterComponent={
             filter === 'admin' ? (
               <TouchableOpacity style={styles.assignBtn} onPress={handleOpenAssignModal}>
@@ -453,5 +444,6 @@ function createStyles(c: Colors) {
       backgroundColor: c.primaryAlpha08, borderRadius: 10, borderWidth: 1, borderColor: c.primaryAlpha20,
     },
     emptyBtnText: { fontSize: 14, color: c.primary, fontWeight: '600' },
+    listContent: { padding: 16, gap: 8 },
   })
 }

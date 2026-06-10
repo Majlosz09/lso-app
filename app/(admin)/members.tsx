@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import {
   View, Text, FlatList, StyleSheet,
   TouchableOpacity, TextInput, ActivityIndicator
@@ -10,6 +10,7 @@ import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { MemberRow, MemberRowData } from '../../components/MemberRow'
 
 type Member = {
   id: string
@@ -76,6 +77,17 @@ export default function MembersScreen() {
     )
   }, [members, filter, search])
 
+  const handleMemberPress = useCallback((id: string) => {
+    router.push(`/(admin)/member-detail?id=${id}`)
+  }, [router])
+
+  const renderItem = useCallback(({ item }: { item: Member }) => (
+    <MemberRow
+      member={item as MemberRowData}
+      onPress={() => handleMemberPress(item.id)}
+    />
+  ), [handleMemberPress])
+
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
@@ -125,32 +137,8 @@ export default function MembersScreen() {
               </Text>
             </View>
           }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() => router.push(`/(admin)/member-detail?id=${item.id}`)}
-              activeOpacity={0.75}
-            >
-              <View style={styles.avatar}>
-                <Ionicons name="person" size={18} color={c.primary} />
-              </View>
-              <View style={styles.rowInfo}>
-                <Text style={styles.name}>{item.full_name}</Text>
-                <Text style={styles.sub}>
-                  {item.phone ?? 'Brak telefonu'}
-                  {item.role === 'member' && item.rocznik ? ` · rocznik ${item.rocznik}` : ''}
-                </Text>
-              </View>
-              {item.role === 'member' && (
-                <View style={styles.pointsBadge}>
-                  <Ionicons name="trophy-outline" size={12} color={c.gold} />
-                  <Text style={styles.pointsText}>{item.total_points ?? 0}</Text>
-                </View>
-              )}
-              <Ionicons name="chevron-forward" size={16} color={c.border} />
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={{ padding: 16, gap: 8 }}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
         />
       )}
     </View>
@@ -200,5 +188,6 @@ function createStyles(c: Colors) {
 
     empty: { alignItems: 'center', marginTop: 60, gap: 12 },
     emptyText: { color: c.textTertiary, fontSize: 15 },
+    listContent: { padding: 16, gap: 8 },
   })
 }
