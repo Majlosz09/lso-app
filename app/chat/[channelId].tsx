@@ -30,11 +30,12 @@ export default function ChannelScreen() {
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [actionSheetMessage, setActionSheetMessage] = useState<ChatMessageWithSender | null>(null)
+  const [actionSheetY, setActionSheetY] = useState(0)
   const [replyTo, setReplyTo] = useState<ChatMessageWithSender | null>(null)
   const [editingMessage, setEditingMessage] = useState<ChatMessageWithSender | null>(null)
   const [showPollModal, setShowPollModal] = useState(false)
 
-  const { messages, loading, loadingMore, hasMore, loadMore } = useChatMessages(channelId)
+  const { messages, loading, loadingMore, hasMore, loadMore, refetch, optimisticToggleReaction } = useChatMessages(channelId)
   const { toggleReaction } = useChatReactions(profile?.id ?? '')
   const { vote, closePoll } = useChatPolls(profile?.id ?? '')
 
@@ -72,12 +73,14 @@ export default function ChannelScreen() {
     const content = text.trim()
 
     if (editingMessage) {
+      setSending(true)
       setText('')
       setEditingMessage(null)
       const { error } = await supabase.from('chat_messages')
         .update({ content, edited_at: new Date().toISOString() })
         .eq('id', editingMessage.id).eq('sender_id', profile.id)
       if (error) Alert.alert('Błąd', 'Nie udało się edytować wiadomości.')
+      setSending(false)
       return
     }
 
@@ -94,21 +97,27 @@ export default function ChannelScreen() {
     if (error) {
       setText(content)
       Alert.alert('Błąd', 'Nie udało się wysłać wiadomości.')
+    } else {
+      refetch()
     }
     setSending(false)
   }
 
-  const handleDelete = async (message: ChatMessageWithSender) => {
+  const handleDelete = useCallback((message: ChatMessageWithSender) => {
     Alert.alert('Usuń wiadomość', 'Tej operacji nie można cofnąć.', [
       { text: 'Anuluj', style: 'cancel' },
       {
         text: 'Usuń', style: 'destructive',
-        onPress: () =>
-          supabase.from('chat_messages')
-            .update({ deleted_at: new Date().toISOString() }).eq('id', message.id),
+        onPress: async () => {
+          const { error } = await supabase.from('chat_messages')
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('id', message.id)
+          if (error) Alert.alert('Błąd', 'Nie udało się usunąć wiadomości.')
+          else refetch()
+        },
       },
     ])
-  }
+  }, [refetch])
 
   const handleCreatePoll = async (question: string, options: string[], allowMultiple: boolean) => {
     if (!profile?.id) return
@@ -116,27 +125,73 @@ export default function ChannelScreen() {
       .from('chat_polls')
       .insert({ channel_id: channelId, creator_id: profile.id, question, allow_multiple: allowMultiple })
       .select().single()
-    if (pollError || !poll) { Alert.alert('Błąd', 'Nie udało się utworzyć ankiety.'); return }
+    if (pollError || !poll) {
+      Alert.alert('Błąd', 'Nie udało się utworzyć ankiety.')
+      throw new Error('poll_create')
+    }
 
-    await Promise.all(
+    const optResults = await Promise.all(
       options.map((text, position) =>
         supabase.from('chat_poll_options').insert({ poll_id: poll.id, text, position })
       )
     )
+    if (optResults.some(r => r.error)) {
+      Alert.alert('Błąd', 'Nie udało się dodać opcji ankiety.')
+      throw new Error('poll_options')
+    }
 
-    await supabase.from('chat_messages').insert({
+    const { error: msgError } = await supabase.from('chat_messages').insert({
       channel_id: channelId,
       sender_id: profile.id,
       content: question,
       type: 'poll',
       poll_id: poll.id,
     })
+    if (msgError) {
+      Alert.alert('Błąd', 'Nie udało się wysłać wiadomości z ankietą.')
+      throw new Error('poll_message')
+    }
   }
 
-  const handleReaction = async (messageId: string, emoji: string, reactions: ChatReaction[]) => {
+  const handleReaction = useCallback(async (messageId: string, emoji: string, reactions: ChatReaction[]) => {
+    if (!profile?.id) return
+    optimisticToggleReaction(messageId, emoji, profile.id)
     const result = await toggleReaction(messageId, emoji, reactions)
-    if (result?.error) Alert.alert('Błąd', 'Nie udało się dodać reakcji.')
-  }
+    if (result?.error) {
+      refetch()
+    }
+  }, [profile?.id, optimisticToggleReaction, toggleReaction, refetch])
+
+  const renderMessage = useCallback(({ item, index }: { item: ChatMessageWithSender; index: number }) => {
+    const prevItem = messages[index + 1]
+    const showSender = item.sender_id !== profile?.id &&
+      (!prevItem || prevItem.sender_id !== item.sender_id)
+    return (
+      <MessageBubble
+        item={item}
+        currentUserId={profile?.id ?? ''}
+        isAdmin={isAdmin}
+        showSender={showSender}
+        onLongPress={(msg, pageY) => { setActionSheetMessage(msg); setActionSheetY(pageY) }}
+        onReactionPress={handleReaction}
+        onVote={async (poll: ChatPoll, optionId: string) => {
+          await vote(poll, optionId)
+          refetch()
+        }}
+        onClosePoll={closePoll}
+        onReply={() => {
+          setReplyTo(item)
+          setEditingMessage(null)
+        }}
+        onEdit={() => {
+          setEditingMessage(item)
+          setText(item.content)
+          setReplyTo(null)
+        }}
+        onDelete={() => handleDelete(item)}
+      />
+    )
+  }, [messages, profile?.id, isAdmin, handleReaction, vote, refetch, closePoll, handleDelete])
 
   // Web: Enter sends, Shift+Enter = new line
   const handleKeyPress = (e: any) => {
@@ -148,7 +203,7 @@ export default function ChannelScreen() {
 
   const insertNewline = () => setText((t) => t + '\n')
 
-  if (loading) {
+  if (loading && messages.length === 0) {
     return (
       <View style={[styles.container, styles.center]}>
         <ActivityIndicator color={c.primary} />
@@ -166,7 +221,7 @@ export default function ChannelScreen() {
         data={messages}
         keyExtractor={(item) => item.id}
         inverted
-        contentContainerStyle={{ padding: 12, gap: 4 }}
+        contentContainerStyle={styles.listContent}
         onEndReached={hasMore ? loadMore : undefined}
         onEndReachedThreshold={0.3}
         ListFooterComponent={
@@ -179,25 +234,7 @@ export default function ChannelScreen() {
             <Text style={styles.emptyText}>Brak wiadomości. Napisz pierwszą!</Text>
           </View>
         }
-        renderItem={({ item, index }) => {
-          const prevItem = messages[index + 1]
-          const showSender = item.sender_id !== profile?.id &&
-            (!prevItem || prevItem.sender_id !== item.sender_id)
-          return (
-            <MessageBubble
-              item={item}
-              currentUserId={profile?.id ?? ''}
-              isAdmin={isAdmin}
-              showSender={showSender}
-              onLongPress={setActionSheetMessage}
-              onReactionPress={handleReaction}
-              onVote={async (poll: ChatPoll, optionId: string) => {
-                await vote(poll, optionId)
-              }}
-              onClosePoll={closePoll}
-            />
-          )
-        }}
+        renderItem={renderMessage}
       />
 
       {(replyTo || editingMessage) && (
@@ -247,10 +284,13 @@ export default function ChannelScreen() {
         message={actionSheetMessage}
         currentUserId={profile?.id ?? ''}
         isAdmin={isAdmin}
+        messageY={actionSheetY}
         onClose={() => setActionSheetMessage(null)}
         onReact={(emoji) => {
-          if (actionSheetMessage)
-            handleReaction(actionSheetMessage.id, emoji, actionSheetMessage.reactions)
+          if (actionSheetMessage) {
+            const fresh = messages.find(m => m.id === actionSheetMessage.id)
+            handleReaction(actionSheetMessage.id, emoji, fresh?.reactions ?? actionSheetMessage.reactions)
+          }
         }}
         onReply={() => {
           setReplyTo(actionSheetMessage)
@@ -277,6 +317,7 @@ function createStyles(c: Colors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.bg },
     center: { justifyContent: 'center', alignItems: 'center' },
+    listContent: { padding: 12, gap: 4 },
     empty: { alignItems: 'center', padding: 40 },
     emptyText: { color: c.subtext, fontSize: 14, textAlign: 'center' },
     inputRow: {
