@@ -64,6 +64,7 @@ export default function ChatScreen() {
   useRealtimeTable<ChatMessageWithSender>('chat_messages', (payload) => {
     const { eventType, new: newMsg } = payload
 
+    // Only INSERT: edits/deletes don't change the channel list preview or unread count
     if (eventType === 'INSERT') {
       setChannels(prev => {
         const channelIndex = prev.findIndex(ch => ch.id === newMsg.channel_id)
