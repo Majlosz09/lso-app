@@ -7,28 +7,61 @@ const PAGE_SIZE = 50
 export function useChatMessages(channelId: string) {
   const [messages, setMessages] = useState<ChatMessageWithSender[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(false)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const reactionsRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const votesRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const oldestCreatedAt = useRef<string | null>(null)
+
+  const select = `
+    *,
+    sender:profiles(id, full_name, avatar_url, role),
+    reply_to:chat_messages!reply_to_id(id, content, deleted_at, sender:profiles(full_name)),
+    reactions:chat_reactions(*),
+    poll:chat_polls(*, options:chat_poll_options(*, votes:chat_poll_votes(*)))
+  `
 
   const fetchMessages = async () => {
     try {
       const { data } = await supabase
         .from('chat_messages')
-        .select(`
-          *,
-          sender:profiles(id, full_name, avatar_url, role),
-          reply_to:chat_messages!reply_to_id(id, content, deleted_at, sender:profiles(full_name)),
-          reactions:chat_reactions(*),
-          poll:chat_polls(*, options:chat_poll_options(*, votes:chat_poll_votes(*)))
-        `)
+        .select(select)
         .eq('channel_id', channelId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(PAGE_SIZE)
-      if (data) setMessages(data as ChatMessageWithSender[])
+      if (data) {
+        setMessages(data as ChatMessageWithSender[])
+        setHasMore(data.length === PAGE_SIZE)
+        oldestCreatedAt.current = data.length > 0 ? data[data.length - 1].created_at : null
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore || !oldestCreatedAt.current) return
+    setLoadingMore(true)
+    try {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select(select)
+        .eq('channel_id', channelId)
+        .is('deleted_at', null)
+        .lt('created_at', oldestCreatedAt.current)
+        .order('created_at', { ascending: false })
+        .limit(PAGE_SIZE)
+      if (data && data.length > 0) {
+        setMessages((prev) => [...prev, ...(data as ChatMessageWithSender[])])
+        setHasMore(data.length === PAGE_SIZE)
+        oldestCreatedAt.current = data[data.length - 1].created_at
+      } else {
+        setHasMore(false)
+      }
+    } finally {
+      setLoadingMore(false)
     }
   }
 
@@ -67,5 +100,5 @@ export function useChatMessages(channelId: string) {
     }
   }, [channelId])
 
-  return { messages, loading, refetch: fetchMessages }
+  return { messages, loading, loadingMore, hasMore, loadMore, refetch: fetchMessages }
 }

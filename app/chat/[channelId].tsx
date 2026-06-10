@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert, FlatList, KeyboardAvoidingView, Platform,
-  StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator,
+  StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, RefreshControl,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useNavigation } from 'expo-router'
@@ -34,7 +34,7 @@ export default function ChannelScreen() {
   const [editingMessage, setEditingMessage] = useState<ChatMessageWithSender | null>(null)
   const [showPollModal, setShowPollModal] = useState(false)
 
-  const { messages, loading } = useChatMessages(channelId)
+  const { messages, loading, loadingMore, hasMore, loadMore } = useChatMessages(channelId)
   const { toggleReaction } = useChatReactions(profile?.id ?? '')
   const { vote, closePoll } = useChatPolls(profile?.id ?? '')
 
@@ -167,6 +167,13 @@ export default function ChannelScreen() {
         keyExtractor={(item) => item.id}
         inverted
         contentContainerStyle={{ padding: 12, gap: 4 }}
+        onEndReached={hasMore ? loadMore : undefined}
+        onEndReachedThreshold={0.3}
+        ListFooterComponent={
+          loadingMore
+            ? <ActivityIndicator color={c.primary} style={{ marginVertical: 12 }} />
+            : null
+        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyText}>Brak wiadomości. Napisz pierwszą!</Text>
