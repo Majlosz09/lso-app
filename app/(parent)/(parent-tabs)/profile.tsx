@@ -309,47 +309,67 @@ function ParentProfile() {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [unlinking, setUnlinking] = useState<string | null>(null)
+
+  const loadChildren = async (parentId: string) => {
+    const { data } = await supabase.from('profiles')
+      .select('id, full_name, rank_id, ranks(name)')
+      .eq('parent_id', parentId)
+    if (!data || data.length === 0) { setLoading(false); return }
+
+    const extras = await Promise.all(
+      data.map((kid: any) => Promise.all([
+        supabase.from('points_summary').select('services_count').eq('profile_id', kid.id).maybeSingle(),
+        supabase.from('member_badges')
+          .select('badge_definition:badge_definitions(icon)')
+          .eq('profile_id', kid.id)
+          .eq('is_active', true),
+      ]))
+    )
+    setChildren(data.map((kid: any, i: number) => ({
+      id: kid.id,
+      full_name: kid.full_name,
+      rank_name: (kid.ranks as any)?.name ?? null,
+      services_count: (extras[i][0].data as any)?.services_count ?? 0,
+      badges: ((extras[i][1].data ?? []) as any[])
+        .map((b: any) => b.badge_definition?.icon)
+        .filter(Boolean),
+    })))
+    setLoading(false)
+  }
 
   useEffect(() => {
     if (!profile?.id) return
-    let cancelled = false
-    Promise.resolve(
-      supabase.from('profiles')
-        .select('id, full_name, rank_id, ranks(name)')
-        .eq('parent_id', profile.id)
-    )
-      .then(async ({ data }) => {
-        if (!data || data.length === 0) {
-          if (!cancelled) setLoading(false)
-          return
-        }
-
-        const extras = await Promise.all(
-          data.map((kid: any) => Promise.all([
-            supabase.from('points_summary').select('services_count').eq('profile_id', kid.id).maybeSingle(),
-            supabase.from('member_badges')
-              .select('badge_definition:badge_definitions(icon)')
-              .eq('profile_id', kid.id)
-              .eq('is_active', true),
-          ]))
-        )
-        if (!cancelled) {
-          setChildren(data.map((kid: any, i: number) => ({
-            id: kid.id,
-            full_name: kid.full_name,
-            rank_name: (kid.ranks as any)?.name ?? null,
-            services_count: (extras[i][0].data as any)?.services_count ?? 0,
-            badges: ((extras[i][1].data ?? []) as any[])
-              .map((b: any) => b.badge_definition?.icon)
-              .filter(Boolean),
-          })))
-          setLoading(false)
-        }
-      })
-      .catch(console.error)
-      .finally(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
+    loadChildren(profile.id).catch(console.error)
   }, [profile?.id])
+
+  const handleUnlinkChild = (child: Child) => {
+    Alert.alert(
+      'Odłącz dziecko',
+      `Czy na pewno chcesz odłączyć ${child.full_name} od swojego konta?\nDziecko pozostanie w parafii, ale nie będzie widoczne w Twoim profilu.`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        {
+          text: 'Odłącz',
+          style: 'destructive',
+          onPress: async () => {
+            setUnlinking(child.id)
+            const { error } = await supabase
+              .from('profiles')
+              .update({ parent_id: null })
+              .eq('id', child.id)
+            setUnlinking(null)
+            if (error) {
+              Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+            } else {
+              setChildren(prev => prev.filter(c => c.id !== child.id))
+              Toast.show({ type: 'success', text1: `Odłączono ${child.full_name}` })
+            }
+          },
+        },
+      ]
+    )
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -365,31 +385,46 @@ function ParentProfile() {
           </View>
         ) : (
           children.map((child, i) => (
-            <TouchableOpacity
+            <View
               key={child.id}
               style={[styles.childRow, i < children.length - 1 && styles.childRowBorder]}
-              onPress={() => router.push(`/(parent)/member-profile?id=${child.id}`)}
-              activeOpacity={0.75}
             >
-              <View style={styles.childAvatar}>
-                <Ionicons name="person" size={16} color={c.primary} />
-              </View>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={styles.childName}>{child.full_name}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[styles.childRank, !child.rank_name && { color: c.textTertiary }]}>
-                    {child.rank_name ?? 'Brak rangi'}
-                  </Text>
-                  {child.badges.slice(0, 4).map((icon, idx) => (
-                    <Text key={idx} style={{ fontSize: 14 }}>{icon}</Text>
-                  ))}
-                  {child.badges.length > 4 && (
-                    <Text style={styles.moreBadges}>+{child.badges.length - 4}</Text>
-                  )}
+              <TouchableOpacity
+                style={styles.childRowMain}
+                onPress={() => router.push(`/(parent)/member-profile?id=${child.id}`)}
+                activeOpacity={0.75}
+              >
+                <View style={styles.childAvatar}>
+                  <Ionicons name="person" size={16} color={c.primary} />
                 </View>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
-            </TouchableOpacity>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={styles.childName}>{child.full_name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[styles.childRank, !child.rank_name && { color: c.textTertiary }]}>
+                      {child.rank_name ?? 'Brak rangi'}
+                    </Text>
+                    {child.badges.slice(0, 4).map((icon, idx) => (
+                      <Text key={idx} style={{ fontSize: 14 }}>{icon}</Text>
+                    ))}
+                    {child.badges.length > 4 && (
+                      <Text style={styles.moreBadges}>+{child.badges.length - 4}</Text>
+                    )}
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.unlinkBtn}
+                onPress={() => handleUnlinkChild(child)}
+                disabled={unlinking === child.id}
+                hitSlop={8}
+              >
+                {unlinking === child.id
+                  ? <ActivityIndicator size="small" color={c.danger} />
+                  : <Ionicons name="person-remove-outline" size={18} color={c.danger} />
+                }
+              </TouchableOpacity>
+            </View>
           ))
         )}
       </InfoSection>
@@ -504,7 +539,7 @@ function EditProfileModal({ visible, onClose, showRocznik }: {
     }
     if (showRocznik) {
       const yr = parseInt(rocznik)
-      updates.rocznik = (rocznik && yr >= 1990 && yr <= new Date().getFullYear()) ? yr : null
+      updates.rocznik = (rocznik && yr >= 1990) ? yr : null
     }
 
     const { error } = await supabase.from('profiles').update(updates).eq('id', profile!.id)
@@ -757,8 +792,10 @@ function createStyles(c: Colors) {
     infoLabel: { fontSize: 12, color: c.textTertiary },
     infoValue: { fontSize: 15, color: c.text, marginTop: 1 },
 
-    childRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+    childRow: { flexDirection: 'row', alignItems: 'center', paddingRight: 12 },
+    childRowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
     childRowBorder: { borderBottomWidth: 1, borderBottomColor: c.primarySurface },
+    unlinkBtn: { padding: 8, borderRadius: 8, backgroundColor: c.danger + '10' },
     childAvatar: {
       width: 32, height: 32, borderRadius: 16,
       backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center',

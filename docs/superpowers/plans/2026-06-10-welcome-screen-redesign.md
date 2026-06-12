@@ -1,5 +1,76 @@
+# Welcome Screen Redesign — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Redesign `app/(auth)/welcome.tsx` — fullscreen gradient hero z obydwoma CTA widocznymi od razu, 4 karty funkcji z chattem, jeden przycisk rejestracji logiczny dla wszystkich ról.
+
+**Architecture:** Jeden plik, zero nowych komponentów. Zastąpienie flat hero gradientem `expo-linear-gradient`. Oba przyciski w hero. Sekcja funkcji scrolluje się poniżej.
+
+**Tech Stack:** React Native, Expo SDK 54, `expo-linear-gradient` (do instalacji), `Ionicons`, `lib/theme.ts`, `lib/shadows.ts`
+
+---
+
+## Files
+
+| Action | Path |
+|--------|------|
+| Modify | `app/(auth)/welcome.tsx` |
+
+---
+
+### Task 1: Zainstaluj expo-linear-gradient
+
+**Files:**
+- Modify: `package.json` (automatycznie przez Expo install)
+
+- [ ] **Krok 1: Sprawdź czy paczka jest już dostępna**
+
+```bash
+cd "C:\Users\brival\Desktop\Projekty\lso-app"
+grep "linear-gradient" package.json
+```
+
+Oczekiwany wynik: brak outputu (paczka nie jest zainstalowana).
+
+- [ ] **Krok 2: Zainstaluj przez Expo (zapewnia kompatybilną wersję)**
+
+```bash
+npx expo install expo-linear-gradient
+```
+
+Oczekiwany wynik: paczka dodana do `package.json`, `node_modules/expo-linear-gradient` istnieje.
+
+- [ ] **Krok 3: Zweryfikuj instalację**
+
+```bash
+grep "linear-gradient" package.json
+```
+
+Oczekiwany wynik: `"expo-linear-gradient": "~X.X.X"` w dependencies.
+
+- [ ] **Krok 4: Commit**
+
+```bash
+git add package.json package-lock.json
+git commit -m "chore: install expo-linear-gradient"
+```
+
+---
+
+### Task 2: Przepisz welcome.tsx
+
+**Files:**
+- Modify: `app/(auth)/welcome.tsx`
+
+> **Uwaga:** `lib/shadows.ts` eksportuje tylko `shadow.xs`, `shadow.md`, `shadow.brand` — brak `shadow.sm`. Stary kod używał `shadow.sm` (undefined, bez efektu). Nowy kod używa poprawnych tokenów.
+
+- [ ] **Krok 1: Zastąp całą zawartość pliku**
+
+Zastąp `app/(auth)/welcome.tsx` tym kodem:
+
+```tsx
 import { useMemo } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Image } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -55,11 +126,9 @@ export default function WelcomeScreen() {
           <Text style={[styles.crossDecor, styles.crossTopLeft]}>✝</Text>
           <Text style={[styles.crossDecor, styles.crossBottomRight]}>✝</Text>
 
-          <Image
-            source={require('../../assets/images/icon.png')}
-            style={styles.logoWrap}
-            resizeMode="contain"
-          />
+          <View style={styles.logoWrap}>
+            <Ionicons name="shield-half-outline" size={34} color="#fff" />
+          </View>
 
           <Text style={styles.appName}>LSO App</Text>
           <Text style={styles.appFull}>Liturgiczna Służba Ołtarza</Text>
@@ -158,8 +227,11 @@ function createStyles(c: Colors) {
 
     // Logo
     logoWrap: {
-      width: 120, height: 120, borderRadius: 26,
-      marginBottom: 16,
+      width: 76, height: 76, borderRadius: 22,
+      backgroundColor: 'rgba(255,255,255,0.12)',
+      justifyContent: 'center', alignItems: 'center',
+      marginBottom: 14,
+      borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
       ...shadow.md,
     },
 
@@ -238,3 +310,75 @@ function createStyles(c: Colors) {
     },
   })
 }
+```
+
+- [ ] **Krok 2: Sprawdź TypeScript — brak błędów kompilacji**
+
+```bash
+cd "C:\Users\brival\Desktop\Projekty\lso-app"
+npx tsc --noEmit
+```
+
+Oczekiwany wynik: brak błędów (lub te same błędy co przed zmianą — nie wprowadzamy nowych).
+
+- [ ] **Krok 3: Commit**
+
+```bash
+git add app/(auth)/welcome.tsx
+git commit -m "feat: redesign welcome screen — gradient hero, dual CTA, chat feature"
+```
+
+---
+
+### Task 3: Manualna weryfikacja wizualna
+
+**Files:** brak zmian — tylko testowanie
+
+- [ ] **Krok 1: Uruchom aplikację**
+
+```bash
+cd "C:\Users\brival\Desktop\Projekty\lso-app"
+npx expo start
+```
+
+Otwórz na urządzeniu lub emulatorze.
+
+- [ ] **Krok 2: Sprawdź hero**
+
+Otwórz aplikację na nowo (wylogowany stan).
+
+Oczekiwane:
+- Gradient indygo widoczny od góry do ~60% ekranu
+- Logo (tarcza) z frosted-glass efektem (biały, lekko przezroczysty)
+- Napis "LSO App" duży, bold, biały
+- Napis "LITURGICZNA SŁUŻBA OŁTARZA" drobny, uppercase, ściszony
+- Tagline pod tytułem, wyśrodkowany
+- Przycisk **złoty** "Zarejestruj się" — pełna szerokość
+- Przycisk **biały** "Zaloguj się" — pełna szerokość, obie ikony widoczne
+- Hint "↓ POZNAJ FUNKCJE ↓" na dole hero, ledwo widoczny
+
+- [ ] **Krok 3: Sprawdź nawigację przycisków**
+
+- Tap "Zarejestruj się" → otwiera `register.tsx` z ekranem wyboru (`ChooseScreen` z dwiema kartami: ministrant/rodzic i parafia)
+- Tap "Zaloguj się" → otwiera `login.tsx`
+- Tap Wstecz w obydwu → wraca do welcome
+
+- [ ] **Krok 4: Sprawdź sekcję funkcji (scroll)**
+
+Zescrolluj w dół.
+
+Oczekiwane:
+- Jasne tło `#F8F9FA` kontrastuje z gradientem
+- 4 karty: Grafik służb, Weryfikacja obecności, System punktów i rankingi, Czat z opiekunem
+- Każda karta ma ikonę na niebieskim tle `#E8EAF6`
+- Brak karty "Zastępstwa"
+- Złoty badge "Bezpłatna aplikacja misyjna" na dole
+
+- [ ] **Krok 5: Sprawdź dark mode**
+
+Przełącz motyw na dark (w ustawieniach urządzenia lub w app jeśli jest przełącznik).
+
+Oczekiwane:
+- Hero gradient bez zmian (hardcoded kolory — OK)
+- Karty funkcji używają `c.surface` i `c.border` — dostosowują się do dark mode
+- Badge "Bezpłatna" z hardcoded `#FFF8E1` — akceptowalne (złoty akcent działa na dark też)

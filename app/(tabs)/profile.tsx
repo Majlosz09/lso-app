@@ -304,7 +304,7 @@ function MemberProfile() {
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
   const { themeOverride, setThemeOverride } = useThemeStore()
-  const { profile, session, signOut, parish } = useAuthStore()
+  const { profile, session, signOut, parish, pushEnabled } = useAuthStore()
   const router = useRouter()
   const [summary, setSummary] = useState<{ total_points: number; services_count: number } | null>(null)
   const [rank, setRank] = useState<number>(0)
@@ -487,6 +487,16 @@ function MemberProfile() {
         <Ionicons name="chevron-forward" size={16} color={c.primary} />
       </TouchableOpacity>
 
+      {pushEnabled === false && (
+        <View style={styles.pushWarning}>
+          <Ionicons name="notifications-off-outline" size={18} color="#EA580C" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pushWarningTitle}>Powiadomienia wyłączone</Text>
+            <Text style={styles.pushWarningText}>Włącz powiadomienia w ustawieniach telefonu, aby otrzymywać alerty o służbach i ogłoszeniach.</Text>
+          </View>
+        </View>
+      )}
+
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={true} />
       <SignOutButton onConfirm={signOut} />
       <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
@@ -500,7 +510,7 @@ function AdminProfile() {
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
   const { themeOverride, setThemeOverride } = useThemeStore()
-  const { profile, session, signOut, parish } = useAuthStore()
+  const { profile, session, signOut, parish, pushEnabled } = useAuthStore()
   const [stats, setStats] = useState({ members: 0, upcoming: 0 })
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
@@ -589,6 +599,16 @@ function AdminProfile() {
         <Ionicons name="chevron-forward" size={16} color={c.primary} />
       </TouchableOpacity>
 
+      {pushEnabled === false && (
+        <View style={styles.pushWarning}>
+          <Ionicons name="notifications-off-outline" size={18} color="#EA580C" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pushWarningTitle}>Powiadomienia wyłączone</Text>
+            <Text style={styles.pushWarningText}>Włącz powiadomienia w ustawieniach telefonu, aby otrzymywać alerty o służbach i ogłoszeniach.</Text>
+          </View>
+        </View>
+      )}
+
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
       <SignOutButton onConfirm={signOut} />
       <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
@@ -633,7 +653,7 @@ function EditProfileModal({ visible, onClose, showRocznik }: {
     }
     if (showRocznik) {
       const yr = parseInt(rocznik)
-      updates.rocznik = (rocznik && yr >= 1990 && yr <= new Date().getFullYear()) ? yr : null
+      updates.rocznik = (rocznik && yr >= 1990) ? yr : null
     }
 
     const { error } = await supabase.from('profiles').update(updates).eq('id', profile!.id)
@@ -1016,6 +1036,14 @@ function createStyles(c: Colors) {
     },
     badgeChipIcon: { fontSize: 16 },
     badgeChipName: { fontSize: 12, fontWeight: '600', color: c.primary },
+
+    pushWarning: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+      backgroundColor: '#EA580C18', borderRadius: 12, padding: 14,
+      borderWidth: 1, borderColor: '#EA580C40',
+    },
+    pushWarningTitle: { fontSize: 14, fontWeight: '700', color: '#EA580C', marginBottom: 2 },
+    pushWarningText: { fontSize: 12, color: c.subtext, lineHeight: 17 },
 
     // Catalog link
     catalogLink: {

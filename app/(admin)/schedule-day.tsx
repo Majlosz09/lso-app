@@ -20,40 +20,42 @@ type DaySchedule = {
 }
 
 export default function ScheduleDayScreen() {
-  const { date } = useLocalSearchParams<{ date: string }>()
+  const { date: initialDate } = useLocalSearchParams<{ date: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { colors: c, isDark } = useTheme()
   const { profile } = useAuthStore()
   const styles = useMemo(() => createStyles(c), [c])
+  const [currentDate, setCurrentDate] = useState(initialDate ?? '')
   const [schedules, setSchedules] = useState<DaySchedule[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!date || !profile?.parish_id) { setLoading(false); return }
+    if (!currentDate || !profile?.parish_id) { setLoading(false); return }
+    setLoading(true)
     supabase
       .from('schedules')
       .select('id, title, time, category, schedule_assignments(profile:profiles(full_name))')
-      .eq('date', date)
+      .eq('date', currentDate)
       .eq('parish_id', profile.parish_id)
       .order('time')
       .then(({ data }) => {
         setSchedules((data ?? []) as unknown as DaySchedule[])
         setLoading(false)
       })
-  }, [date, profile?.parish_id])
+  }, [currentDate, profile?.parish_id])
 
-  const d = date ? new Date(date + 'T12:00:00') : null
+  const d = currentDate ? new Date(currentDate + 'T12:00:00') : null
   const dayTitle = d
     ? d.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     : ''
 
-  const lit = date ? getLiturgicalDay(date) : null
+  const lit = currentDate ? getLiturgicalDay(currentDate) : null
   const vestmentColor = lit ? getLiturgicalVestmentColor(lit) : c.subtext
   const vestmentLabel = lit ? (VESTMENT_LABELS[lit.color ?? ''] ?? lit.color ?? '') : ''
 
   const adjacentDate = (offset: -1 | 1) => {
-    const base = new Date((date ?? '') + 'T12:00:00')
+    const base = new Date((currentDate ?? '') + 'T12:00:00')
     base.setDate(base.getDate() + offset)
     return base.toISOString().split('T')[0]
   }
@@ -61,8 +63,8 @@ export default function ScheduleDayScreen() {
   const formatShort = (dateStr: string) =>
     new Date(dateStr + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric', month: 'short' })
 
-  const prevDate = date ? adjacentDate(-1) : null
-  const nextDate = date ? adjacentDate(1) : null
+  const prevDate = currentDate ? adjacentDate(-1) : null
+  const nextDate = currentDate ? adjacentDate(1) : null
 
   return (
     <>
@@ -73,7 +75,7 @@ export default function ScheduleDayScreen() {
       <View style={styles.navBar}>
         <TouchableOpacity
           style={styles.navBtn}
-          onPress={() => prevDate && router.replace(`/(admin)/schedule-day?date=${prevDate}`)}
+          onPress={() => prevDate && setCurrentDate(prevDate)}
           hitSlop={8}
         >
           <Ionicons name="chevron-back" size={18} color={c.primary} />
@@ -81,7 +83,7 @@ export default function ScheduleDayScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.navBtn, { flexDirection: 'row-reverse' }]}
-          onPress={() => nextDate && router.replace(`/(admin)/schedule-day?date=${nextDate}`)}
+          onPress={() => nextDate && setCurrentDate(nextDate)}
           hitSlop={8}
         >
           <Ionicons name="chevron-forward" size={18} color={c.primary} />
@@ -112,7 +114,7 @@ export default function ScheduleDayScreen() {
           <View style={styles.empty}>
             <Ionicons name="calendar-outline" size={48} color="#E5E7EB" />
             <Text style={styles.emptyText}>Brak służb w tym dniu</Text>
-            <TouchableOpacity style={styles.addBtn} onPress={() => router.push(`/(admin)/schedule-form?date=${date}`)}>
+            <TouchableOpacity style={styles.addBtn} onPress={() => router.push(`/(admin)/schedule-form?date=${currentDate}`)}>
               <Ionicons name="add" size={16} color="#fff" />
               <Text style={styles.addBtnText}>Dodaj służbę</Text>
             </TouchableOpacity>
@@ -156,7 +158,7 @@ export default function ScheduleDayScreen() {
                 </TouchableOpacity>
               )
             })}
-            <TouchableOpacity style={styles.addBtnRow} onPress={() => router.push(`/(admin)/schedule-form?date=${date}`)}>
+            <TouchableOpacity style={styles.addBtnRow} onPress={() => router.push(`/(admin)/schedule-form?date=${currentDate}`)}>
               <Ionicons name="add" size={16} color={c.primary} />
               <Text style={styles.addBtnRowText}>Dodaj służbę w tym dniu</Text>
             </TouchableOpacity>

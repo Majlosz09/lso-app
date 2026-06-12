@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator
 } from 'react-native'
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -9,6 +9,9 @@ import { shadow } from '../../../lib/shadows'
 import { useTheme } from '../../../lib/ThemeContext'
 import { Colors } from '../../../lib/theme'
 import { findItem } from '../../../lib/wiedza'
+import { supabase } from '../../../lib/supabase'
+
+type DbItem = { id: string; title: string; subtitle: string | null; content: string }
 
 export default function WiedzaItemScreen() {
   const { categoryId, itemId } = useLocalSearchParams<{ categoryId: string; itemId: string }>()
@@ -16,6 +19,46 @@ export default function WiedzaItemScreen() {
   const styles = useMemo(() => createStyles(c), [c])
   const router = useRouter()
   const insets = useSafeAreaInsets()
+
+  const isDbEntry = itemId?.startsWith('__db_')
+  const dbEntryId = isDbEntry ? itemId.replace('__db_', '') : null
+
+  const [dbItem, setDbItem] = useState<DbItem | null>(null)
+  const [dbLoading, setDbLoading] = useState(isDbEntry)
+
+  useEffect(() => {
+    if (!dbEntryId) return
+    supabase
+      .from('wiedza_entries')
+      .select('id, title, subtitle, content')
+      .eq('id', dbEntryId)
+      .single()
+      .then(({ data }) => { setDbItem(data); setDbLoading(false) })
+      .catch(() => setDbLoading(false))
+  }, [dbEntryId])
+
+  if (isDbEntry) {
+    if (dbLoading) {
+      return <View style={styles.center}><ActivityIndicator color={c.primary} /></View>
+    }
+    if (!dbItem) {
+      return <View style={styles.center}><Text style={{ color: c.subtext }}>Nie znaleziono treści</Text></View>
+    }
+    return (
+      <>
+        <Stack.Screen options={{ title: dbItem.title }} />
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom + 32, 48) }]}
+        >
+          {dbItem.subtitle && <Text style={styles.subtitle}>{dbItem.subtitle}</Text>}
+          <View style={styles.textCard}>
+            <Text style={styles.text}>{dbItem.content}</Text>
+          </View>
+        </ScrollView>
+      </>
+    )
+  }
 
   const found = findItem(categoryId, itemId)
 

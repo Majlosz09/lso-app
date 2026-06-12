@@ -36,4 +36,16 @@ export const shadow = {
     native: nat('#1A237E', 0.30, 10, 4),
     web: { boxShadow: '0 4px 10px rgba(26,35,126,0.30)' } as any,
   })!,
+
+  // Float — subtle panel shadow for floating overlays (reaction picker, action menu)
+  float: Platform.select({
+    native: nat('#000', 0.12, 6, 3),
+    web: { boxShadow: '0 2px 6px rgba(0,0,0,0.12)' } as any,
+  })!,
+
+  // Fab — prominent shadow for floating action buttons
+  fab: Platform.select({
+    native: nat('#000', 0.25, 4, 4),
+    web: { boxShadow: '0 2px 4px rgba(0,0,0,0.25)' } as any,
+  })!,
 }

@@ -3,8 +3,8 @@ import Constants from 'expo-constants'
 import { Platform } from 'react-native'
 import { supabase } from './supabase'
 
-export async function registerForPushNotificationsAsync(profileId: string): Promise<void> {
-  if (Platform.OS === 'web') return
+export async function registerForPushNotificationsAsync(profileId: string): Promise<boolean> {
+  if (Platform.OS === 'web') return true
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
@@ -23,7 +23,7 @@ export async function registerForPushNotificationsAsync(profileId: string): Prom
     finalStatus = status
   }
 
-  if (finalStatus !== 'granted') return
+  if (finalStatus !== 'granted') return false
 
   try {
     const projectId = Constants.expoConfig?.extra?.eas?.projectId
@@ -32,7 +32,9 @@ export async function registerForPushNotificationsAsync(profileId: string): Prom
     )
     const token = tokenData.data
     await supabase.from('profiles').update({ push_token: token }).eq('id', profileId)
+    return true
   } catch {
     // Silently fail on simulators or missing projectId
+    return true
   }
 }

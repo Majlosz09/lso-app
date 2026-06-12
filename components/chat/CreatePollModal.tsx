@@ -47,10 +47,15 @@ export function CreatePollModal({ visible, onClose, onSubmit }: Props) {
     if (!trimmedQ) { Alert.alert('Błąd', 'Wpisz pytanie.'); return }
     if (trimmedOpts.length < 2) { Alert.alert('Błąd', 'Dodaj co najmniej 2 opcje.'); return }
     setSubmitting(true)
-    await onSubmit(trimmedQ, trimmedOpts, allowMultiple)
-    setSubmitting(false)
-    reset()
-    onClose()
+    try {
+      await onSubmit(trimmedQ, trimmedOpts, allowMultiple)
+      reset()
+      onClose()
+    } catch {
+      // onSubmit showed an Alert — leave modal open so user can retry
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (

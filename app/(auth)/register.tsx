@@ -115,7 +115,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
     if (!phone.trim()) return 'Wpisz numer telefonu.'
     if (role === 'member') {
       const yr = parseInt(rocznik)
-      if (!rocznik || yr < 1990 || yr > new Date().getFullYear()) return 'Podaj poprawny rocznik (np. 2018).'
+      if (!rocznik || yr < 1990) return 'Podaj poprawny rocznik (np. 2018).'
     }
     if (inviteCode.trim().length !== 6) return 'Wpisz 6-znakowy kod parafii.'
     return null

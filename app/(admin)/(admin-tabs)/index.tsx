@@ -247,6 +247,17 @@ export default function AdminHome() {
         <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.parishRow} onPress={() => router.push('/(admin)/wiedza-admin')} activeOpacity={0.75}>
+        <View style={[styles.parishIcon, { backgroundColor: c.primaryAlpha08 }]}>
+          <Ionicons name="book-outline" size={22} color={c.primary} />
+        </View>
+        <View style={styles.parishInfo}>
+          <Text style={styles.parishTitle}>Wiedza</Text>
+          <Text style={styles.parishSub}>Własne wpisy dla parafii</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.parishRow} onPress={() => router.push('/(admin)/rank-assignment')} activeOpacity={0.75}>
         <View style={[styles.parishIcon, { backgroundColor: c.primaryAlpha08 }]}>
           <Ionicons name="ribbon" size={22} color={c.primary} />

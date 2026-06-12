@@ -58,6 +58,7 @@ interface AuthState {
   profile: Profile | null
   parish: Parish | null
   isLoading: boolean
+  pushEnabled: boolean | null  // null = nieznane (nie sprawdzono)
   // Akcje
   setSession: (session: Session | null) => void
   fetchProfile: () => Promise<void>
@@ -70,6 +71,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   profile: null,
   parish: null,
   isLoading: true,
+  pushEnabled: null,
 
   setSession: (session) => {
     if (session) {
@@ -123,7 +125,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ profile: profileData, parish: parishData, isLoading: false })
 
       if (parishData?.setup_done) ensureSchedulesCoverage(profileData.parish_id!).catch(() => {})
-      registerForPushNotificationsAsync(profileData.id).catch(() => {})
+      registerForPushNotificationsAsync(profileData.id)
+        .then(granted => set({ pushEnabled: granted }))
+        .catch(() => set({ pushEnabled: false }))
     } else {
       set({ isLoading: false })
     }

@@ -35,6 +35,12 @@ export default function TabsLayout() {
     </TouchableOpacity>
   )
 
+  const backButton = () => (
+    <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={{ marginLeft: 8 }} hitSlop={8}>
+      <Ionicons name="chevron-back" size={28} color="#fff" />
+    </TouchableOpacity>
+  )
+
   return (
     <Tabs
       tabBar={(props) => <CustomTabBar {...props} />}
@@ -94,7 +100,7 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="announcements" options={{ href: null, title: 'Ogłoszenia', headerRight }} />
+      <Tabs.Screen name="announcements" options={{ href: null, title: 'Ogłoszenia', headerRight, headerLeft: backButton }} />
       <Tabs.Screen name="profile" options={{ href: null, title: 'Profil' }} />
       <Tabs.Screen name="badge-catalog" options={{ href: null, title: 'Katalog odznak' }} />
       <Tabs.Screen name="member-profile" options={{ href: null, title: 'Profil ministranta' }} />

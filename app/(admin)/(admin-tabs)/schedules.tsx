@@ -168,12 +168,20 @@ export default function SchedulesTab() {
   return (
     <View style={styles.container}>
       <View style={styles.weekNav}>
-        <TouchableOpacity onPress={() => setWeekOffset(w => w - 1)} hitSlop={12}>
-          <Ionicons name="chevron-back" size={22} color={c.primary} />
+        <TouchableOpacity
+          onPress={() => setWeekOffset(w => Math.max(-52, w - 1))}
+          hitSlop={12}
+          disabled={weekOffset <= -52}
+        >
+          <Ionicons name="chevron-back" size={22} color={weekOffset <= -52 ? c.iconMuted : c.primary} />
         </TouchableOpacity>
         <Text style={styles.weekLabel}>{label}</Text>
-        <TouchableOpacity onPress={() => setWeekOffset(w => w + 1)} hitSlop={12}>
-          <Ionicons name="chevron-forward" size={22} color={c.primary} />
+        <TouchableOpacity
+          onPress={() => setWeekOffset(w => Math.min(104, w + 1))}
+          hitSlop={12}
+          disabled={weekOffset >= 104}
+        >
+          <Ionicons name="chevron-forward" size={22} color={weekOffset >= 104 ? c.iconMuted : c.primary} />
         </TouchableOpacity>
       </View>
 

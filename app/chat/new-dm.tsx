@@ -77,7 +77,7 @@ export default function NewDmScreen() {
     // Utwórz nowy kanał DM
     const { data: newChannel, error } = await supabase
       .from('chat_channels')
-      .insert({ parish_id: profile.parish_id, type: 'dm', name: targetName })
+      .insert({ parish_id: profile.parish_id, type: 'dm', name: null })
       .select()
       .single()
 

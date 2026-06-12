@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  ActivityIndicator, TouchableOpacity,
+  ActivityIndicator, TouchableOpacity, Alert,
   Modal, TextInput, KeyboardAvoidingView, Platform
 } from 'react-native'
 import { ConfirmDialog } from '../../components/ConfirmDialog'

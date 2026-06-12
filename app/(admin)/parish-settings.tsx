@@ -133,7 +133,8 @@ export default function ParishSettingsScreen() {
           text: 'Regeneruj', style: 'destructive',
           onPress: async () => {
             setRegenerating(true)
-            const newCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+            const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+            const newCode = Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join('')
             const { error } = await supabase
               .from('parishes')
               .update({ invite_code: newCode })
@@ -141,7 +142,9 @@ export default function ParishSettingsScreen() {
             setRegenerating(false)
             if (error) { Alert.alert('Błąd', error.message); return }
             setInviteCode(newCode)
-            await fetchProfile()
+            useAuthStore.setState(state =>
+              state.parish ? { parish: { ...state.parish, invite_code: newCode } } : {}
+            )
           },
         },
       ]

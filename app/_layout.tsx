@@ -9,15 +9,17 @@ import { useAuthStore } from '../stores/authStore'
 import { ThemeProvider } from '../lib/ThemeContext'
 import { OnboardingModal } from '../components/OnboardingModal'
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-})
+if (Platform.OS !== 'web') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  })
+}
 
 if (Platform.OS === 'web') {
   const originalWarn = console.warn
