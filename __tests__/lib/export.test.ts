@@ -175,3 +175,40 @@ describe('buildExportData', () => {
     expect(result.members[0].attendanceRate).toBe(0)
   })
 })
+
+describe('generateCSV pointsOnly', () => {
+  it('omits attendance section when pointsOnly=true', () => {
+    const csv = generateCSV(SAMPLE, { pointsOnly: true })
+    expect(csv).not.toContain('Statystyki obecności')
+    expect(csv).not.toContain('Liczba służb')
+  })
+
+  it('still contains ranking section when pointsOnly=true', () => {
+    const csv = generateCSV(SAMPLE, { pointsOnly: true })
+    expect(csv).toContain('Ranking punktowy')
+    expect(csv).toContain('Jan Kowalski')
+    expect(csv).toContain('50')
+  })
+
+  it('shows fallback message only once when pointsOnly=true and members empty', () => {
+    const csv = generateCSV({ ...SAMPLE, members: [] }, { pointsOnly: true })
+    expect(csv.match(/Brak danych/g)?.length).toBe(1)
+  })
+})
+
+describe('generateHTML pointsOnly', () => {
+  it('contains exactly one <table> when pointsOnly=true', () => {
+    const count = (generateHTML(SAMPLE, { pointsOnly: true }).match(/<table/g) ?? []).length
+    expect(count).toBe(1)
+  })
+
+  it('omits attendance heading when pointsOnly=true', () => {
+    const html = generateHTML(SAMPLE, { pointsOnly: true })
+    expect(html).not.toContain('Statystyki obecności')
+  })
+
+  it('still contains ranking heading when pointsOnly=true', () => {
+    const html = generateHTML(SAMPLE, { pointsOnly: true })
+    expect(html).toContain('Ranking punktowy')
+  })
+})
