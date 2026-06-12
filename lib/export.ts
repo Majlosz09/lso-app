@@ -87,7 +87,8 @@ export async function buildExportData(
   return { parishName, from, to, generatedAt: new Date().toISOString(), members }
 }
 
-export function generateCSV(data: ExportData): string {
+export function generateCSV(data: ExportData, opts?: { pointsOnly?: boolean }): string {
+  const pointsOnly = opts?.pointsOnly ?? false
   const BOM = '﻿'
   const noData = 'Brak danych w wybranym okresie'
   const generatedDate = new Date(data.generatedAt).toLocaleDateString('pl-PL')
@@ -107,22 +108,25 @@ export function generateCSV(data: ExportData): string {
     data.members.forEach((m, i) => lines.push(`${i + 1},"${m.fullName}",${m.points}`))
   }
 
-  lines.push('')
-  lines.push('Statystyki obecności')
-  lines.push('')
-  lines.push('Lp.,Imię i nazwisko,Liczba służb,Obecny,Frekwencja')
-  if (data.members.length === 0) {
-    lines.push(noData)
-  } else {
-    data.members.forEach((m, i) =>
-      lines.push(`${i + 1},"${m.fullName}",${m.scheduled},${m.present},${m.attendanceRate.toFixed(1)}%`)
-    )
+  if (!pointsOnly) {
+    lines.push('')
+    lines.push('Statystyki obecności')
+    lines.push('')
+    lines.push('Lp.,Imię i nazwisko,Liczba służb,Obecny,Frekwencja')
+    if (data.members.length === 0) {
+      lines.push(noData)
+    } else {
+      data.members.forEach((m, i) =>
+        lines.push(`${i + 1},"${m.fullName}",${m.scheduled},${m.present},${m.attendanceRate.toFixed(1)}%`)
+      )
+    }
   }
 
   return BOM + lines.join('\n')
 }
 
-export function generateHTML(data: ExportData): string {
+export function generateHTML(data: ExportData, opts?: { pointsOnly?: boolean }): string {
+  const pointsOnly = opts?.pointsOnly ?? false
   const MEDAL = ['🥇', '🥈', '🥉']
   const noData3 = '<tr><td colspan="3" style="text-align:center;padding:16px;color:#888">Brak danych w wybranym okresie</td></tr>'
   const noData4 = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#888">Brak danych w wybranym okresie</td></tr>'
@@ -141,6 +145,13 @@ export function generateHTML(data: ExportData): string {
     }).join('\n')
 
   const generatedDate = new Date(data.generatedAt).toLocaleDateString('pl-PL')
+
+  const attendanceSection = pointsOnly ? '' : `
+<h2>Statystyki obecności</h2>
+<table>
+  <thead><tr><th style="width:40px;text-align:center">Lp.</th><th>Imię i nazwisko</th><th style="text-align:right">Służby</th><th style="text-align:right">Obecny</th><th style="text-align:right">Frekwencja</th></tr></thead>
+  <tbody>${attendanceRows}</tbody>
+</table>`
 
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8">
@@ -176,23 +187,21 @@ export function generateHTML(data: ExportData): string {
   <thead><tr><th style="width:40px;text-align:center">Lp.</th><th>Imię i nazwisko</th><th style="text-align:right">Punkty</th></tr></thead>
   <tbody>${rankingRows}</tbody>
 </table>
-
-<h2>Statystyki obecności</h2>
-<table>
-  <thead><tr><th style="width:40px;text-align:center">Lp.</th><th>Imię i nazwisko</th><th style="text-align:right">Służby</th><th style="text-align:right">Obecny</th><th style="text-align:right">Frekwencja</th></tr></thead>
-  <tbody>${attendanceRows}</tbody>
-</table>
+${attendanceSection}
 <div class="footer">Wygenerowano ${generatedDate} &nbsp;·&nbsp; Aplikacja LSO</div>
 </div>
 </body></html>`
 }
 
-export function generateXLS(data: ExportData): string {
+export function generateXLS(data: ExportData, opts?: { pointsOnly?: boolean }): string {
+  const pointsOnly = opts?.pointsOnly ?? false
   const generatedDate = new Date(data.generatedAt).toLocaleDateString('pl-PL')
 
   const C = 'border:1px solid #C5CAE9;padding:6px 10px;font-family:Calibri,Arial,sans-serif;font-size:10pt'
   const TH = `${C};background:#1A237E;color:#fff;font-weight:700`
   const E = 'border:none;padding:0'
+  const SEC = 'background:#E8EAF6;color:#1A237E;font-weight:700;font-size:11pt;padding:8px 12px;font-family:Calibri,Arial,sans-serif;border-bottom:2px solid #1A237E'
+  const META = 'color:#666;padding:3px 12px;font-family:Calibri,Arial,sans-serif;font-size:10pt;border:none'
 
   const rankingRows = data.members.length === 0
     ? `<tr><td colspan="3" style="${C};text-align:center;color:#888">Brak danych w wybranym okresie</td><td colspan="2" style="${E}"></td></tr>`
@@ -207,22 +216,31 @@ export function generateXLS(data: ExportData): string {
         </tr>`
       }).join('')
 
-  const attendanceRows = data.members.length === 0
-    ? `<tr><td colspan="5" style="${C};text-align:center;color:#888">Brak danych w wybranym okresie</td></tr>`
-    : data.members.map((m, i) => {
-        const rateColor = m.attendanceRate >= 80 ? '#16a34a' : m.attendanceRate >= 50 ? '#d97706' : '#dc2626'
-        const evenBg = i % 2 === 1 ? ';background:#F5F7FF' : ''
-        return `<tr>
-          <td style="${C};text-align:center${evenBg}">${i + 1}</td>
-          <td style="${C}${evenBg}">${m.fullName}</td>
-          <td style="${C};text-align:right${evenBg}">${m.scheduled}</td>
-          <td style="${C};text-align:right${evenBg}">${m.present}</td>
-          <td style="${C};text-align:right;font-weight:600;color:${rateColor}${evenBg}">${m.attendanceRate.toFixed(1)}%</td>
-        </tr>`
-      }).join('')
-
-  const SEC = 'background:#E8EAF6;color:#1A237E;font-weight:700;font-size:11pt;padding:8px 12px;font-family:Calibri,Arial,sans-serif;border-bottom:2px solid #1A237E'
-  const META = 'color:#666;padding:3px 12px;font-family:Calibri,Arial,sans-serif;font-size:10pt;border:none'
+  const attendanceSection = pointsOnly ? '' : (() => {
+    const attendanceRows = data.members.length === 0
+      ? `<tr><td colspan="5" style="${C};text-align:center;color:#888">Brak danych w wybranym okresie</td></tr>`
+      : data.members.map((m, i) => {
+          const rateColor = m.attendanceRate >= 80 ? '#16a34a' : m.attendanceRate >= 50 ? '#d97706' : '#dc2626'
+          const evenBg = i % 2 === 1 ? ';background:#F5F7FF' : ''
+          return `<tr>
+            <td style="${C};text-align:center${evenBg}">${i + 1}</td>
+            <td style="${C}${evenBg}">${m.fullName}</td>
+            <td style="${C};text-align:right${evenBg}">${m.scheduled}</td>
+            <td style="${C};text-align:right${evenBg}">${m.present}</td>
+            <td style="${C};text-align:right;font-weight:600;color:${rateColor}${evenBg}">${m.attendanceRate.toFixed(1)}%</td>
+          </tr>`
+        }).join('')
+    return `<tr><td colspan="5" style="padding:6px;border:none"></td></tr>
+<tr><td colspan="5" style="${SEC}">Statystyki obecności</td></tr>
+<tr>
+  <th style="${TH};text-align:center;width:50px">Lp.</th>
+  <th style="${TH}">Imię i nazwisko</th>
+  <th style="${TH};text-align:right">Liczba służb</th>
+  <th style="${TH};text-align:right">Obecny</th>
+  <th style="${TH};text-align:right">Frekwencja</th>
+</tr>
+${attendanceRows}`
+  })()
 
   return `<html xmlns:o="urn:schemas-microsoft-com:office:office"
   xmlns:x="urn:schemas-microsoft-com:office:excel"
@@ -248,16 +266,7 @@ export function generateXLS(data: ExportData): string {
   <td colspan="2" style="${E}"></td>
 </tr>
 ${rankingRows}
-<tr><td colspan="5" style="padding:6px;border:none"></td></tr>
-<tr><td colspan="5" style="${SEC}">Statystyki obecności</td></tr>
-<tr>
-  <th style="${TH};text-align:center;width:50px">Lp.</th>
-  <th style="${TH}">Imię i nazwisko</th>
-  <th style="${TH};text-align:right">Liczba służb</th>
-  <th style="${TH};text-align:right">Obecny</th>
-  <th style="${TH};text-align:right">Frekwencja</th>
-</tr>
-${attendanceRows}
+${attendanceSection}
 </table>
 </body></html>`
 }
