@@ -19,6 +19,7 @@ type PresetPeriod = 7 | 30 | 90 | 365
 interface Props {
   visible: boolean
   onClose: () => void
+  pointsOnly?: boolean
 }
 
 function localDateStr(d: Date) {
@@ -35,7 +36,7 @@ const PRESET_LABELS: Record<PresetPeriod, string> = {
   7: '7 dni', 30: '30 dni', 90: '3 mies.', 365: 'Rok',
 }
 
-export function ExportModal({ visible, onClose }: Props) {
+export function ExportModal({ visible, onClose, pointsOnly = false }: Props) {
   const { profile, parish } = useAuthStore()
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
@@ -92,7 +93,7 @@ export function ExportModal({ visible, onClose }: Props) {
 
       if (format === 'csv') {
         if (Platform.OS === 'web') {
-          const xls = generateXLS(data)
+          const xls = generateXLS(data, { pointsOnly })
           const blob = new Blob([xls], { type: 'application/vnd.ms-excel;charset=utf-8' })
           const url = URL.createObjectURL(blob)
           const a = document.createElement('a')
@@ -103,13 +104,13 @@ export function ExportModal({ visible, onClose }: Props) {
           document.body.removeChild(a)
           URL.revokeObjectURL(url)
         } else {
-          const csv = generateCSV(data)
+          const csv = generateCSV(data, { pointsOnly })
           const uri = (FileSystem.cacheDirectory ?? '') + `raport-${from}-${to}.csv`
           await FileSystem.writeAsStringAsync(uri, csv, { encoding: FileSystem.EncodingType.UTF8 })
           await shareFile(uri)
         }
       } else {
-        const html = generateHTML(data)
+        const html = generateHTML(data, { pointsOnly })
         if (Platform.OS === 'web') {
           const printBar = `<div class="no-print" style="position:sticky;top:0;z-index:99;background:#1A237E;padding:10px 20px;display:flex;justify-content:space-between;align-items:center"><span style="color:#fff;font-size:13px;font-weight:600">Podgląd raportu</span><button onclick="window.print()" style="background:#fff;color:#1A237E;border:none;padding:7px 18px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">🖨 Drukuj / Zapisz PDF</button></div><style>@media print{.no-print{display:none!important}}</style>`
           const win = window.open('', '_blank')
@@ -137,7 +138,9 @@ export function ExportModal({ visible, onClose }: Props) {
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
           <TouchableOpacity style={styles.sheet} activeOpacity={1}>
             <View style={styles.header}>
-              <Text style={styles.title}>Eksportuj raport</Text>
+              <Text style={styles.title}>
+                {pointsOnly ? 'Eksportuj ranking punktów' : 'Eksportuj raport'}
+              </Text>
               <TouchableOpacity onPress={onClose} hitSlop={8}>
                 <Ionicons name="close" size={24} color={c.subtext} />
               </TouchableOpacity>
