@@ -32,6 +32,7 @@ export default function ChatScreen() {
     const { data, error } = await supabase.rpc('get_chat_channels_with_meta')
 
     if (error || !data) {
+      console.error('[Chat] fetchChannels error:', error)
       setLoading(false)
       setRefreshing(false)
       return
@@ -57,7 +58,7 @@ export default function ChatScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchChannels(channels.length === 0)
+      fetchChannels(false)
     }, [fetchChannels])
   )
 

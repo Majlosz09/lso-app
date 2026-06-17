@@ -14,6 +14,7 @@ interface Props {
   currentUserId: string
   isAdmin: boolean
   showSender: boolean
+  senderMap?: Record<string, string>
   onLongPress: (message: ChatMessageWithSender, pageY: number) => void
   onReactionPress: (messageId: string, emoji: string, reactions: ChatReaction[]) => void
   onVote: (poll: ChatPoll, optionId: string) => void
@@ -24,7 +25,7 @@ interface Props {
 }
 
 function MessageBubbleComponent({
-  item, currentUserId, isAdmin, showSender,
+  item, currentUserId, isAdmin, showSender, senderMap,
   onLongPress, onReactionPress, onVote, onClosePoll,
   onReply, onEdit, onDelete,
 }: Props) {
@@ -33,6 +34,7 @@ function MessageBubbleComponent({
   const [hovered, setHovered] = useState(false)
   const [showReactionPicker, setShowReactionPicker] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [hoveredEmoji, setHoveredEmoji] = useState<string | null>(null)
 
   const isOwn = item.sender_id === currentUserId
   const isWeb = Platform.OS === 'web'
@@ -44,7 +46,7 @@ function MessageBubbleComponent({
   }, {})
 
   const canEdit = isOwn && item.type !== 'poll'
-  const canDelete = isOwn || isAdmin
+  const canDelete = isOwn
   // Show three-dots only when there's at least one action in the menu
   const hasMenuItems = canEdit || canDelete
 
@@ -96,20 +98,36 @@ function MessageBubbleComponent({
         <View style={styles.reactionsRow}>
           {Object.entries(reactionGroups).map(([emoji, reactions]) => {
             const iMine = reactions.some((r) => r.user_id === currentUserId)
+            const tooltipNames = reactions.map(r =>
+              r.user_id === currentUserId ? 'Ty' : (senderMap?.[r.user_id] ?? 'Nieznany')
+            )
             return (
-              <TouchableOpacity
-                key={emoji}
-                style={[
-                  styles.reactionChip,
-                  { backgroundColor: c.surface, borderColor: iMine ? c.primary : c.border },
-                ]}
-                onPress={() => onReactionPress(item.id, emoji, item.reactions)}
-              >
-                <Text style={styles.reactionEmoji}>{emoji}</Text>
-                <Text style={[styles.reactionCount, { color: iMine ? c.primary : c.subtext }]}>
-                  {reactions.length}
-                </Text>
-              </TouchableOpacity>
+              <View key={emoji} style={{ position: 'relative' }}>
+                <TouchableOpacity
+                  style={[
+                    styles.reactionChip,
+                    { backgroundColor: c.surface, borderColor: iMine ? c.primary : c.border },
+                  ]}
+                  onPress={() => onReactionPress(item.id, emoji, item.reactions)}
+                  // @ts-ignore — React Native Web
+                  onMouseEnter={isWeb ? () => setHoveredEmoji(emoji) : undefined}
+                  // @ts-ignore
+                  onMouseLeave={isWeb ? () => setHoveredEmoji(null) : undefined}
+                >
+                  <Text style={styles.reactionEmoji}>{emoji}</Text>
+                  <Text style={[styles.reactionCount, { color: iMine ? c.primary : c.subtext }]}>
+                    {reactions.length}
+                  </Text>
+                </TouchableOpacity>
+                {isWeb && hoveredEmoji === emoji && (
+                  <View style={[styles.reactionTooltip, isOwn ? { right: 0 } : { left: 0 }]}>
+                    <Text style={styles.reactionTooltipEmoji}>{emoji}</Text>
+                    {tooltipNames.map((name, i) => (
+                      <Text key={i} style={styles.reactionTooltipName}>{name}</Text>
+                    ))}
+                  </View>
+                )}
+              </View>
             )
           })}
         </View>
@@ -314,10 +332,38 @@ function createStyles(c: Colors) {
     },
     reactionEmoji: { fontSize: 13 },
     reactionCount: { fontSize: 12 },
+    reactionTooltip: {
+      position: 'absolute',
+      bottom: 30,
+      borderRadius: 10,
+      maxWidth: 200,
+      paddingTop: 8,
+      paddingBottom: 6,
+      paddingHorizontal: 12,
+      zIndex: 200,
+      minWidth: 80,
+      backgroundColor: 'rgba(30,30,30,0.92)',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+    },
+    reactionTooltipEmoji: {
+      fontSize: 18,
+      textAlign: 'center',
+      marginBottom: 5,
+    },
+    reactionTooltipName: {
+      fontSize: 12,
+      color: '#fff',
+      fontWeight: '500',
+      paddingVertical: 1,
+    },
     // Web compact action bar — collapses to width:0 when hidden so messages sit flush
     actionBarContainer: {
       flexDirection: 'row',
       alignItems: 'center',
+      alignSelf: 'flex-end',
       gap: 3,
       position: 'relative',
       overflow: 'visible',

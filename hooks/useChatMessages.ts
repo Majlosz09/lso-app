@@ -100,7 +100,7 @@ export function useChatMessages(channelId: string) {
         console.error('[useChatMessages] fetch error, running fallback:', error.message)
         const { data: fallback, error: fallbackError } = await supabase
           .from('chat_messages')
-          .select('*, sender:profiles(id, full_name, avatar_url, role)')
+          .select('*, sender:profiles(id, full_name, avatar_url, role), reactions:chat_reactions!chat_reactions_message_id_fkey(*)')
           .eq('channel_id', channelId)
           .is('deleted_at', null)
           .order('created_at', { ascending: false })
@@ -143,7 +143,7 @@ export function useChatMessages(channelId: string) {
         console.error('[useChatMessages] loadMore error, running fallback:', error.message)
         const { data: fallback } = await supabase
           .from('chat_messages')
-          .select('*, sender:profiles(id, full_name, avatar_url, role)')
+          .select('*, sender:profiles(id, full_name, avatar_url, role), reactions:chat_reactions!chat_reactions_message_id_fkey(*)')
           .eq('channel_id', channelId)
           .is('deleted_at', null)
           .lt('created_at', oldestCreatedAt.current)
@@ -178,8 +178,8 @@ export function useChatMessages(channelId: string) {
       const existing = msg.reactions.find(r => r.user_id === userId)
       if (existing) {
         if (existing.emoji === emoji) {
-          // Same emoji — reaction is permanent, no-op
-          return msg
+          // Same emoji — toggle off optimistically
+          return { ...msg, reactions: msg.reactions.filter(r => r.user_id !== userId) }
         }
         return {
           ...msg,

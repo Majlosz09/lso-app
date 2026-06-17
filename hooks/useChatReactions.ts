@@ -12,14 +12,24 @@ export function useChatReactions(userId: string) {
 
     const existingByUser = currentReactions.find(r => r.user_id === userId)
 
-    // Same emoji already set — reaction is permanent, nothing to do
+    // Same emoji already set — toggle off (delete)
     if (existingByUser?.emoji === emoji) {
-      return { success: true }
+      try {
+        const { error } = await supabase
+          .from('chat_reactions')
+          .delete()
+          .eq('message_id', messageId)
+          .eq('user_id', userId)
+        if (error) throw error
+        return { success: true }
+      } catch (err: any) {
+        console.error('[useChatReactions] Błąd podczas usuwania reakcji:', err.message || err)
+        return { success: false, error: err }
+      }
     }
 
     try {
       // UPSERT handles both new reactions and emoji changes atomically.
-      // Avoids 409 conflicts when optimistic state is out of sync with DB.
       const { error } = await supabase
         .from('chat_reactions')
         .upsert(

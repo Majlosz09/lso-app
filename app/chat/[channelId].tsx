@@ -26,6 +26,8 @@ export default function ChannelScreen() {
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
 
+  const inputRef = useRef<TextInput>(null)
+
   const [channel, setChannel] = useState<ChatChannel | null>(null)
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -40,6 +42,15 @@ export default function ChannelScreen() {
   const { vote, closePoll } = useChatPolls(profile?.id ?? '')
 
   const isAdmin = profile?.role === 'admin' || !!profile?.is_admin
+
+  const senderMap = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const msg of messages) {
+      if (msg.sender_id && msg.sender?.full_name) map[msg.sender_id] = msg.sender.full_name
+    }
+    if (profile?.id && profile?.full_name) map[profile.id] = profile.full_name
+    return map
+  }, [messages, profile?.id, profile?.full_name])
 
   useEffect(() => {
     const init = async () => {
@@ -104,19 +115,25 @@ export default function ChannelScreen() {
   }
 
   const handleDelete = useCallback((message: ChatMessageWithSender) => {
-    Alert.alert('Usuń wiadomość', 'Tej operacji nie można cofnąć.', [
-      { text: 'Anuluj', style: 'cancel' },
-      {
-        text: 'Usuń', style: 'destructive',
-        onPress: async () => {
-          const { error } = await supabase.from('chat_messages')
-            .update({ deleted_at: new Date().toISOString() })
-            .eq('id', message.id)
-          if (error) Alert.alert('Błąd', 'Nie udało się usunąć wiadomości.')
-          else refetch()
-        },
-      },
-    ])
+    const doDelete = async () => {
+      const { error } = await supabase.from('chat_messages')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', message.id)
+      if (error) Alert.alert('Błąd', 'Nie udało się usunąć wiadomości.')
+      else refetch()
+    }
+
+    if (Platform.OS === 'web') {
+      // Alert.alert with multiple buttons is a no-op on React Native Web
+      if (window.confirm('Usuń wiadomość?\nTej operacji nie można cofnąć.')) {
+        doDelete()
+      }
+    } else {
+      Alert.alert('Usuń wiadomość', 'Tej operacji nie można cofnąć.', [
+        { text: 'Anuluj', style: 'cancel' },
+        { text: 'Usuń', style: 'destructive', onPress: doDelete },
+      ])
+    }
   }, [refetch])
 
   const handleCreatePoll = async (question: string, options: string[], allowMultiple: boolean) => {
@@ -172,6 +189,7 @@ export default function ChannelScreen() {
         currentUserId={profile?.id ?? ''}
         isAdmin={isAdmin}
         showSender={showSender}
+        senderMap={senderMap}
         onLongPress={(msg, pageY) => { setActionSheetMessage(msg); setActionSheetY(pageY) }}
         onReactionPress={handleReaction}
         onVote={async (poll: ChatPoll, optionId: string) => {
@@ -182,6 +200,7 @@ export default function ChannelScreen() {
         onReply={() => {
           setReplyTo(item)
           setEditingMessage(null)
+          inputRef.current?.focus()
         }}
         onEdit={() => {
           setEditingMessage(item)
@@ -191,7 +210,7 @@ export default function ChannelScreen() {
         onDelete={() => handleDelete(item)}
       />
     )
-  }, [messages, profile?.id, isAdmin, handleReaction, vote, refetch, closePoll, handleDelete])
+  }, [messages, profile?.id, isAdmin, senderMap, handleReaction, vote, refetch, closePoll, handleDelete])
 
   // Web: Enter sends, Shift+Enter = new line
   const handleKeyPress = (e: any) => {
@@ -247,6 +266,7 @@ export default function ChannelScreen() {
 
       <View style={[styles.inputRow, { borderTopColor: c.border }]}>
         <TextInput
+          ref={inputRef}
           style={[styles.input, { color: c.text, backgroundColor: c.surface, borderColor: c.border }]}
           value={text}
           onChangeText={setText}
@@ -295,6 +315,7 @@ export default function ChannelScreen() {
         onReply={() => {
           setReplyTo(actionSheetMessage)
           setEditingMessage(null)
+          setTimeout(() => inputRef.current?.focus(), Platform.OS === 'web' ? 0 : 350)
         }}
         onEdit={() => {
           setEditingMessage(actionSheetMessage)

@@ -1,4 +1,4 @@
-import { InteractionManager, Modal, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native'
+import { Modal, Platform, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View, useWindowDimensions } from 'react-native'
 import { useMemo } from 'react'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
@@ -31,7 +31,7 @@ export function MessageActionSheet({
 
   const isOwn = message.sender_id === currentUserId
   const canEdit = isOwn && message.type !== 'poll' && !message.deleted_at
-  const canDelete = (isOwn || isAdmin) && !message.deleted_at
+  const canDelete = isOwn && !message.deleted_at
 
   const handleReact = (emoji: string) => {
     onReact(emoji)
@@ -70,9 +70,9 @@ export function MessageActionSheet({
                   style={styles.action}
                   onPress={() => {
                     onClose()
-                    // Wait for the modal fade-out to finish before showing the Alert.
-                    // Without this delay the Alert can be swallowed by the closing animation.
-                    InteractionManager.runAfterInteractions(() => onDelete())
+                    // setTimeout gives the modal time to close before Alert shows.
+                    // InteractionManager doesn't reliably track CSS animations on web.
+                    setTimeout(() => onDelete(), Platform.OS === 'web' ? 0 : 300)
                   }}
                 >
                   <Text style={[styles.actionText, { color: c.danger }]}>🗑️  Usuń</Text>
