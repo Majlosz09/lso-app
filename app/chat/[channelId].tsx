@@ -4,6 +4,8 @@ import {
   Alert, FlatList, KeyboardAvoidingView, Platform,
   StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator, RefreshControl,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useHeaderHeight } from '@react-navigation/elements'
 import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useNavigation } from 'expo-router'
 import { supabase } from '../../lib/supabase'
@@ -25,6 +27,9 @@ export default function ChannelScreen() {
   const { profile } = useAuthStore()
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
+
+  const insets = useSafeAreaInsets()
+  const headerHeight = useHeaderHeight()
 
   const inputRef = useRef<TextInput>(null)
 
@@ -231,106 +236,109 @@ export default function ChannelScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <FlatList
-        data={messages}
-        keyExtractor={(item) => item.id}
-        inverted
-        contentContainerStyle={styles.listContent}
-        onEndReached={hasMore ? loadMore : undefined}
-        onEndReachedThreshold={0.3}
-        ListFooterComponent={
-          loadingMore
-            ? <ActivityIndicator color={c.primary} style={{ marginVertical: 12 }} />
-            : null
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>Brak wiadomości. Napisz pierwszą!</Text>
-          </View>
-        }
-        renderItem={renderMessage}
-      />
-
-      {(replyTo || editingMessage) && (
-        <ReplyPreview
-          message={(replyTo ?? editingMessage)!}
-          mode={editingMessage ? 'edit' : 'reply'}
-          onCancel={() => { setReplyTo(null); setEditingMessage(null); setText('') }}
-        />
-      )}
-
-      <View style={[styles.inputRow, { borderTopColor: c.border }]}>
-        <TextInput
-          ref={inputRef}
-          style={[styles.input, { color: c.text, backgroundColor: c.surface, borderColor: c.border }]}
-          value={text}
-          onChangeText={setText}
-          placeholder={editingMessage ? 'Edytuj wiadomość...' : 'Napisz wiadomość...'}
-          placeholderTextColor={c.subtext}
-          multiline
-          maxLength={1000}
-          returnKeyType="send"
-          blurOnSubmit={false}
-          onSubmitEditing={Platform.OS !== 'web' ? handleSend : undefined}
-          onKeyPress={Platform.OS === 'web' ? handleKeyPress : undefined}
-        />
-        {Platform.OS !== 'web' && (
-          <TouchableOpacity style={[styles.newlineBtn, { borderColor: c.border }]} onPress={insertNewline}>
-            <Text style={{ color: c.subtext, fontSize: 14 }}>⏎</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[styles.pollBtn, { borderColor: c.border }]}
-          onPress={() => setShowPollModal(true)}
-        >
-          <Text style={{ fontSize: 18 }}>📊</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.sendBtn, { backgroundColor: text.trim() ? c.primary : c.border }]}
-          onPress={handleSend}
-          disabled={!text.trim() || sending}
-        >
-          <Ionicons name="send" size={18} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      <MessageActionSheet
-        visible={!!actionSheetMessage}
-        message={actionSheetMessage}
-        currentUserId={profile?.id ?? ''}
-        isAdmin={isAdmin}
-        messageY={actionSheetY}
-        onClose={() => setActionSheetMessage(null)}
-        onReact={(emoji) => {
-          if (actionSheetMessage) {
-            const fresh = messages.find(m => m.id === actionSheetMessage.id)
-            handleReaction(actionSheetMessage.id, emoji, fresh?.reactions ?? actionSheetMessage.reactions)
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior="padding"
+        keyboardVerticalOffset={headerHeight}
+      >
+        <FlatList
+          data={messages}
+          keyExtractor={(item) => item.id}
+          inverted
+          contentContainerStyle={styles.listContent}
+          onEndReached={hasMore ? loadMore : undefined}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            loadingMore
+              ? <ActivityIndicator color={c.primary} style={{ marginVertical: 12 }} />
+              : null
           }
-        }}
-        onReply={() => {
-          setReplyTo(actionSheetMessage)
-          setEditingMessage(null)
-          setTimeout(() => inputRef.current?.focus(), Platform.OS === 'web' ? 0 : 350)
-        }}
-        onEdit={() => {
-          setEditingMessage(actionSheetMessage)
-          setText(actionSheetMessage?.content ?? '')
-          setReplyTo(null)
-        }}
-        onDelete={() => { if (actionSheetMessage) handleDelete(actionSheetMessage) }}
-      />
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>Brak wiadomości. Napisz pierwszą!</Text>
+            </View>
+          }
+          renderItem={renderMessage}
+        />
 
-      <CreatePollModal
-        visible={showPollModal}
-        onClose={() => setShowPollModal(false)}
-        onSubmit={handleCreatePoll}
-      />
-    </KeyboardAvoidingView>
+        {(replyTo || editingMessage) && (
+          <ReplyPreview
+            message={(replyTo ?? editingMessage)!}
+            mode={editingMessage ? 'edit' : 'reply'}
+            onCancel={() => { setReplyTo(null); setEditingMessage(null); setText('') }}
+          />
+        )}
+
+        <View style={[styles.inputRow, { borderTopColor: c.border }]}>
+          <TextInput
+            ref={inputRef}
+            style={[styles.input, { color: c.text, backgroundColor: c.surface, borderColor: c.border }]}
+            value={text}
+            onChangeText={setText}
+            placeholder={editingMessage ? 'Edytuj wiadomość...' : 'Napisz wiadomość...'}
+            placeholderTextColor={c.subtext}
+            multiline
+            maxLength={1000}
+            returnKeyType="send"
+            blurOnSubmit={false}
+            onSubmitEditing={Platform.OS !== 'web' ? handleSend : undefined}
+            onKeyPress={Platform.OS === 'web' ? handleKeyPress : undefined}
+          />
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity style={[styles.newlineBtn, { borderColor: c.border }]} onPress={insertNewline}>
+              <Text style={{ color: c.subtext, fontSize: 14 }}>⏎</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.pollBtn, { borderColor: c.border }]}
+            onPress={() => setShowPollModal(true)}
+          >
+            <Text style={{ fontSize: 18 }}>📊</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.sendBtn, { backgroundColor: text.trim() ? c.primary : c.border }]}
+            onPress={handleSend}
+            disabled={!text.trim() || sending}
+          >
+            <Ionicons name="send" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    {Platform.OS === 'android' && insets.bottom > 0 && (
+      <View style={{ height: insets.bottom, backgroundColor: c.bg }} />
+    )}
+    <MessageActionSheet
+      visible={!!actionSheetMessage}
+      message={actionSheetMessage}
+      currentUserId={profile?.id ?? ''}
+      isAdmin={isAdmin}
+      messageY={actionSheetY}
+      onClose={() => setActionSheetMessage(null)}
+      onReact={(emoji) => {
+        if (actionSheetMessage) {
+          const fresh = messages.find(m => m.id === actionSheetMessage.id)
+          handleReaction(actionSheetMessage.id, emoji, fresh?.reactions ?? actionSheetMessage.reactions)
+        }
+      }}
+      onReply={() => {
+        setReplyTo(actionSheetMessage)
+        setEditingMessage(null)
+        setTimeout(() => inputRef.current?.focus(), Platform.OS === 'web' ? 0 : 350)
+      }}
+      onEdit={() => {
+        setEditingMessage(actionSheetMessage)
+        setText(actionSheetMessage?.content ?? '')
+        setReplyTo(null)
+      }}
+      onDelete={() => { if (actionSheetMessage) handleDelete(actionSheetMessage) }}
+    />
+    <CreatePollModal
+      visible={showPollModal}
+      onClose={() => setShowPollModal(false)}
+      onSubmit={handleCreatePoll}
+    />
+    </View>
   )
 }
 

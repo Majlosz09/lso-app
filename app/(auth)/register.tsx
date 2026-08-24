@@ -16,6 +16,12 @@ import { Colors } from '../../lib/theme'
 type Step = 'choose' | 'member' | 'admin'
 type MemberRole = 'member' | 'parent'
 
+function WebFormWrapper({ onSubmit, children }: { onSubmit: () => void; children: React.ReactNode }) {
+  if (Platform.OS !== 'web') return <>{children}</>
+  // @ts-ignore — form is valid HTML on web
+  return <form onSubmit={(e: any) => { e.preventDefault(); onSubmit() }} style={{ display: 'contents' }}>{children}</form>
+}
+
 export default function RegisterScreen() {
   const [step, setStep] = useState<Step>('choose')
 
@@ -70,7 +76,7 @@ function ChooseScreen({ onMember, onAdmin }: { onMember: () => void; onAdmin: ()
 }
 
 function MemberForm({ onBack }: { onBack: () => void }) {
-  const { fetchProfile } = useAuthStore()
+  const { fetchProfile, setSession } = useAuthStore()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -122,24 +128,36 @@ function MemberForm({ onBack }: { onBack: () => void }) {
   }
 
   const handleSubmit = async () => {
+    if (loading) return
     const err = validate()
     if (err) { Alert.alert('Błąd', err); return }
 
     setLoading(true)
     const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
     if (error || !data.user) {
-      Alert.alert('Błąd rejestracji', error?.message ?? 'Nieznany błąd')
+      const isAlreadyRegistered =
+        (error as any)?.status === 422 ||
+        error?.message?.toLowerCase().includes('already registered') ||
+        error?.message?.toLowerCase().includes('user already registered')
+      Alert.alert(
+        'Błąd rejestracji',
+        isAlreadyRegistered
+          ? 'Ten adres email jest już zarejestrowany. Zaloguj się zamiast tego.'
+          : (error?.message ?? 'Nieznany błąd')
+      )
       setLoading(false)
       return
     }
 
-    if (!data.session) {
-      const { error: loginErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-      if (loginErr) {
+    let activeSession = data.session
+    if (!activeSession) {
+      const { data: signInData, error: loginErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      if (loginErr || !signInData.session) {
         Alert.alert('Błąd', 'Sprawdź email i potwierdź konto, a następnie zaloguj się.')
         setLoading(false)
         return
       }
+      activeSession = signInData.session
     }
 
     const { data: parishId, error: rpcError } = await supabase
@@ -168,15 +186,11 @@ function MemberForm({ onBack }: { onBack: () => void }) {
     }
 
     if (role === 'parent' && selectedChildIds.length > 0) {
-      await supabase
-        .from('profiles')
-        .update({ parent_id: data.user.id })
-        .in('id', selectedChildIds)
+      await supabase.rpc('link_parent_to_children', { p_child_ids: selectedChildIds })
     }
 
-    setLoading(false)
-    Toast.show({ type: 'success', text1: 'Witaj!', text2: 'Konto zostało utworzone. Trwa logowanie…' })
-    await fetchProfile()
+    Toast.show({ type: 'success', text1: 'Witaj!', text2: 'Konto zostało utworzone.' })
+    setSession(activeSession)
   }
 
   return (
@@ -190,6 +204,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
         <Text style={styles.formTitle}>Rejestracja</Text>
         <Text style={styles.formSub}>Ministrant lub rodzic</Text>
 
+        <WebFormWrapper onSubmit={handleSubmit}>
         <View style={styles.nameRow}>
           <TextInput style={[styles.input, { flex: 1 }]} placeholder="Imię" placeholderTextColor={c.textTertiary}
             value={firstName} onChangeText={setFirstName} />
@@ -279,13 +294,14 @@ function MemberForm({ onBack }: { onBack: () => void }) {
         <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleSubmit} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Zarejestruj się</Text>}
         </TouchableOpacity>
+        </WebFormWrapper>
       </ScrollView>
     </KeyboardAvoidingView>
   )
 }
 
 function AdminForm({ onBack }: { onBack: () => void }) {
-  const { fetchProfile } = useAuthStore()
+  const { setSession } = useAuthStore()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -310,24 +326,36 @@ function AdminForm({ onBack }: { onBack: () => void }) {
   }
 
   const handleSubmit = async () => {
+    if (loading) return
     const err = validate()
     if (err) { Alert.alert('Błąd', err); return }
 
     setLoading(true)
     const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
     if (error || !data.user) {
-      Alert.alert('Błąd rejestracji', error?.message ?? 'Nieznany błąd')
+      const isAlreadyRegistered =
+        (error as any)?.status === 422 ||
+        error?.message?.toLowerCase().includes('already registered') ||
+        error?.message?.toLowerCase().includes('user already registered')
+      Alert.alert(
+        'Błąd rejestracji',
+        isAlreadyRegistered
+          ? 'Ten adres email jest już zarejestrowany. Zaloguj się zamiast tego.'
+          : (error?.message ?? 'Nieznany błąd')
+      )
       setLoading(false)
       return
     }
 
-    if (!data.session) {
-      const { error: loginErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-      if (loginErr) {
+    let activeSession = data.session
+    if (!activeSession) {
+      const { data: signInData, error: loginErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      if (loginErr || !signInData.session) {
         Alert.alert('Błąd', 'Sprawdź email i potwierdź konto, a następnie zaloguj się.')
         setLoading(false)
         return
       }
+      activeSession = signInData.session
     }
 
     const { data: parishData, error: parishError } = await supabase
@@ -351,10 +379,14 @@ function AdminForm({ onBack }: { onBack: () => void }) {
       parish_id: parishData.id,
     })
 
-    setLoading(false)
-    if (profileError) { Alert.alert('Błąd profilu', profileError.message); return }
+    if (profileError) {
+      setLoading(false)
+      Alert.alert('Błąd profilu', profileError.message)
+      return
+    }
+
     Toast.show({ type: 'success', text1: 'Parafia utworzona!', text2: 'Konto administratora zostało aktywowane.' })
-    await fetchProfile()
+    setSession(activeSession)
   }
 
   return (
@@ -368,6 +400,7 @@ function AdminForm({ onBack }: { onBack: () => void }) {
         <Text style={styles.formTitle}>Nowa parafia</Text>
         <Text style={styles.formSub}>Administrator / ksiądz</Text>
 
+        <WebFormWrapper onSubmit={handleSubmit}>
         <View style={styles.nameRow}>
           <TextInput style={[styles.input, { flex: 1 }]} placeholder="Imię" placeholderTextColor={c.textTertiary}
             value={firstName} onChangeText={setFirstName} />
@@ -402,6 +435,7 @@ function AdminForm({ onBack }: { onBack: () => void }) {
           onPress={handleSubmit} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Utwórz parafię</Text>}
         </TouchableOpacity>
+        </WebFormWrapper>
       </ScrollView>
     </KeyboardAvoidingView>
   )

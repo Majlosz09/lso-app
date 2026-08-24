@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "description": "Aplikacja dla Liturgicznej Służby Ołtarza — grafik służb, weryfikacja obecności i punktacja ministrantów.",
-    "privacyPolicyUrl": "https://lsoapp.pl/privacy",
+    "privacyPolicyUrl": "https://lsoapp.com/privacy",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -35,7 +35,7 @@
         "android.permission.RECEIVE_BOOT_COMPLETED"
       ],
       "package": "pl.lsoapp.app",
-      "versionCode": 1
+      "versionCode": 2
     },
     "web": {
       "bundler": "metro",
