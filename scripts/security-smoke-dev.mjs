@@ -50,7 +50,7 @@ async function registerAdmin(label, parishName) {
 }
 
 // Rejestracja ministranta / rodzica — jak MemberForm
-async function registerMember(label, role, invite, extra = {}) {
+async function registerMember(label, role, invite, extra = {}, approver = null) {
   const u = await signUp(label)
   const { data: pid, error: rpcErr } = await u.c.rpc('get_parish_by_invite_code', { code: invite })
   if (rpcErr || !pid) throw new Error(`invite ${label}: ${rpcErr?.message}`)
@@ -58,6 +58,8 @@ async function registerMember(label, role, invite, extra = {}) {
     id: u.id, full_name: label, role, phone: '600000001', rocznik: role === 'member' ? 2013 : null,
     is_active: true, parish_id: pid, ...extra,
   })
+  // dołączenie kodem → oczekuje na zatwierdzenie (migracja 20260928010000)
+  if (!error && approver) await approver.c.rpc('approve_member', { p_profile_id: u.id })
   return { ...u, parishId: pid, upsertError: error }
 }
 
@@ -67,9 +69,9 @@ console.log('1. Rejestracja')
 const adminA = await registerAdmin('adminA', `Parafia A ${run}`)
 const adminB = await registerAdmin('adminB', `Parafia B ${run}`)
 ok('admin zakłada parafię i widzi kod zaproszenia', !!adminA.invite)
-const member = await registerMember('ministrant', 'member', adminA.invite)
+const member = await registerMember('ministrant', 'member', adminA.invite, {}, adminA)
 ok('ministrant dołącza kodem', !member.upsertError, member.upsertError?.message)
-const parent = await registerMember('rodzic', 'parent', adminA.invite)
+const parent = await registerMember('rodzic', 'parent', adminA.invite, {}, adminA)
 ok('rodzic dołącza kodem', !parent.upsertError, parent.upsertError?.message)
 const { error: linkErr } = await parent.c.rpc('link_parent_to_children', { p_child_ids: [member.id] })
 ok('rodzic łączy się z dzieckiem', !linkErr, linkErr?.message)

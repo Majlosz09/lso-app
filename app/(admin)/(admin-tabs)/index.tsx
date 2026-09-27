@@ -33,6 +33,7 @@ export default function AdminHome() {
   const router = useRouter()
   const [stats, setStats] = useState<Stats>({ members: 0, unstaff: 0, absent: 0 })
   const [statsLoading, setStatsLoading] = useState(true)
+  const [pendingCount, setPendingCount] = useState(0)
   const [scheduleDates, setScheduleDates] = useState<Set<string>>(new Set())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
@@ -43,6 +44,7 @@ export default function AdminHome() {
 
   // Load stats on focus
   const fetchStats = useCallback(() => {
+    supabase.rpc('get_pending_members').then(({ data }) => setPendingCount((data ?? []).length))
     const nextWeek = new Date()
     nextWeek.setDate(nextWeek.getDate() + 7)
     const nextWeekStr = localDateStr(nextWeek)
@@ -96,6 +98,16 @@ export default function AdminHome() {
         <Text style={styles.greetingName}>Witaj, {firstName}!</Text>
         <Text style={styles.greetingSub}>Panel zarządzania LSO</Text>
       </View>
+
+      {pendingCount > 0 && (
+        <TouchableOpacity style={styles.pendingBanner} onPress={() => router.push('/(admin)/(admin-tabs)/members')}>
+          <Ionicons name="person-add" size={20} color="#B45309" />
+          <Text style={styles.pendingBannerText}>
+            {pendingCount === 1 ? '1 osoba czeka' : `${pendingCount} osoby czekają`} na zatwierdzenie
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color="#B45309" />
+        </TouchableOpacity>
+      )}
 
       {statsLoading ? (
         <ActivityIndicator color={c.primary} style={{ marginVertical: 12 }} />
@@ -314,6 +326,11 @@ function createStyles(c: Colors) {
     greetingSub: { fontSize: 13, color: c.subtext },
 
     statsRow: { flexDirection: 'row', gap: 10 },
+    pendingBanner: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      backgroundColor: '#FEF3C7', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#F59E0B',
+    },
+    pendingBannerText: { flex: 1, fontSize: 14, fontWeight: '700', color: '#92400E' },
     statCard: {
       flex: 1, backgroundColor: c.surface, borderRadius: 12,
       padding: 12, gap: 4, alignItems: 'center', borderTopWidth: 3,

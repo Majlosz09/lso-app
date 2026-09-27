@@ -26,6 +26,16 @@ type Member = {
 
 type Filter = 'member' | 'parent' | 'admin'
 
+type Pending = {
+  id: string
+  full_name: string
+  role: 'member' | 'parent'
+  phone: string | null
+  rocznik: number | null
+  email: string | null
+  children: string | null
+}
+
 export default function MembersTab() {
   const router = useRouter()
   const { parish, profile: adminProfile } = useAuthStore()
@@ -39,6 +49,10 @@ export default function MembersTab() {
   const [assignLoading, setAssignLoading] = useState(false)
   const [pendingRevoke, setPendingRevoke] = useState<Member | null>(null)
   const [pendingGrant, setPendingGrant] = useState<Member | null>(null)
+  // Osoby, które dołączyły kodem i czekają na zatwierdzenie
+  const [waiting, setWaiting] = useState<Pending[]>([])
+  const [rejecting, setRejecting] = useState<Pending | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
 
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
@@ -46,6 +60,7 @@ export default function MembersTab() {
   // odświeżaj po powrocie (np. po usunięciu osoby z parafii w szczegółach)
   useFocusEffect(useCallback(() => {
     const fetchAll = async () => {
+      supabase.rpc('get_pending_members').then(({ data }) => setWaiting((data ?? []) as Pending[]))
       const [profilesRes, pointsRes] = await Promise.all([
         supabase
           .from('profiles')
@@ -157,6 +172,29 @@ export default function MembersTab() {
     }
   }
 
+  const approve = async (p: Pending) => {
+    setBusyId(p.id)
+    const { error } = await supabase.rpc('approve_member', { p_profile_id: p.id })
+    setBusyId(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    setWaiting(prev => prev.filter(x => x.id !== p.id))
+    setMembers(prev => [...prev, { id: p.id, full_name: p.full_name, role: p.role, phone: p.phone, rocznik: p.rocznik, total_points: 0 }]
+      .sort((a, b) => a.full_name.localeCompare(b.full_name)))
+    Toast.show({ type: 'success', text1: 'Zatwierdzono', text2: p.full_name })
+  }
+
+  const doReject = async () => {
+    if (!rejecting) return
+    const p = rejecting
+    setRejecting(null)
+    setBusyId(p.id)
+    const { error } = await supabase.rpc('remove_member_from_parish', { p_profile_id: p.id })
+    setBusyId(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    setWaiting(prev => prev.filter(x => x.id !== p.id))
+    Toast.show({ type: 'success', text1: 'Prośba odrzucona', text2: p.full_name })
+  }
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
     return members.filter(
@@ -236,6 +274,34 @@ export default function MembersTab() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
+          ListHeaderComponent={waiting.length > 0 ? (
+            <View style={styles.pendingBox}>
+              <Text style={styles.pendingTitle}>Oczekują na zatwierdzenie ({waiting.length})</Text>
+              {waiting.map(p => (
+                <View key={p.id} style={styles.pendingRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.name}>{p.full_name}</Text>
+                    <Text style={styles.sub}>
+                      {p.role === 'parent' ? 'Rodzic' : `Ministrant${p.rocznik ? `, rocznik ${p.rocznik}` : ''}`}
+                      {p.children ? ` · dzieci: ${p.children}` : ''}
+                    </Text>
+                    <Text style={styles.sub}>{[p.email, p.phone].filter(Boolean).join(' · ')}</Text>
+                  </View>
+                  {busyId === p.id ? <ActivityIndicator color={c.primary} /> : (
+                    <View style={styles.pendingActions}>
+                      <TouchableOpacity style={styles.rejectBtn} onPress={() => setRejecting(p)} hitSlop={6}>
+                        <Ionicons name="close" size={18} color={c.danger} />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.approveBtn} onPress={() => approve(p)} hitSlop={6}>
+                        <Ionicons name="checkmark" size={18} color="#fff" />
+                        <Text style={styles.approveText}>Zatwierdź</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
+          ) : null}
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="people-outline" size={48} color={c.iconMuted} />
@@ -349,6 +415,16 @@ export default function MembersTab() {
       </Modal>
 
       <ConfirmDialog
+        visible={rejecting !== null}
+        title="Odrzucić prośbę?"
+        message={`${rejecting?.full_name ?? ''} nie zostanie dodany do parafii. Jeśli to pomyłka, osoba może ponownie wpisać kod.`}
+        confirmText="Odrzuć"
+        destructive
+        onConfirm={doReject}
+        onCancel={() => setRejecting(null)}
+      />
+
+      <ConfirmDialog
         visible={pendingRevoke !== null}
         title="Usuń uprawnienia admina"
         message={`Czy na pewno chcesz usunąć uprawnienia administratora dla ${pendingRevoke?.full_name ?? ''}?`}
@@ -446,5 +522,21 @@ function createStyles(c: Colors) {
     },
     emptyBtnText: { fontSize: 14, color: c.primary, fontWeight: '600' },
     listContent: { padding: 16, gap: 8 },
+    pendingBox: {
+      backgroundColor: c.surface, borderRadius: 14, padding: 12, gap: 4, marginBottom: 8,
+      borderWidth: 1.5, borderColor: '#F59E0B', ...shadow.xs,
+    },
+    pendingTitle: { fontSize: 13, fontWeight: '700', color: '#B45309', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 },
+    pendingRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      paddingVertical: 10, borderTopWidth: 1, borderTopColor: c.border,
+    },
+    pendingActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    rejectBtn: { padding: 8, borderRadius: 10, borderWidth: 1, borderColor: c.danger + '55' },
+    approveBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      backgroundColor: '#16A34A', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8,
+    },
+    approveText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   })
 }

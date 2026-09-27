@@ -9,6 +9,7 @@ import { useAuthStore } from '../stores/authStore'
 import { ThemeProvider } from '../lib/ThemeContext'
 import { OnboardingModal } from '../components/OnboardingModal'
 import { EnvBanner } from '../components/EnvBanner'
+import '../lib/webAlert' // Alert.alert na webie (react-native-web go nie wyświetla)
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
@@ -67,12 +68,24 @@ function AuthGate() {
     const inAuth = segments[0] === '(auth)'
     const inParishSetup = segments[1] === 'parish-setup'
     const inRegister = segments[1] === 'register'
+    const inPending = segments[1] === 'pending'
+    const isPending = !!profile?.parish_id && profile?.approved === false
 
     if (!session && !inAuth) {
       router.replace('/(auth)/welcome')
       return
     }
     if (session && profile === null) return
+
+    // Dołączył kodem — czeka na zatwierdzenie przez admina parafii
+    if (session && isPending) {
+      if (!inPending) router.replace('/(auth)/pending')
+      return
+    }
+    if (session && inPending) {
+      router.replace(profile?.parish_id ? '/(tabs)' : '/(auth)/parish-setup')
+      return
+    }
 
     if (session && inRegister) {
       // During registration: only redirect when parish is fully set up
@@ -92,7 +105,7 @@ function AuthGate() {
   }, [session, isLoading, profile, segments])
 
   useEffect(() => {
-    if (profile && profile.parish_id && profile.onboarding_completed === false) {
+    if (profile && profile.parish_id && profile.approved !== false && profile.onboarding_completed === false) {
       setShowOnboarding(true)
     }
   }, [profile?.id, profile?.onboarding_completed])
@@ -104,6 +117,7 @@ function AuthGate() {
         <Stack.Screen name="(auth)/login" />
         <Stack.Screen name="(auth)/register" />
         <Stack.Screen name="(auth)/parish-setup" />
+        <Stack.Screen name="(auth)/pending" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(admin)" />
         <Stack.Screen name="(parent)" />

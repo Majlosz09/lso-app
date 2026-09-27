@@ -81,6 +81,8 @@ export interface Profile {
   parish_id: string | null
   push_token: string | null
   onboarding_completed: boolean
+  // false = dołączył kodem i czeka na zatwierdzenie przez admina parafii
+  approved: boolean
   created_at: string
 }
 

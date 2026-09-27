@@ -43,14 +43,17 @@ console.log('1. Rejestracja z metadanymi (bez upsertu z apki)')
 ok('założyciel parafii zostaje adminem (parish-setup)', !becomeAdmin, becomeAdmin?.message)
 
 const parent = await signUp('rodzic', { full_name: 'Anna Rodzic', role: 'parent', phone: '600000001', invite_code: invite.invite_code })
+await admin.c.rpc('approve_member', { p_profile_id: parent.id })
 const { data: pp } = await admin.c.from('profiles').select('full_name, role, parish_id, phone').eq('id', parent.id).single()
 ok('rodzic ma rolę parent, imię i parafię od razu po rejestracji', pp?.role === 'parent' && pp?.full_name === 'Anna Rodzic' && pp?.parish_id === parish.id, JSON.stringify(pp))
 
 const m1 = await signUp('min1', { full_name: 'Jan Ministrant', role: 'member', rocznik: '2013', invite_code: invite.invite_code })
 const m2 = await signUp('min2', { full_name: 'Piotr Ministrant', role: 'member', rocznik: '2014', invite_code: invite.invite_code })
+for (const u of [m1, m2]) await admin.c.rpc('approve_member', { p_profile_id: u.id })
 const { data: mp } = await admin.c.from('profiles').select('role, rocznik, parish_id').eq('id', m1.id).single()
 ok('ministrant ma rolę member, rocznik i parafię', mp?.role === 'member' && mp?.rocznik === 2013 && mp?.parish_id === parish.id, JSON.stringify(mp))
 const evil = await signUp('evil', { full_name: 'X', role: 'admin', invite_code: invite.invite_code })
+await admin.c.rpc('approve_member', { p_profile_id: evil.id })
 const { data: ep } = await admin.c.from('profiles').select('role').eq('id', evil.id).single()
 ok('metadane role=admin są ignorowane', ep?.role === 'member')
 

@@ -137,11 +137,11 @@ function MemberForm({ onBack }: { onBack: () => void }) {
       setMembersList([]); setParishIdPreview(null); setSelectedChildIds([]); return
     }
     setLoadingMembers(true)
-    supabase.rpc('get_parish_by_invite_code', { code: inviteCode }).then(async ({ data: pid }) => {
-      if (!pid) { setMembersList([]); setParishIdPreview(null); setLoadingMembers(false); return }
-      setParishIdPreview(pid)
-      const { data } = await supabase.rpc('get_parish_members', { p_parish_id: pid })
-      setMembersList(data ?? [])
+    // Przed rejestracją widać tylko imię + inicjał nazwiska i rocznik (ochrona danych dzieci)
+    supabase.rpc('get_parish_children_by_code', { code: inviteCode }).then(({ data }) => {
+      const kids = (data ?? []) as { id: string; display_name: string; rocznik: number | null }[]
+      setParishIdPreview(kids.length ? inviteCode : null)
+      setMembersList(kids.map(k => ({ id: k.id, full_name: k.rocznik ? `${k.display_name} (${k.rocznik})` : k.display_name })))
       setLoadingMembers(false)
     })
   }, [inviteCode, role])
@@ -241,7 +241,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
       await supabase.rpc('link_parent_to_children', { p_child_ids: selectedChildIds })
     }
 
-    Toast.show({ type: 'success', text1: 'Witaj!', text2: 'Konto zostało utworzone.' })
+    Toast.show({ type: 'success', text1: 'Konto utworzone', text2: 'Administrator parafii musi jeszcze zatwierdzić Twoje dołączenie.' })
     setSession(activeSession)
   }
 

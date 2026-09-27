@@ -134,7 +134,7 @@ export default function ParishSettingsScreen() {
           text: 'Regeneruj', style: 'destructive',
           onPress: async () => {
             setRegenerating(true)
-            const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+            const CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789' // bez mylących 0/O, 1/I/L — jak gen_invite_code() w bazie
             const newCode = Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join('')
             const { error } = await supabase
               .from('parishes')
