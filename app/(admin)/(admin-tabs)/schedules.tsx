@@ -202,6 +202,14 @@ export default function SchedulesTab() {
         </TouchableOpacity>
       </View>
 
+      <TouchableOpacity
+        style={[styles.addButton, styles.recurringButton]}
+        onPress={() => router.push('/(admin)/recurring-assignments')}
+      >
+        <Ionicons name='repeat-outline' size={18} color={c.primary} />
+        <Text style={styles.addButtonText}>Stałe dyżury ministrantów</Text>
+      </TouchableOpacity>
+
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={c.primary} />
@@ -310,6 +318,7 @@ function createStyles(c: Colors) {
       borderWidth: 1, borderColor: c.primaryAlpha20,
     },
     addButtonSeries: {},
+    recurringButton: { marginHorizontal: 16, marginBottom: 8 },
     addButtonText: { color: c.primary, fontSize: 14, fontWeight: '600' },
 
     listContent: { padding: 16, gap: 4 },

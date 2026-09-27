@@ -1,9 +1,9 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   View, Text, FlatList, StyleSheet,
   TouchableOpacity, TextInput, ActivityIndicator, Modal,
 } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../../lib/supabase'
 import { useAuthStore } from '../../../stores/authStore'
@@ -43,7 +43,8 @@ export default function MembersTab() {
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
 
-  useEffect(() => {
+  // odświeżaj po powrocie (np. po usunięciu osoby z parafii w szczegółach)
+  useFocusEffect(useCallback(() => {
     const fetchAll = async () => {
       const [profilesRes, pointsRes] = await Promise.all([
         supabase
@@ -70,7 +71,7 @@ export default function MembersTab() {
       setLoading(false)
     }
     fetchAll()
-  }, [])
+  }, [adminProfile?.parish_id]))
 
   const handleRevokeAdmin = (item: Member) => {
     if (item.id === adminProfile!.id) {

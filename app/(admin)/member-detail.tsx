@@ -14,6 +14,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import { AvatarImage } from '../../components/AvatarImage'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 
 type MemberProfile = {
   id: string
@@ -92,6 +93,9 @@ export default function MemberDetailScreen() {
   const [selectedBadgeDef, setSelectedBadgeDef] = useState<ManualBadgeDef | null>(null)
   const [awardNote, setAwardNote] = useState('')
   const [awarding, setAwarding] = useState(false)
+  const [pendingRole, setPendingRole] = useState<'member' | 'parent' | null>(null)
+  const [confirmRemove, setConfirmRemove] = useState(false)
+  const [managing, setManaging] = useState(false)
 
   useEffect(() => {
     supabase.from('ranks').select('*').order('order').then(({ data }) => {
@@ -241,6 +245,36 @@ export default function MemberDetailScreen() {
       setManualBadgeDefs(data ?? [])
     }
     setAwardSheetVisible(true)
+  }
+
+  // Ministrant ↔ rodzic (np. rodzic zarejestrowany omyłkowo jako ministrant)
+  const doChangeRole = async () => {
+    if (!pendingRole || !profile) return
+    const role = pendingRole
+    setPendingRole(null)
+    setManaging(true)
+    const { error } = await supabase.rpc('set_member_role', { p_profile_id: profile.id, p_role: role })
+    setManaging(false)
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Nie udało się zmienić roli', text2: error.message })
+      return
+    }
+    setProfile({ ...profile, role, parent_id: role === 'parent' ? null : profile.parent_id })
+    Toast.show({ type: 'success', text1: 'Rola zmieniona', text2: `${profile.full_name} jest teraz ${role === 'parent' ? 'rodzicem' : 'ministrantem'}` })
+  }
+
+  const doRemoveFromParish = async () => {
+    if (!profile) return
+    setConfirmRemove(false)
+    setManaging(true)
+    const { error } = await supabase.rpc('remove_member_from_parish', { p_profile_id: profile.id })
+    setManaging(false)
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Nie udało się usunąć z parafii', text2: error.message })
+      return
+    }
+    Toast.show({ type: 'success', text1: 'Usunięto z parafii', text2: profile.full_name })
+    router.back()
   }
 
   const handleAwardBadge = () => {
@@ -511,6 +545,50 @@ export default function MemberDetailScreen() {
         </Section>
       )}
 
+      {/* Zarządzanie członkiem */}
+      {profile.role !== 'admin' && (
+        <Section title="Zarządzanie" styles={styles}>
+          <TouchableOpacity
+            style={styles.manageRow}
+            onPress={() => setPendingRole(isMember ? 'parent' : 'member')}
+            disabled={managing}
+          >
+            <Ionicons name="swap-horizontal-outline" size={18} color={c.primary} />
+            <Text style={styles.manageText}>{isMember ? 'Zmień na rodzica' : 'Zmień na ministranta'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.manageRow, styles.manageRowLast]}
+            onPress={() => setConfirmRemove(true)}
+            disabled={managing}
+          >
+            <Ionicons name="person-remove-outline" size={18} color={c.danger} />
+            <Text style={[styles.manageText, { color: c.danger }]}>Usuń z parafii</Text>
+            {managing && <ActivityIndicator size="small" color={c.subtext} />}
+          </TouchableOpacity>
+        </Section>
+      )}
+
+      <ConfirmDialog
+        visible={pendingRole !== null}
+        title={pendingRole === 'parent' ? 'Zmienić na rodzica?' : 'Zmienić na ministranta?'}
+        message={pendingRole === 'parent'
+          ? `${profile.full_name} zniknie z listy ministrantów i rankingu, a przyszłe dyżury i stałe dyżury tej osoby zostaną usunięte.`
+          : `${profile.full_name} pojawi się na liście ministrantów. Powiązania z dziećmi zostaną usunięte.`}
+        confirmText="Zmień"
+        onConfirm={doChangeRole}
+        onCancel={() => setPendingRole(null)}
+      />
+
+      <ConfirmDialog
+        visible={confirmRemove}
+        title="Usunąć z parafii?"
+        message={`${profile.full_name} straci dostęp do parafii, a przyszłe dyżury tej osoby zostaną usunięte. Historia służb i punktów zostaje. Konto nie jest kasowane — jeśli osoba zna kod zaproszenia, może dołączyć ponownie (kod możesz zmienić w ustawieniach parafii).`}
+        confirmText="Usuń z parafii"
+        destructive
+        onConfirm={doRemoveFromParish}
+        onCancel={() => setConfirmRemove(false)}
+      />
+
       {/* Bottom sheet: przyznaj odznakę */}
       <Modal
         visible={awardSheetVisible}
@@ -690,6 +768,12 @@ function createStyles(c: Colors) {
       backgroundColor: c.primary, borderRadius: 12, padding: 14,
     },
     awardButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+    manageRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14, paddingHorizontal: 4,
+      borderBottomWidth: 1, borderBottomColor: c.border,
+    },
+    manageRowLast: { borderBottomWidth: 0 },
+    manageText: { flex: 1, fontSize: 15, fontWeight: '600', color: c.primary },
 
     section: { gap: 8 },
     sectionTitle: { fontSize: 13, fontWeight: '600', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 },

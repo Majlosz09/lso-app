@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { shadow } from '../../lib/shadows'
@@ -12,17 +13,30 @@ import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import type { AttendanceMode } from '../../types/database'
 import GpsLocationPicker from '../../components/GpsLocationPicker'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
+
+// Alert.alert nie wyświetla się na webie — Toast działa wszędzie
+const showError = (message: string) => Toast.show({ type: 'error', text1: 'Błąd', text2: message })
 
 type Tab = 'join' | 'create'
 
 export default function ParishSetupScreen() {
   const router = useRouter()
-  const { profile, fetchProfile } = useAuthStore()
-  const [tab, setTab] = useState<Tab>('join')
+  const { profile, user, fetchProfile } = useAuthStore()
+  // Dane z formularza rejestracji (zapisane w metadanych konta, gdy trzeba było potwierdzić e-mail)
+  const meta = (user?.user_metadata ?? {}) as Record<string, string | undefined>
+  const [tab, setTab] = useState<Tab>(meta.parish_name ? 'create' : 'join')
 
   const [inviteCode, setInviteCode] = useState('')
-  const [parishName, setParishName] = useState('')
-  const [parishCity, setParishCity] = useState('')
+  const [joinRole, setJoinRole] = useState<'member' | 'parent'>(profile?.role === 'parent' ? 'parent' : 'member')
+  const [rocznik, setRocznik] = useState(profile?.rocznik ? String(profile.rocznik) : '')
+  // Profil bez prawdziwego imienia (np. imię = e-mail) — poprosimy o nie przy dołączaniu
+  const needsName = !profile?.full_name?.trim() || profile.full_name.includes('@')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [parishName, setParishName] = useState(meta.parish_name ?? '')
+  const [parishCity, setParishCity] = useState(meta.parish_city ?? '')
+  const [confirmLogout, setConfirmLogout] = useState(false)
   const [attendanceMode, setAttendanceMode] = useState<AttendanceMode>('button')
   const [lat, setLat] = useState('')
   const [lng, setLng] = useState('')
@@ -31,23 +45,28 @@ export default function ParishSetupScreen() {
 
   const { colors: c } = useTheme()
 
-  const handleLogout = () => {
-    Alert.alert('Wyloguj', 'Czy na pewno chcesz się wylogować?', [
-      { text: 'Anuluj', style: 'cancel' },
-      { text: 'Wyloguj', style: 'destructive', onPress: () => supabase.auth.signOut() },
-    ])
-  }
+  const handleLogout = () => setConfirmLogout(true)
   const styles = useMemo(() => createStyles(c), [c])
 
   const ATTENDANCE_OPTIONS: { mode: AttendanceMode; label: string; icon: string; color: string }[] = useMemo(() => [
     { mode: 'button', label: 'Przycisk (bez weryfikacji)', icon: 'hand-left-outline',   color: '#10B981' },
     { mode: 'qr',     label: 'Kod QR w zakrystii',         icon: 'qr-code-outline',     color: c.primary },
     { mode: 'gps',    label: 'Lokalizacja GPS',             icon: 'location-outline',    color: '#EA580C' },
+    { mode: 'admin',  label: 'Tylko admin (zaznacza ksiądz)', icon: 'shield-checkmark-outline', color: '#7C3AED' },
   ], [c.primary])
 
   const handleJoin = async () => {
     if (!inviteCode.trim() || inviteCode.trim().length !== 6) {
-      Alert.alert('Błąd', 'Wpisz 6-znakowy kod parafii.')
+      showError('Wpisz 6-znakowy kod parafii.')
+      return
+    }
+    if (needsName && (!firstName.trim() || !lastName.trim())) {
+      showError('Wpisz imię i nazwisko.')
+      return
+    }
+    const yr = parseInt(rocznik)
+    if (joinRole === 'member' && (!rocznik || isNaN(yr) || yr < 1990 || yr > new Date().getFullYear())) {
+      showError('Podaj poprawny rocznik (np. 2014).')
       return
     }
     setLoading(true)
@@ -55,19 +74,24 @@ export default function ParishSetupScreen() {
       .rpc('get_parish_by_invite_code', { code: inviteCode.trim().toUpperCase() })
 
     if (error || !foundId) {
-      Alert.alert('Błąd', 'Nieznany kod parafii. Sprawdź kod i spróbuj ponownie.')
+      showError('Nieznany kod parafii. Sprawdź kod i spróbuj ponownie.')
       setLoading(false)
       return
     }
 
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ parish_id: foundId })
+      .update({
+        parish_id: foundId,
+        role: joinRole,
+        rocznik: joinRole === 'member' ? yr : null,
+        ...(needsName ? { full_name: `${firstName.trim()} ${lastName.trim()}` } : {}),
+      })
       .eq('id', profile?.id)
 
     setLoading(false)
     if (updateError) {
-      Alert.alert('Błąd', updateError.message)
+      showError(updateError.message)
       return
     }
     await fetchProfile()
@@ -76,14 +100,14 @@ export default function ParishSetupScreen() {
 
   const handleCreate = async () => {
     if (!parishName.trim()) {
-      Alert.alert('Błąd', 'Wpisz nazwę parafii.')
+      showError('Wpisz nazwę parafii.')
       return
     }
     if (attendanceMode === 'gps') {
       const latNum = parseFloat(lat.trim())
       const lngNum = parseFloat(lng.trim())
       if (isNaN(latNum) || isNaN(lngNum)) {
-        Alert.alert('Błąd', 'Wpisz współrzędne kościoła dla trybu GPS.')
+        showError('Wpisz współrzędne kościoła dla trybu GPS.')
         return
       }
     }
@@ -105,19 +129,20 @@ export default function ParishSetupScreen() {
       .single()
 
     if (parishError || !parishData) {
-      Alert.alert('Błąd', 'Nie udało się utworzyć parafii: ' + (parishError?.message ?? 'Nieznany błąd'))
+      showError('Nie udało się utworzyć parafii: ' + (parishError?.message ?? 'Nieznany błąd'))
       setLoading(false)
       return
     }
 
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ parish_id: parishData.id })
+      // założyciel parafii zostaje jej administratorem
+      .update({ parish_id: parishData.id, role: 'admin' })
       .eq('id', profile?.id)
 
     setLoading(false)
     if (updateError) {
-      Alert.alert('Błąd', updateError.message)
+      showError(updateError.message)
       return
     }
     await fetchProfile()
@@ -154,6 +179,30 @@ export default function ParishSetupScreen() {
 
         {tab === 'join' ? (
           <>
+            <Text style={styles.label}>Kim jesteś?</Text>
+            <View style={styles.roleRow}>
+              {([['member', 'Ministrant'], ['parent', 'Rodzic']] as const).map(([r, label]) => (
+                <TouchableOpacity
+                  key={r}
+                  style={[styles.roleChip, joinRole === r && styles.roleChipActive]}
+                  onPress={() => setJoinRole(r)}
+                >
+                  <Text style={[styles.roleChipText, joinRole === r && styles.roleChipTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {needsName && (
+              <View style={styles.nameRow}>
+                <TextInput style={[styles.input, { flex: 1 }]} placeholder="Imię" placeholderTextColor={c.textTertiary}
+                  value={firstName} onChangeText={setFirstName} />
+                <TextInput style={[styles.input, { flex: 1 }]} placeholder="Nazwisko" placeholderTextColor={c.textTertiary}
+                  value={lastName} onChangeText={setLastName} />
+              </View>
+            )}
+            {joinRole === 'member' && (
+              <TextInput style={styles.input} placeholder="Rocznik (np. 2014)" placeholderTextColor={c.textTertiary}
+                keyboardType="number-pad" maxLength={4} value={rocznik} onChangeText={setRocznik} />
+            )}
             <Text style={styles.label}>Kod parafii</Text>
             <TextInput
               style={styles.input}
@@ -237,6 +286,15 @@ export default function ParishSetupScreen() {
           </>
         )}
       </ScrollView>
+      <ConfirmDialog
+        visible={confirmLogout}
+        title="Wyloguj"
+        message="Czy na pewno chcesz się wylogować?"
+        confirmText="Wyloguj"
+        destructive
+        onConfirm={() => { setConfirmLogout(false); supabase.auth.signOut() }}
+        onCancel={() => setConfirmLogout(false)}
+      />
     </KeyboardAvoidingView>
   )
 }
@@ -291,6 +349,16 @@ function createStyles(c: Colors) {
     modeLabel: { flex: 1, fontSize: 14, fontWeight: '500', color: c.subtext },
     radioOuter: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: c.iconMuted, justifyContent: 'center', alignItems: 'center' },
     radioInner: { width: 8, height: 8, borderRadius: 4 },
+
+    roleRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+    roleChip: {
+      flex: 1, paddingVertical: 11, borderRadius: 10, alignItems: 'center',
+      borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface,
+    },
+    roleChipActive: { borderColor: c.primary, backgroundColor: c.primarySurface },
+    roleChipText: { fontSize: 14, fontWeight: '600', color: c.subtext },
+    roleChipTextActive: { color: c.primary },
+    nameRow: { flexDirection: 'row', gap: 8 },
 
     gpsBox: { gap: 8, backgroundColor: '#EA580C10', borderRadius: 10, padding: 12, marginBottom: 4 },
     gpsLabel: { fontSize: 13, fontWeight: '600', color: '#EA580C' },

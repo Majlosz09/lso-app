@@ -122,13 +122,15 @@ interface ScheduleTileProps {
   onSignUp: () => void
   onUnsign: () => void
   onReportAbsence: () => void
+  // tryb parafii „Tylko admin” — ministrant nie melduje się sam
+  adminAttendance: boolean
   styles: any
   colors: Colors
 }
 
 function ScheduleTile({
   schedule, checkingIn, signingUp, unsigning, reporting,
-  onCheckIn, onSignUp, onUnsign, onReportAbsence,
+  onCheckIn, onSignUp, onUnsign, onReportAbsence, adminAttendance,
   styles, colors: c,
 }: ScheduleTileProps) {
   const { isDark } = useTheme()
@@ -154,7 +156,14 @@ function ScheduleTile({
   } else if (isSun) {
     // No action for Sunday masses
   } else if (cat === 'msza') {
-    if (windowOpen) {
+    if (windowOpen && adminAttendance) {
+      actionButton = assignment ? (
+        <View style={styles.adminAttendanceNote}>
+          <Ionicons name="shield-checkmark-outline" size={14} color={c.subtext} />
+          <Text style={styles.adminAttendanceNoteText}>Obecność zaznacza ksiądz</Text>
+        </View>
+      ) : null
+    } else if (windowOpen) {
       const isAssigned = !!assignment
       actionButton = (
         <TouchableOpacity
@@ -199,7 +208,14 @@ function ScheduleTile({
     }
   } else {
     // nabozenstwo or zbiorka
-    if (windowOpen) {
+    if (windowOpen && adminAttendance) {
+      actionButton = (
+        <View style={styles.adminAttendanceNote}>
+          <Ionicons name="shield-checkmark-outline" size={14} color={c.subtext} />
+          <Text style={styles.adminAttendanceNoteText}>Obecność zaznacza ksiądz</Text>
+        </View>
+      )
+    } else if (windowOpen) {
       actionButton = (
         <TouchableOpacity
           style={[styles.tileBtn, { backgroundColor: c.primary }]}
@@ -657,6 +673,7 @@ function MemberScheduleView() {
               unsigning={unsigningId === schedule.assignment?.id}
               reporting={reportingAbsenceId === schedule.assignment?.id}
               onCheckIn={() => handleCheckIn(schedule)}
+              adminAttendance={parish?.attendance_mode === 'admin'}
               onSignUp={() => handleSignUp(schedule)}
               onUnsign={() => handleUnsign(schedule)}
               onReportAbsence={() => setAbsenceModal({
@@ -1117,6 +1134,8 @@ function createStyles(c: Colors) {
       minWidth: 80, alignItems: 'center',
     },
     tileBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+    adminAttendanceNote: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    adminAttendanceNoteText: { fontSize: 11, fontWeight: '600', color: c.subtext },
     tileBtnOutline: { backgroundColor: c.goldSurface, borderWidth: 1, borderColor: '#EA580C' },
     tileBtnSecondary: { backgroundColor: c.primarySurface },
     absenceLink: { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: c.bg },

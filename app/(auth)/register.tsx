@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, Alert, ActivityIndicator,
+  StyleSheet, ActivityIndicator,
   KeyboardAvoidingView, Platform, ScrollView, Linking
 } from 'react-native'
 import Toast from 'react-native-toast-message'
@@ -20,6 +20,11 @@ function WebFormWrapper({ onSubmit, children }: { onSubmit: () => void; children
   if (Platform.OS !== 'web') return <>{children}</>
   // @ts-ignore — form is valid HTML on web
   return <form onSubmit={(e: any) => { e.preventDefault(); onSubmit() }} style={{ display: 'contents' }}>{children}</form>
+}
+
+// Alert.alert nie wyświetla się na webie (react-native-web) — Toast działa wszędzie
+function showError(title: string, message?: string) {
+  Toast.show({ type: 'error', text1: title, text2: message })
 }
 
 const TERMS_URL = 'https://lsoapp.com/regulamin'
@@ -163,16 +168,30 @@ function MemberForm({ onBack }: { onBack: () => void }) {
   const handleSubmit = async () => {
     if (loading) return
     const err = validate()
-    if (err) { Alert.alert('Błąd', err); return }
+    if (err) { showError('Błąd', err); return }
 
     setLoading(true)
-    const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
+    // Metadane trafiają do profilu przez trigger handle_new_user — profil jest kompletny
+    // nawet gdy sesja powstaje dopiero po potwierdzeniu maila
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: {
+          full_name: `${firstName.trim()} ${lastName.trim()}`,
+          role,
+          phone: phone.trim(),
+          rocznik: role === 'member' ? rocznik : null,
+          invite_code: inviteCode.trim().toUpperCase(),
+        },
+      },
+    })
     if (error || !data.user) {
       const isAlreadyRegistered =
         (error as any)?.status === 422 ||
         error?.message?.toLowerCase().includes('already registered') ||
         error?.message?.toLowerCase().includes('user already registered')
-      Alert.alert(
+      showError(
         'Błąd rejestracji',
         isAlreadyRegistered
           ? 'Ten adres email jest już zarejestrowany. Zaloguj się zamiast tego.'
@@ -186,7 +205,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
     if (!activeSession) {
       const { data: signInData, error: loginErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
       if (loginErr || !signInData.session) {
-        Alert.alert('Błąd', 'Sprawdź email i potwierdź konto, a następnie zaloguj się.')
+        Toast.show({ type: 'info', text1: 'Potwierdź adres e-mail', text2: 'Wysłaliśmy link na Twój e-mail. Po potwierdzeniu zaloguj się — dane z formularza są zapisane.' })
         setLoading(false)
         return
       }
@@ -197,7 +216,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
       .rpc('get_parish_by_invite_code', { code: inviteCode.trim().toUpperCase() })
 
     if (rpcError || !parishId) {
-      Alert.alert('Błąd', 'Nieznany kod parafii. Sprawdź kod i spróbuj ponownie.')
+      showError('Błąd', 'Nieznany kod parafii. Sprawdź kod i spróbuj ponownie.')
       setLoading(false)
       return
     }
@@ -214,7 +233,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
 
     if (profileError) {
       setLoading(false)
-      Alert.alert('Błąd profilu', profileError.message)
+      showError('Błąd profilu', profileError.message)
       return
     }
 
@@ -375,16 +394,28 @@ function AdminForm({ onBack }: { onBack: () => void }) {
   const handleSubmit = async () => {
     if (loading) return
     const err = validate()
-    if (err) { Alert.alert('Błąd', err); return }
+    if (err) { showError('Błąd', err); return }
 
     setLoading(true)
-    const { data, error } = await supabase.auth.signUp({ email: email.trim(), password })
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: {
+          full_name: `${firstName.trim()} ${lastName.trim()}`,
+          phone: phone.trim(),
+          // parafię utworzy ekran parish-setup po potwierdzeniu maila (podpowiada te wartości)
+          parish_name: parishName.trim(),
+          parish_city: parishCity.trim(),
+        },
+      },
+    })
     if (error || !data.user) {
       const isAlreadyRegistered =
         (error as any)?.status === 422 ||
         error?.message?.toLowerCase().includes('already registered') ||
         error?.message?.toLowerCase().includes('user already registered')
-      Alert.alert(
+      showError(
         'Błąd rejestracji',
         isAlreadyRegistered
           ? 'Ten adres email jest już zarejestrowany. Zaloguj się zamiast tego.'
@@ -398,7 +429,7 @@ function AdminForm({ onBack }: { onBack: () => void }) {
     if (!activeSession) {
       const { data: signInData, error: loginErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
       if (loginErr || !signInData.session) {
-        Alert.alert('Błąd', 'Sprawdź email i potwierdź konto, a następnie zaloguj się.')
+        Toast.show({ type: 'info', text1: 'Potwierdź adres e-mail', text2: 'Wysłaliśmy link na Twój e-mail. Po potwierdzeniu zaloguj się — dane z formularza są zapisane.' })
         setLoading(false)
         return
       }
@@ -412,7 +443,7 @@ function AdminForm({ onBack }: { onBack: () => void }) {
       .single()
 
     if (parishError || !parishData) {
-      Alert.alert('Błąd', 'Nie udało się utworzyć parafii: ' + (parishError?.message ?? 'Nieznany błąd'))
+      showError('Błąd', 'Nie udało się utworzyć parafii: ' + (parishError?.message ?? 'Nieznany błąd'))
       setLoading(false)
       return
     }
@@ -428,7 +459,7 @@ function AdminForm({ onBack }: { onBack: () => void }) {
 
     if (profileError) {
       setLoading(false)
-      Alert.alert('Błąd profilu', profileError.message)
+      showError('Błąd profilu', profileError.message)
       return
     }
 

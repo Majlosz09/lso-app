@@ -27,6 +27,7 @@ export default function ParishSettingsScreen() {
     { mode: 'button', label: 'Przycisk',    sub: 'Zameldowanie jednym kliknięciem, bez weryfikacji', icon: 'hand-left-outline',   color: '#10B981' },
     { mode: 'qr',     label: 'Kod QR',      sub: 'Ministrant skanuje kod QR wywiesony w zakrystii',  icon: 'qr-code-outline',     color: c.primary },
     { mode: 'gps',    label: 'Lokalizacja', sub: 'Weryfikacja przez GPS — ministrant musi być blisko kościoła', icon: 'location-outline', color: '#EA580C' },
+    { mode: 'admin',  label: 'Tylko admin', sub: 'Ministranci nie meldują się sami — obecność zaznacza ksiądz lub admin w szczegółach służby', icon: 'shield-checkmark-outline', color: '#7C3AED' },
   ], [c.primary])
 
   const [name, setName] = useState(parish?.name ?? '')
