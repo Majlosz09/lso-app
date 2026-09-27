@@ -75,6 +75,14 @@
         "projectId": "948ef4cf-804f-4539-aea5-234b68ce2087"
       }
     },
-    "owner": "majlosz"
+    "owner": "majlosz",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/948ef4cf-804f-4539-aea5-234b68ce2087",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }
