@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { ThemeProvider } from '../lib/ThemeContext'
 import { OnboardingModal } from '../components/OnboardingModal'
+import { EnvBanner } from '../components/EnvBanner'
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
@@ -109,6 +110,7 @@ function AuthGate() {
         <Stack.Screen name="wiedza" options={{ headerShown: false }} />
       </Stack>
       <Toast />
+      <EnvBanner />
       <OnboardingModal
         visible={showOnboarding}
         onClose={() => setShowOnboarding(false)}

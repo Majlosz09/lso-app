@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator,
-  KeyboardAvoidingView, Platform, ScrollView
+  KeyboardAvoidingView, Platform, ScrollView, Linking
 } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { Link } from 'expo-router'
@@ -20,6 +20,33 @@ function WebFormWrapper({ onSubmit, children }: { onSubmit: () => void; children
   if (Platform.OS !== 'web') return <>{children}</>
   // @ts-ignore — form is valid HTML on web
   return <form onSubmit={(e: any) => { e.preventDefault(); onSubmit() }} style={{ display: 'contents' }}>{children}</form>
+}
+
+const TERMS_URL = 'https://lsoapp.com/regulamin'
+const PRIVACY_URL = 'https://lsoapp.com/privacy'
+
+function ConsentCheckbox({ checked, onToggle, children }: {
+  checked: boolean; onToggle: () => void; children: React.ReactNode
+}) {
+  const { colors: c } = useTheme()
+  return (
+    <TouchableOpacity
+      onPress={onToggle}
+      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 4 }}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+    >
+      <Ionicons name={checked ? 'checkbox' : 'square-outline'} size={22} color={checked ? c.primary : c.subtext} />
+      <Text style={{ flex: 1, fontSize: 13, lineHeight: 19, color: c.subtext }}>{children}</Text>
+    </TouchableOpacity>
+  )
+}
+
+function LegalLink({ url, label }: { url: string; label: string }) {
+  const { colors: c } = useTheme()
+  return (
+    <Text style={{ color: c.primary, fontWeight: '600' }} onPress={() => Linking.openURL(url)}>{label}</Text>
+  )
 }
 
 export default function RegisterScreen() {
@@ -92,6 +119,10 @@ function MemberForm({ onBack }: { onBack: () => void }) {
   const [membersList, setMembersList] = useState<{ id: string; full_name: string }[]>([])
   const [loadingMembers, setLoadingMembers] = useState(false)
   const [selectedChildIds, setSelectedChildIds] = useState<string[]>([])
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [parentConsent, setParentConsent] = useState(false)
+  // Poniżej 16 lat: zgoda rodzica/opiekuna (art. 8 RODO, polska granica wieku)
+  const isMinor = role === 'member' && rocznik.length === 4 && new Date().getFullYear() - parseInt(rocznik) < 16
 
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
@@ -124,6 +155,8 @@ function MemberForm({ onBack }: { onBack: () => void }) {
       if (!rocznik || yr < 1990) return 'Podaj poprawny rocznik (np. 2018).'
     }
     if (inviteCode.trim().length !== 6) return 'Wpisz 6-znakowy kod parafii.'
+    if (!acceptTerms) return 'Zaakceptuj Regulamin i Politykę prywatności.'
+    if (isMinor && !parentConsent) return 'Osoba poniżej 16 lat potrzebuje zgody rodzica lub opiekuna.'
     return null
   }
 
@@ -291,6 +324,16 @@ function MemberForm({ onBack }: { onBack: () => void }) {
           </>
         )}
 
+        <ConsentCheckbox checked={acceptTerms} onToggle={() => setAcceptTerms(v => !v)}>
+          Akceptuję <LegalLink url={TERMS_URL} label="Regulamin" /> i zapoznałem/-am się
+          z <LegalLink url={PRIVACY_URL} label="Polityką prywatności" />.
+        </ConsentCheckbox>
+        {isMinor && (
+          <ConsentCheckbox checked={parentConsent} onToggle={() => setParentConsent(v => !v)}>
+            Mam mniej niż 16 lat — mój rodzic lub opiekun prawny wie o założeniu konta i się na to zgadza.
+          </ConsentCheckbox>
+        )}
+
         <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleSubmit} disabled={loading}>
           {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Zarejestruj się</Text>}
         </TouchableOpacity>
@@ -309,6 +352,8 @@ function AdminForm({ onBack }: { onBack: () => void }) {
   const [phone, setPhone] = useState('')
   const [parishName, setParishName] = useState('')
   const [parishCity, setParishCity] = useState('')
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -322,6 +367,8 @@ function AdminForm({ onBack }: { onBack: () => void }) {
     if (password.length < 6) return 'Hasło musi mieć minimum 6 znaków.'
     if (!phone.trim()) return 'Wpisz numer telefonu.'
     if (!parishName.trim()) return 'Wpisz nazwę parafii.'
+    if (!acceptTerms) return 'Zaakceptuj Regulamin i Politykę prywatności.'
+    if (!authorized) return 'Potwierdź, że działasz w imieniu parafii.'
     return null
   }
 
@@ -430,6 +477,15 @@ function AdminForm({ onBack }: { onBack: () => void }) {
           value={parishName} onChangeText={setParishName} />
         <TextInput style={styles.input} placeholder="Miejscowość (opcjonalnie)" placeholderTextColor={c.textTertiary}
           value={parishCity} onChangeText={setParishCity} />
+
+        <ConsentCheckbox checked={acceptTerms} onToggle={() => setAcceptTerms(v => !v)}>
+          Akceptuję <LegalLink url={TERMS_URL} label="Regulamin" /> (w tym zasady powierzenia
+          przetwarzania danych) i zapoznałem/-am się z <LegalLink url={PRIVACY_URL} label="Polityką prywatności" />.
+        </ConsentCheckbox>
+        <ConsentCheckbox checked={authorized} onToggle={() => setAuthorized(v => !v)}>
+          Oświadczam, że zakładam grupę LSO za wiedzą i zgodą proboszcza parafii i będę dbać
+          o zgody rodziców niepełnoletnich ministrantów.
+        </ConsentCheckbox>
 
         <TouchableOpacity style={[styles.button, { backgroundColor: '#16A34A' }, loading && styles.buttonDisabled]}
           onPress={handleSubmit} disabled={loading}>

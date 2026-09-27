@@ -49,3 +49,10 @@ supabase/.temp/
 
 # Local screenshots
 screenshots/
+
+# wyniki audytu bezpieczeństwa (dane osobowe)
+docs/security/audit-result.json
+docs/security/parishes.csv
+docs/security/accounts.csv
+# eksport schematu z panelu (surowy CSV; wersja .sql jest w repo)
+supabase/dev/*.csv

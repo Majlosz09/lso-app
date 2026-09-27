@@ -22,6 +22,7 @@ import {
 import { FormationSection, BadgesSection, BadgeWithDef } from '../../components/FormationBadges'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 import { OnboardingModal } from '../../components/OnboardingModal'
+import { DeleteAccountButton } from '../../components/DeleteAccountButton'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrator',
@@ -499,6 +500,7 @@ function MemberProfile() {
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={true} />
       <SignOutButton onConfirm={signOut} />
+      <DeleteAccountButton />
       <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </ScrollView>
   )
@@ -611,6 +613,7 @@ function AdminProfile() {
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
       <SignOutButton onConfirm={signOut} />
+      <DeleteAccountButton />
       <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </ScrollView>
   )

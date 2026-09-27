@@ -5,6 +5,10 @@ import { Platform } from 'react-native'
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!
 
+// Projekt produkcyjny (prawdziwe parafie). Development: .env.development.local → LSO-dev.
+const PRODUCTION_PROJECT_REF = 'kvqjaoprxxiemynyihfs'
+export const isProductionDb = supabaseUrl.includes(PRODUCTION_PROJECT_REF)
+
 const storage = Platform.OS === 'web' ? undefined : AsyncStorage
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {

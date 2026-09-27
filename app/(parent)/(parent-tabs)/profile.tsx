@@ -19,6 +19,7 @@ import {
   PRESET_ICONS, PRESET_COLORS, buildPresetUrl, parsePresetUrl, isPresetUrl,
 } from '../../../lib/presetAvatar'
 import { OnboardingModal } from '../../../components/OnboardingModal'
+import { DeleteAccountButton } from '../../../components/DeleteAccountButton'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrator',
@@ -498,6 +499,7 @@ function ParentProfile() {
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
       <SignOutButton onConfirm={signOut} />
+      <DeleteAccountButton />
       <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </ScrollView>
   )

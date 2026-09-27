@@ -113,7 +113,7 @@ Pierwsze wydanie aplikacji LSO App!
 
 | Pole | Wartość |
 |------|---------|
-| Email wsparcia | kontakt@lsoapp.pl |
+| Email wsparcia | lsoapp@parafia-borzapilski.pl |
 | Strona internetowa | https://lsoapp.pl |
 | Polityka prywatności | https://lsoapp.pl/privacy |
 | Telefon | (opcjonalny — można pominąć) |
