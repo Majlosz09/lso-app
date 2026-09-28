@@ -20,6 +20,7 @@ import { MessageBubble } from '../../components/chat/MessageBubble'
 import { MessageActionSheet } from '../../components/chat/MessageActionSheet'
 import { ReplyPreview } from '../../components/chat/ReplyPreview'
 import { CreatePollModal } from '../../components/chat/CreatePollModal'
+import { ReportMessageModal } from '../../components/chat/ReportMessageModal'
 
 export default function ChannelScreen() {
   const { channelId } = useLocalSearchParams<{ channelId: string }>()
@@ -38,6 +39,7 @@ export default function ChannelScreen() {
   const [sending, setSending] = useState(false)
   const [actionSheetMessage, setActionSheetMessage] = useState<ChatMessageWithSender | null>(null)
   const [actionSheetY, setActionSheetY] = useState(0)
+  const [reportMessage, setReportMessage] = useState<ChatMessageWithSender | null>(null)
   const [replyTo, setReplyTo] = useState<ChatMessageWithSender | null>(null)
   const [editingMessage, setEditingMessage] = useState<ChatMessageWithSender | null>(null)
   const [showPollModal, setShowPollModal] = useState(false)
@@ -332,6 +334,12 @@ export default function ChannelScreen() {
         setReplyTo(null)
       }}
       onDelete={() => { if (actionSheetMessage) handleDelete(actionSheetMessage) }}
+      onReport={() => setReportMessage(actionSheetMessage)}
+    />
+    <ReportMessageModal
+      message={reportMessage}
+      reporterId={profile?.id ?? ''}
+      onClose={() => setReportMessage(null)}
     />
     <CreatePollModal
       visible={showPollModal}

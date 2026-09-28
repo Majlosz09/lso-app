@@ -23,6 +23,7 @@ import { FormationSection, BadgesSection, BadgeWithDef } from '../../components/
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 import { OnboardingModal } from '../../components/OnboardingModal'
 import { DeleteAccountButton } from '../../components/DeleteAccountButton'
+import { ExportMyDataButton } from '../../components/ExportMyDataButton'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrator',
@@ -351,7 +352,7 @@ function MemberProfile() {
         })
         setActiveBadges(deduped as unknown as BadgeWithDef[])
       })
-      .catch(console.error)
+      .then(undefined, console.error)
   }, [profile?.id])
 
   useEffect(() => {
@@ -362,7 +363,7 @@ function MemberProfile() {
       .or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`)
       .order('order')
       .then(({ data }) => setAllRanks(data ?? []))
-      .catch(console.error)
+      .then(undefined, console.error)
     fetchBadges()
     computeAndSyncBadges(supabase, profile.id, profile.parish_id).catch(console.error)
   }, [profile?.id, profile?.parish_id, fetchBadges])
@@ -500,6 +501,7 @@ function MemberProfile() {
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={true} />
       <SignOutButton onConfirm={signOut} />
+      <ExportMyDataButton />
       <DeleteAccountButton />
       <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </ScrollView>
@@ -613,6 +615,7 @@ function AdminProfile() {
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
       <SignOutButton onConfirm={signOut} />
+      <ExportMyDataButton />
       <DeleteAccountButton />
       <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </ScrollView>

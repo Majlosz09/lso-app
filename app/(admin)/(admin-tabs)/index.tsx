@@ -34,6 +34,7 @@ export default function AdminHome() {
   const [stats, setStats] = useState<Stats>({ members: 0, unstaff: 0, absent: 0 })
   const [statsLoading, setStatsLoading] = useState(true)
   const [pendingCount, setPendingCount] = useState(0)
+  const [reportsCount, setReportsCount] = useState(0)
   const [scheduleDates, setScheduleDates] = useState<Set<string>>(new Set())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
@@ -45,6 +46,8 @@ export default function AdminHome() {
   // Load stats on focus
   const fetchStats = useCallback(() => {
     supabase.rpc('get_pending_members').then(({ data }) => setPendingCount((data ?? []).length))
+    supabase.from('chat_reports').select('id', { count: 'exact', head: true }).is('resolved_at', null)
+      .then(({ count }) => setReportsCount(count ?? 0))
     const nextWeek = new Date()
     nextWeek.setDate(nextWeek.getDate() + 7)
     const nextWeekStr = localDateStr(nextWeek)
@@ -277,6 +280,17 @@ export default function AdminHome() {
         <View style={styles.parishInfo}>
           <Text style={styles.parishTitle}>Przydziel rangi</Text>
           <Text style={styles.parishSub}>Masowe przypisywanie rang formacyjnych</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.parishRow} onPress={() => router.push('/(admin)/chat-reports')} activeOpacity={0.75}>
+        <View style={[styles.parishIcon, { backgroundColor: c.danger + "14" }]}>
+          <Ionicons name="flag" size={22} color={c.danger} />
+        </View>
+        <View style={styles.parishInfo}>
+          <Text style={styles.parishTitle}>Zgłoszenia z czatu{reportsCount > 0 ? ` (${reportsCount})` : ''}</Text>
+          <Text style={styles.parishSub}>Wiadomości zgłoszone przez członków parafii</Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />
       </TouchableOpacity>

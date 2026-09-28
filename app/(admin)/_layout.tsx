@@ -51,6 +51,7 @@ export default function AdminLayout() {
       <Stack.Screen name="badge-management" options={{ title: 'Odznaki' }} />
       <Stack.Screen name="rank-assignment" options={{ title: 'Przydziel rangi' }} />
       <Stack.Screen name="recurring-assignments" options={{ title: 'Stałe dyżury' }} />
+      <Stack.Screen name="chat-reports" options={{ title: 'Zgłoszenia z czatu' }} />
     </Stack>
   )
 }

@@ -15,12 +15,13 @@ interface Props {
   onReply: () => void
   onEdit: () => void
   onDelete: () => void
+  onReport?: () => void
   messageY?: number
 }
 
 export function MessageActionSheet({
   visible, message, currentUserId, isAdmin,
-  onClose, onReact, onReply, onEdit, onDelete,
+  onClose, onReact, onReply, onEdit, onDelete, onReport,
   messageY,
 }: Props) {
   const { colors: c } = useTheme()
@@ -31,7 +32,9 @@ export function MessageActionSheet({
 
   const isOwn = message.sender_id === currentUserId
   const canEdit = isOwn && message.type !== 'poll' && !message.deleted_at
-  const canDelete = isOwn && !message.deleted_at
+  // admin parafii moderuje czat — może usuwać cudze wiadomości
+  const canDelete = (isOwn || isAdmin) && !message.deleted_at
+  const canReport = !isOwn && !message.deleted_at && !!onReport
 
   const handleReact = (emoji: string) => {
     onReact(emoji)
@@ -76,6 +79,14 @@ export function MessageActionSheet({
                   }}
                 >
                   <Text style={[styles.actionText, { color: c.danger }]}>🗑️  Usuń</Text>
+                </TouchableOpacity>
+              )}
+              {canReport && (
+                <TouchableOpacity
+                  style={styles.action}
+                  onPress={() => { onClose(); setTimeout(() => onReport?.(), Platform.OS === 'web' ? 0 : 300) }}
+                >
+                  <Text style={[styles.actionText, { color: c.danger }]}>🚩  Zgłoś administratorowi</Text>
                 </TouchableOpacity>
               )}
             </View>
