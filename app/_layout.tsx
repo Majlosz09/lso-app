@@ -73,7 +73,8 @@ function AuthGate() {
     if (segments[1] === 'reset-password') return
     const isPending = !!profile?.parish_id && profile?.approved === false
 
-    if (!session && !inAuth) {
+    // bez sesji: ekrany wymagające konta (oczekiwanie, wybór parafii) → powitanie (np. po „Wyloguj”)
+    if (!session && (!inAuth || inPending || inParishSetup)) {
       router.replace('/(auth)/welcome')
       return
     }

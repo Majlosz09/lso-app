@@ -11,6 +11,8 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { shadow } from '../../lib/shadows'
 import { buildParishQrValue } from '../../lib/checkin'
+import * as Clipboard from 'expo-clipboard'
+import Toast from 'react-native-toast-message'
 import type { AttendanceMode } from '../../types/database'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
@@ -152,8 +154,19 @@ export default function ParishSettingsScreen() {
     )
   }
 
-  const handleCopy = () => {
-    Share.share({ message: `Kod do dołączenia do parafii: ${inviteCode}` })
+  // Kopiowanie do schowka (web + telefon); udostępnianie osobnym przyciskiem na telefonie
+  const handleCopy = async () => {
+    try {
+      await Clipboard.setStringAsync(inviteCode)
+      Toast.show({ type: 'success', text1: 'Skopiowano kod', text2: inviteCode })
+    } catch {
+      Toast.show({ type: 'error', text1: 'Nie udało się skopiować', text2: 'Zaznacz kod i skopiuj ręcznie.' })
+    }
+  }
+
+  const handleShare = () => {
+    Share.share({ message: `Kod do dołączenia do parafii w LSO App: ${inviteCode}
+https://app.lsoapp.com` })
   }
 
   if (!parish) {
@@ -248,6 +261,12 @@ export default function ParishSettingsScreen() {
               <Ionicons name="copy-outline" size={20} color={c.primary} />
               <Text style={styles.copyButtonText}>Kopiuj</Text>
             </TouchableOpacity>
+            {Platform.OS !== 'web' && (
+              <TouchableOpacity style={styles.copyButton} onPress={handleShare}>
+                <Ionicons name="share-social-outline" size={20} color={c.primary} />
+                <Text style={styles.copyButtonText}>Udostępnij</Text>
+              </TouchableOpacity>
+            )}
           </View>
           <TouchableOpacity style={[styles.regenButton, regenerating && { opacity: 0.6 }]} onPress={handleRegenerate} disabled={regenerating}>
             {regenerating
