@@ -416,7 +416,7 @@ function MemberScheduleView() {
   })
   useRealtimeTable('schedules', () => {
     fetchWeekSchedules(weekDays)
-  })
+  }, profile?.parish_id ? `parish_id=eq.${profile.parish_id}` : undefined)
 
   // --- Handlers ---
 

@@ -86,7 +86,7 @@ export default function PointsScreen() {
 
   useEffect(() => { fetchData() }, [profile?.id])
 
-  useRealtimeTable('points', fetchData)
+  useRealtimeTable('points', fetchData, profile?.parish_id ? `parish_id=eq.${profile.parish_id}` : undefined)
 
   const onRefresh = () => { setRefreshing(true); fetchData() }
 

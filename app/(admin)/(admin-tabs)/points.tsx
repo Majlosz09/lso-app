@@ -65,8 +65,8 @@ export default function PointsTab() {
   }
 
   useEffect(() => { loadRanking() }, [])
-  useRealtimeTable('points', loadRanking)
-  useRealtimeTable('attendance', loadRanking)
+  useRealtimeTable('points', loadRanking, adminProfile?.parish_id ? `parish_id=eq.${adminProfile.parish_id}` : undefined)
+  useRealtimeTable('attendance', loadRanking, adminProfile?.parish_id ? `parish_id=eq.${adminProfile.parish_id}` : undefined)
 
   useEffect(() => {
     supabase

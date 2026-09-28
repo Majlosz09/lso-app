@@ -95,7 +95,7 @@ function MemberHomeView() {
   }
 
   useEffect(() => { fetchData() }, [profile?.id])
-  useRealtimeTable('schedule_assignments', fetchData)
+  useRealtimeTable('schedule_assignments', fetchData, profile?.id ? `profile_id=eq.${profile.id}` : undefined)
 
   const eventsForDay = (() => {
     const templateSlots = getTemplatesForDate(selectedDay, massTemplates)

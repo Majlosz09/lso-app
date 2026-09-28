@@ -55,7 +55,7 @@ export default function AnnouncementsScreen() {
 
   useEffect(() => { if (profile?.parish_id) fetchAnnouncements() }, [profile?.parish_id])
 
-  useRealtimeTable('announcements', fetchAnnouncements)
+  useRealtimeTable('announcements', fetchAnnouncements, profile?.parish_id ? `parish_id=eq.${profile.parish_id}` : undefined)
 
   const onRefresh = () => { setRefreshing(true); fetchAnnouncements() }
 
