@@ -68,7 +68,8 @@ Migracje na **LSO (prod)**, po kolei (każda przetestowana na LSO-dev):
 1. `20260928000000_admin_tools.sql` — stałe dyżury, usuwanie z parafii, zmiana roli, tryb „Tylko admin”
 2. `20260928010000_points_approval_hardening.sql` — punkty (bez podwójnego liczenia), akceptacja członków, doszczelnienia
 3. `20260928020000_chat_perf_rodo.sql` — czat (DM wg ustawień parafii, zgłoszenia, limit długości), indeksy, RLS, eksport danych
-4. `docs/security/06-find-wrong-roles.sql` — lista kont do ręcznej poprawy (imię = e-mail, założyciel bez admina)
+4. `20260928030000_fix_rls_recursion.sql` — poprawka do 3 (bez niej nie da się założyć parafii) — **zawsze razem z 3**
+5. `docs/security/06-find-wrong-roles.sql` — lista kont do ręcznej poprawy (imię = e-mail, założyciel bez admina)
 
 ⚠️ Po migracji 2 w parafiach z regułami punktacji sumy w rankingu **spadną o 5 pkt za każdą służbę** (to naprawa podwójnego liczenia) — uprzedź adminów.
 ⚠️ Po migracji 2 nowe osoby dołączające kodem czekają na zatwierdzenie — admin zatwierdza w zakładce Ministranci (baner na Panelu).
