@@ -129,6 +129,8 @@ const { error: joinErr } = await member.c.from('chat_members').insert({ channel_
 ok('ministrant A nie dopisze się do kanału parafii B', !!joinErr)
 const { data: chansA } = await adminA.c.from('chat_channels').select('id, parish_id')
 ok('admin A widzi tylko kanały swojej parafii', (chansA ?? []).every(c => c.parish_id === adminA.parishId) && (chansA ?? []).length >= 2)
+// DM między członkami tylko gdy parafia pozwala (migracja 20260928020000)
+await adminA.c.from('parishes').update({ allow_member_dm: true }).eq('id', adminA.parishId)
 const { data: dm, error: dmErr } = await member.c.from('chat_channels')
   .insert({ parish_id: adminA.parishId, type: 'dm', name: null }).select().single()
 ok('ministrant zakłada DM', !dmErr, dmErr?.message)
