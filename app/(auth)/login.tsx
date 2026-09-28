@@ -9,6 +9,7 @@ import { Link } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { ForgotPasswordModal } from '../../components/ForgotPasswordModal'
 
 function translateAuthError(msg: string): string {
   if (msg.includes('Invalid login credentials')) return 'Nieprawidłowy email lub hasło'
@@ -35,6 +36,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [loginError, setLoginError] = useState<string | null>(null)
+  const [forgotOpen, setForgotOpen] = useState(false)
   const passwordRef = useRef<TextInput>(null)
 
   const { colors: c } = useTheme()
@@ -110,9 +112,15 @@ export default function LoginScreen() {
 
         {loginError && <Text style={styles.errorText}>{loginError}</Text>}
 
+        <TouchableOpacity onPress={() => setForgotOpen(true)} style={styles.forgot}>
+          <Text style={styles.forgotText}>Nie pamiętasz hasła?</Text>
+        </TouchableOpacity>
+
         <Link href="/(auth)/register" style={styles.link}>
           Nie masz konta? Zarejestruj się
         </Link>
+
+        <ForgotPasswordModal visible={forgotOpen} initialEmail={email} onClose={() => setForgotOpen(false)} />
       </View>
     </KeyboardAvoidingView>
   )
@@ -184,6 +192,8 @@ function createStyles(c: Colors) {
       fontSize: 16,
       color: c.text,
     },
+    forgot: { alignSelf: 'center', paddingVertical: 6, marginTop: 4 },
+    forgotText: { fontSize: 14, color: c.subtext, textDecorationLine: 'underline' },
     link: {
       textAlign: 'center',
       marginTop: 24,

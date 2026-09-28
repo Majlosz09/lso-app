@@ -69,6 +69,8 @@ function AuthGate() {
     const inParishSetup = segments[1] === 'parish-setup'
     const inRegister = segments[1] === 'register'
     const inPending = segments[1] === 'pending'
+    // strona z linku „Zmiana hasła” sama zarządza sesją odzyskiwania — bez przekierowań
+    if (segments[1] === 'reset-password') return
     const isPending = !!profile?.parish_id && profile?.approved === false
 
     if (!session && !inAuth) {
@@ -118,6 +120,7 @@ function AuthGate() {
         <Stack.Screen name="(auth)/register" />
         <Stack.Screen name="(auth)/parish-setup" />
         <Stack.Screen name="(auth)/pending" />
+        <Stack.Screen name="(auth)/reset-password" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(admin)" />
         <Stack.Screen name="(parent)" />
