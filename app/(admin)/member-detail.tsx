@@ -183,7 +183,7 @@ export default function MemberDetailScreen() {
         if (seen.has(key)) return false
         seen.add(key)
         return true
-      }) as BadgeRow[]
+      }) as unknown as BadgeRow[]
     setBadges(deduped)
   }
 

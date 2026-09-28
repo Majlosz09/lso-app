@@ -86,12 +86,12 @@ export async function computeAndSyncBadges(
   const [systemDefsRes, parishDefsRes] = await Promise.all([
     supabase
       .from('badge_definitions')
-      .select('id, criteria_key, persistence')
+      .select('id, criteria_key, persistence, parish_id')
       .is('parish_id', null)
       .eq('type', 'auto'),
     supabase
       .from('badge_definitions')
-      .select('id, criteria_key, persistence')
+      .select('id, criteria_key, persistence, parish_id')
       .eq('parish_id', parishId)
       .eq('type', 'auto'),
   ])

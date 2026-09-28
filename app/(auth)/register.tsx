@@ -153,7 +153,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
     if (!firstName.trim()) return 'Wpisz imię.'
     if (!lastName.trim()) return 'Wpisz nazwisko.'
     if (!email.includes('@')) return 'Podaj poprawny email.'
-    if (password.length < 6) return 'Hasło musi mieć minimum 6 znaków.'
+    if (password.length < 8) return 'Hasło musi mieć minimum 8 znaków.'
     if (!phone.trim()) return 'Wpisz numer telefonu.'
     if (role === 'member') {
       const yr = parseInt(rocznik)
@@ -267,7 +267,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
         <TextInput style={styles.input} placeholder="Email" placeholderTextColor={c.textTertiary}
           autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
         <View style={styles.passwordRow}>
-          <TextInput style={styles.passwordInput} placeholder="Hasło (min. 6 znaków)" placeholderTextColor={c.textTertiary}
+          <TextInput style={styles.passwordInput} placeholder="Hasło (min. 8 znaków)" placeholderTextColor={c.textTertiary}
             secureTextEntry={!showPassword} value={password} onChangeText={setPassword} />
           <TouchableOpacity onPress={() => setShowPassword(p => !p)} hitSlop={8}>
             <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={c.textTertiary} />
@@ -383,7 +383,7 @@ function AdminForm({ onBack }: { onBack: () => void }) {
     if (!firstName.trim()) return 'Wpisz imię.'
     if (!lastName.trim()) return 'Wpisz nazwisko.'
     if (!email.includes('@')) return 'Podaj poprawny email.'
-    if (password.length < 6) return 'Hasło musi mieć minimum 6 znaków.'
+    if (password.length < 8) return 'Hasło musi mieć minimum 8 znaków.'
     if (!phone.trim()) return 'Wpisz numer telefonu.'
     if (!parishName.trim()) return 'Wpisz nazwę parafii.'
     if (!acceptTerms) return 'Zaakceptuj Regulamin i Politykę prywatności.'
@@ -489,7 +489,7 @@ function AdminForm({ onBack }: { onBack: () => void }) {
         <TextInput style={styles.input} placeholder="Email" placeholderTextColor={c.textTertiary}
           autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
         <View style={styles.passwordRow}>
-          <TextInput style={styles.passwordInput} placeholder="Hasło (min. 6 znaków)" placeholderTextColor={c.textTertiary}
+          <TextInput style={styles.passwordInput} placeholder="Hasło (min. 8 znaków)" placeholderTextColor={c.textTertiary}
             secureTextEntry={!showPassword} value={password} onChangeText={setPassword} />
           <TouchableOpacity onPress={() => setShowPassword(p => !p)} hitSlop={8}>
             <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={c.textTertiary} />

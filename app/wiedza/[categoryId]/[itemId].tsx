@@ -33,8 +33,7 @@ export default function WiedzaItemScreen() {
       .select('id, title, subtitle, content')
       .eq('id', dbEntryId)
       .single()
-      .then(({ data }) => { setDbItem(data); setDbLoading(false) })
-      .catch(() => setDbLoading(false))
+      .then(({ data }) => { setDbItem(data); setDbLoading(false) }, () => setDbLoading(false))
   }, [dbEntryId])
 
   if (isDbEntry) {

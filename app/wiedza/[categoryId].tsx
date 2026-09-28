@@ -31,7 +31,7 @@ export default function WiedzaCategoryScreen() {
       .eq('category_id', categoryId)
       .order('display_order')
       .then(({ data }) => setDbEntries(data ?? []))
-      .catch(console.error)
+      .then(undefined, console.error)
   }, [categoryId, profile?.parish_id])
 
   const category = findCategory(categoryId)

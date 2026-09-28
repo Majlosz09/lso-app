@@ -59,3 +59,40 @@ Dokładne limity sprawdzić w Billing, bo Supabase je co jakiś czas zmienia.
   ograniczenie tylko do admina wymaga zmian w apce (widok bez telefonu) i osobnej migracji.
 - Kod zaproszenia (6 znaków) pokazuje listę ministrantów jeszcze przed rejestracją (ekran rodzica). Do przeniesienia za logowanie.
 - Włącz 2FA na koncie Supabase i zmień hasło.
+
+---
+
+# Paczka 2026-09-28 — wdrożenie na produkcję (przed pilotażem 3.10)
+
+Migracje na **LSO (prod)**, po kolei (każda przetestowana na LSO-dev):
+1. `20260928000000_admin_tools.sql` — stałe dyżury, usuwanie z parafii, zmiana roli, tryb „Tylko admin”
+2. `20260928010000_points_approval_hardening.sql` — punkty (bez podwójnego liczenia), akceptacja członków, doszczelnienia
+3. `20260928020000_chat_perf_rodo.sql` — czat (DM wg ustawień parafii, zgłoszenia, limit długości), indeksy, RLS, eksport danych
+4. `docs/security/06-find-wrong-roles.sql` — lista kont do ręcznej poprawy (imię = e-mail, założyciel bez admina)
+
+⚠️ Po migracji 2 w parafiach z regułami punktacji sumy w rankingu **spadną o 5 pkt za każdą służbę** (to naprawa podwójnego liczenia) — uprzedź adminów.
+⚠️ Po migracji 2 nowe osoby dołączające kodem czekają na zatwierdzenie — admin zatwierdza w zakładce Ministranci (baner na Panelu).
+
+## Konfiguracja w panelach (jednorazowo)
+**E-mail (punkt 5 przeglądu)** — Supabase LSO → Authentication:
+- Sign In / Providers → Email → **Confirm email: ON**, Minimum password length: **8**
+- Emails → SMTP Settings → własny serwer (np. Resend lub Brevo — darmowy plan wystarcza), nadawca `lsoapp@parafia-borzapilski.pl`
+  (wbudowany serwer Supabase wysyła tylko kilka maili na godzinę — przy włączonym potwierdzaniu to za mało).
+- Apka już obsługuje potwierdzanie: dane z formularza zapisują się przy rejestracji, po kliknięciu linku wystarczy się zalogować.
+
+**Powiadomienia (punkt 3)** — kolejność ma znaczenie:
+1. expo.dev → Account settings → Access tokens → Create token
+2. Supabase **LSO-dev** i **LSO** → Integrations → Vault → sekret `expo_access_token`
+3. Dopiero potem expo.dev → projekt lso-app → Settings → Push notifications → **Enhanced security: ON**
+
+**Kopie zapasowe (punkt 9)** — GitHub → repo lso-app → Settings → Secrets and variables → Actions:
+- `SUPABASE_DB_URL` = Supabase LSO → Connect → **Session pooler** (IPv4), z hasłem bazy
+- `BACKUP_PASSPHRASE` = długie losowe hasło (zapisz w menedżerze haseł — bez niego kopii nie odtworzysz)
+- Test: Actions → „DB backup (encrypted)” → Run workflow. Kopia: artefakt przy uruchomieniu, trzymany 14 dni.
+
+**Buildy testowe (EAS preview)** — expo.dev → projekt → Environment variables → **preview**:
+ustaw `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` na **LSO-dev**, żeby testowe APK nie łączyły się z produkcją.
+
+## Świadomie pominięte
+- **Sentry (monitoring błędów)** — wymaga nowego pakietu natywnego i konta Sentry; przy jednym darmowym buildzie
+  1.10 i pilotażu 3.10 ryzyko nieudanego buildu jest większe niż zysk. Do dodania w kolejnym buildzie natywnym.

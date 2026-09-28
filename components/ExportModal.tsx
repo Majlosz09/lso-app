@@ -3,7 +3,7 @@ import {
   Modal, View, Text, StyleSheet,
   TouchableOpacity, ActivityIndicator, Alert, Platform,
 } from 'react-native'
-import * as FileSystem from 'expo-file-system'
+import * as FileSystem from 'expo-file-system/legacy' // SDK 54: stare API tylko z /legacy (główny moduł rzuca wyjątek)
 import * as Print from 'expo-print'
 import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../lib/supabase'

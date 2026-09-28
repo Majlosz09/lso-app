@@ -108,10 +108,10 @@
     "color": "GREEN"
   },
   "2026-01-19": {
-    "name": "Saint Jozef Sebastian Pelczar",
+    "name": "Św. Józefa Sebastiana Pelczara, biskupa",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
-    "color": "GREEN"
+    "color": "WHITE"
   },
   "2026-01-20": {
     "name": "Św. Fabiana, papieża i męczennika/Św. Sebastiana, męczennika",
@@ -732,7 +732,7 @@
     "color": "WHITE"
   },
   "2026-05-03": {
-    "name": "Our Lady, Queen of Poland",
+    "name": "Najświętszej Maryi Panny, Królowej Polski",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -948,7 +948,7 @@
     "color": "WHITE"
   },
   "2026-06-08": {
-    "name": "Saint Hedwig of Poland",
+    "name": "Św. Jadwigi Królowej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "WHITE"
@@ -1608,7 +1608,7 @@
     "color": "GREEN"
   },
   "2026-09-26": {
-    "name": "Saints Lawrence Ruiz and Companions, Martyrs",
+    "name": "Świętych męczenników Wawrzyńca Ruiza i Towarzyszy",
     "type": "OPT_MEMORIAL",
     "typeLabel": "Wspomnienie dowolne",
     "color": "GREEN"
@@ -1620,7 +1620,7 @@
     "color": "GREEN"
   },
   "2026-09-28": {
-    "name": "Saint Wenceslaus, Martyr",
+    "name": "Św. Wacława, męczennika",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -1716,7 +1716,7 @@
     "color": "GREEN"
   },
   "2026-10-14": {
-    "name": "Saint Msrgaret Mary Alacoque",
+    "name": "Św. Małgorzaty Marii Alacoque, dziewicy",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "GREEN"
@@ -1728,7 +1728,7 @@
     "color": "WHITE"
   },
   "2026-10-16": {
-    "name": "Saint Hedwig of Silesia",
+    "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "GREEN"
@@ -2298,10 +2298,10 @@
     "color": "GREEN"
   },
   "2027-01-19": {
-    "name": "Saint Jozef Sebastian Pelczar",
+    "name": "Św. Józefa Sebastiana Pelczara, biskupa",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
-    "color": "GREEN"
+    "color": "WHITE"
   },
   "2027-01-20": {
     "name": "Św. Fabiana, papieża i męczennika/Św. Sebastiana, męczennika",
@@ -2922,7 +2922,7 @@
     "color": "WHITE"
   },
   "2027-05-03": {
-    "name": "Our Lady, Queen of Poland",
+    "name": "Najświętszej Maryi Panny, Królowej Polski",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -3048,7 +3048,7 @@
     "color": "WHITE"
   },
   "2027-05-24": {
-    "name": "Our Lady, Help of Christians",
+    "name": "Najświętszej Maryi Panny, Wspomożycielki Wiernych",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "WHITE"
@@ -3138,7 +3138,7 @@
     "color": "GREEN"
   },
   "2027-06-08": {
-    "name": "Saint Hedwig of Poland",
+    "name": "Św. Jadwigi Królowej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "WHITE"
@@ -3810,7 +3810,7 @@
     "color": "WHITE"
   },
   "2027-09-28": {
-    "name": "Saint Wenceslaus, Martyr",
+    "name": "Św. Wacława, męczennika",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -3906,7 +3906,7 @@
     "color": "GREEN"
   },
   "2027-10-14": {
-    "name": "Saint Msrgaret Mary Alacoque",
+    "name": "Św. Małgorzaty Marii Alacoque, dziewicy",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "GREEN"
@@ -3918,7 +3918,7 @@
     "color": "WHITE"
   },
   "2027-10-16": {
-    "name": "Saint Hedwig of Silesia",
+    "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "GREEN"
@@ -4488,10 +4488,10 @@
     "color": "GREEN"
   },
   "2028-01-19": {
-    "name": "Saint Jozef Sebastian Pelczar",
+    "name": "Św. Józefa Sebastiana Pelczara, biskupa",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
-    "color": "GREEN"
+    "color": "WHITE"
   },
   "2028-01-20": {
     "name": "Św. Fabiana, papieża i męczennika/Św. Sebastiana, męczennika",
@@ -5118,7 +5118,7 @@
     "color": "WHITE"
   },
   "2028-05-03": {
-    "name": "Our Lady, Queen of Poland",
+    "name": "Najświętszej Maryi Panny, Królowej Polski",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -5244,7 +5244,7 @@
     "color": "WHITE"
   },
   "2028-05-24": {
-    "name": "Our Lady, Help of Christians",
+    "name": "Najświętszej Maryi Panny, Wspomożycielki Wiernych",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "WHITE"
@@ -5994,7 +5994,7 @@
     "color": "GREEN"
   },
   "2028-09-26": {
-    "name": "Saints Lawrence Ruiz and Companions, Martyrs",
+    "name": "Świętych męczenników Wawrzyńca Ruiza i Towarzyszy",
     "type": "OPT_MEMORIAL",
     "typeLabel": "Wspomnienie dowolne",
     "color": "GREEN"
@@ -6006,7 +6006,7 @@
     "color": "WHITE"
   },
   "2028-09-28": {
-    "name": "Saint Wenceslaus, Martyr",
+    "name": "Św. Wacława, męczennika",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -6102,7 +6102,7 @@
     "color": "GREEN"
   },
   "2028-10-14": {
-    "name": "Saint Msrgaret Mary Alacoque",
+    "name": "Św. Małgorzaty Marii Alacoque, dziewicy",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "GREEN"
@@ -6114,7 +6114,7 @@
     "color": "GREEN"
   },
   "2028-10-16": {
-    "name": "Saint Hedwig of Silesia",
+    "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "GREEN"
@@ -6684,10 +6684,10 @@
     "color": "GREEN"
   },
   "2029-01-19": {
-    "name": "Saint Jozef Sebastian Pelczar",
+    "name": "Św. Józefa Sebastiana Pelczara, biskupa",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
-    "color": "GREEN"
+    "color": "WHITE"
   },
   "2029-01-20": {
     "name": "Św. Fabiana, papieża i męczennika/Św. Sebastiana, męczennika",
@@ -7308,7 +7308,7 @@
     "color": "WHITE"
   },
   "2029-05-03": {
-    "name": "Our Lady, Queen of Poland",
+    "name": "Najświętszej Maryi Panny, Królowej Polski",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -8184,7 +8184,7 @@
     "color": "GREEN"
   },
   "2029-09-26": {
-    "name": "Saints Lawrence Ruiz and Companions, Martyrs",
+    "name": "Świętych męczenników Wawrzyńca Ruiza i Towarzyszy",
     "type": "OPT_MEMORIAL",
     "typeLabel": "Wspomnienie dowolne",
     "color": "GREEN"
@@ -8196,7 +8196,7 @@
     "color": "WHITE"
   },
   "2029-09-28": {
-    "name": "Saint Wenceslaus, Martyr",
+    "name": "Św. Wacława, męczennika",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -8304,7 +8304,7 @@
     "color": "WHITE"
   },
   "2029-10-16": {
-    "name": "Saint Hedwig of Silesia",
+    "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "GREEN"
@@ -8874,10 +8874,10 @@
     "color": "GREEN"
   },
   "2030-01-19": {
-    "name": "Saint Jozef Sebastian Pelczar",
+    "name": "Św. Józefa Sebastiana Pelczara, biskupa",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
-    "color": "GREEN"
+    "color": "WHITE"
   },
   "2030-01-20": {
     "name": "2. Niedziela zwykła",
@@ -9498,7 +9498,7 @@
     "color": "WHITE"
   },
   "2030-05-03": {
-    "name": "Our Lady, Queen of Poland",
+    "name": "Najświętszej Maryi Panny, Królowej Polski",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -9624,7 +9624,7 @@
     "color": "WHITE"
   },
   "2030-05-24": {
-    "name": "Our Lady, Help of Christians",
+    "name": "Najświętszej Maryi Panny, Wspomożycielki Wiernych",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "WHITE"
@@ -9714,7 +9714,7 @@
     "color": "WHITE"
   },
   "2030-06-08": {
-    "name": "Saint Hedwig of Poland",
+    "name": "Św. Jadwigi Królowej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "WHITE"
@@ -10374,7 +10374,7 @@
     "color": "GREEN"
   },
   "2030-09-26": {
-    "name": "Saints Lawrence Ruiz and Companions, Martyrs",
+    "name": "Świętych męczenników Wawrzyńca Ruiza i Towarzyszy",
     "type": "OPT_MEMORIAL",
     "typeLabel": "Wspomnienie dowolne",
     "color": "GREEN"
@@ -10386,7 +10386,7 @@
     "color": "WHITE"
   },
   "2030-09-28": {
-    "name": "Saint Wenceslaus, Martyr",
+    "name": "Św. Wacława, męczennika",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -10482,7 +10482,7 @@
     "color": "GREEN"
   },
   "2030-10-14": {
-    "name": "Saint Msrgaret Mary Alacoque",
+    "name": "Św. Małgorzaty Marii Alacoque, dziewicy",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "GREEN"
@@ -10494,7 +10494,7 @@
     "color": "WHITE"
   },
   "2030-10-16": {
-    "name": "Saint Hedwig of Silesia",
+    "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "GREEN"
@@ -11688,7 +11688,7 @@
     "color": "WHITE"
   },
   "2031-05-03": {
-    "name": "Our Lady, Queen of Poland",
+    "name": "Najświętszej Maryi Panny, Królowej Polski",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -11814,7 +11814,7 @@
     "color": "WHITE"
   },
   "2031-05-24": {
-    "name": "Our Lady, Help of Christians",
+    "name": "Najświętszej Maryi Panny, Wspomożycielki Wiernych",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "WHITE"
@@ -12564,7 +12564,7 @@
     "color": "GREEN"
   },
   "2031-09-26": {
-    "name": "Saints Lawrence Ruiz and Companions, Martyrs",
+    "name": "Świętych męczenników Wawrzyńca Ruiza i Towarzyszy",
     "type": "OPT_MEMORIAL",
     "typeLabel": "Wspomnienie dowolne",
     "color": "GREEN"
@@ -12576,7 +12576,7 @@
     "color": "WHITE"
   },
   "2031-09-28": {
-    "name": "Saint Wenceslaus, Martyr",
+    "name": "Św. Wacława, męczennika",
     "type": "SOLEMNITY",
     "typeLabel": "Uroczystość",
     "color": "WHITE"
@@ -12672,7 +12672,7 @@
     "color": "GREEN"
   },
   "2031-10-14": {
-    "name": "Saint Msrgaret Mary Alacoque",
+    "name": "Św. Małgorzaty Marii Alacoque, dziewicy",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "GREEN"
@@ -12684,7 +12684,7 @@
     "color": "WHITE"
   },
   "2031-10-16": {
-    "name": "Saint Hedwig of Silesia",
+    "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
     "color": "GREEN"

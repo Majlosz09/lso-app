@@ -1,0 +1,65 @@
+# Nocna, ZASZYFROWANA kopia bazy produkcyjnej (Supabase LSO).
+# Repo jest publiczne — kopia zawiera dane dzieci, więc przed zapisem jest szyfrowana AES-256
+# hasłem BACKUP_PASSPHRASE. Bez hasła plik jest bezużyteczny.
+#
+# Wymagane sekrety (GitHub → Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL    — Supabase → LSO → Connect → „Session pooler” (IPv4!), z hasłem bazy, np.
+#                        postgresql://postgres.kvqjaoprxxiemynyihfs:<HASŁO>@aws-1-eu-north-1.pooler.supabase.com:5432/postgres
+#   BACKUP_PASSPHRASE  — długie losowe hasło; zapisz je w menedżerze haseł (bez niego nie odtworzysz kopii)
+#
+# Odtworzenie:
+#   gpg --batch --passphrase "<BACKUP_PASSPHRASE>" -d lso-backup-RRRR-MM-DD.dump.gpg > lso.dump
+#   pg_restore --no-owner --no-privileges -d "<URL bazy docelowej>" lso.dump
+name: DB backup (encrypted)
+
+on:
+  schedule:
+    - cron: '30 1 * * *'   # codziennie 01:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Sprawdź sekrety
+        id: check
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$PASS" ]; then
+            echo "::warning::Brak sekretów SUPABASE_DB_URL lub BACKUP_PASSPHRASE — kopia pominięta"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: pg_dump (Postgres 17, jak w Supabase) + szyfrowanie
+        if: steps.check.outputs.ok == 'true'
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          FILE="lso-backup-$(date -u +%F).dump"
+          docker run --rm -e DB_URL postgres:17 \
+            sh -c 'pg_dump "$DB_URL" -Fc --no-owner --no-privileges --schema=public --schema=auth --schema=storage' > "$FILE"
+          test -s "$FILE"
+          printf '%s' "$PASS" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 -o "$FILE.gpg" "$FILE"
+          shred -u "$FILE"
+          ls -lh "$FILE.gpg"
+          echo "BACKUP_FILE=$FILE.gpg" >> "$GITHUB_ENV"
+
+      - name: Zapisz kopię (14 dni)
+        if: steps.check.outputs.ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lso-db-backup
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 14
+          if-no-files-found: error

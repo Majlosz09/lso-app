@@ -2,12 +2,13 @@ import { renderHook, act } from '@testing-library/react-native'
 import { useChatPolls } from '../../hooks/useChatPolls'
 import { ChatPoll } from '../../types/chat'
 
-// All terminal operations use .match() — simplifies mock chaining
-const mockFrom = {
+// Hook filtruje łańcuchem .eq(); obiekt jest „thenable”, więc await na końcu łańcucha zwraca { error: null }
+const mockFrom: any = {
   delete: jest.fn().mockReturnThis(),
   update: jest.fn().mockReturnThis(),
+  eq: jest.fn().mockReturnThis(),
   insert: jest.fn().mockResolvedValue({ error: null }),
-  match: jest.fn().mockResolvedValue({ error: null }),
+  then: (resolve: (v: any) => void) => resolve({ error: null }),
 }
 
 jest.mock('../../lib/supabase', () => ({
@@ -39,7 +40,8 @@ describe('useChatPolls', () => {
     const { result } = renderHook(() => useChatPolls(userId))
     await act(async () => { await result.current.vote(poll, 'opt-2') })
     expect(mockFrom.delete).toHaveBeenCalled()
-    expect(mockFrom.match).toHaveBeenCalledWith({ id: 'v-1', user_id: userId })
+    expect(mockFrom.eq).toHaveBeenCalledWith('id', 'v-1')
+    expect(mockFrom.eq).toHaveBeenCalledWith('user_id', userId)
     expect(mockFrom.insert).toHaveBeenCalledWith({ option_id: 'opt-2', user_id: userId })
   })
 
@@ -64,10 +66,10 @@ describe('useChatPolls', () => {
     expect(mockFrom.insert).not.toHaveBeenCalled()
   })
 
-  it('closePoll: updates closed_at via match', async () => {
+  it('closePoll: updates closed_at by poll id', async () => {
     const { result } = renderHook(() => useChatPolls(userId))
     await act(async () => { await result.current.closePoll('poll-1') })
     expect(mockFrom.update).toHaveBeenCalledWith(expect.objectContaining({ closed_at: expect.any(String) }))
-    expect(mockFrom.match).toHaveBeenCalledWith({ id: 'poll-1' })
+    expect(mockFrom.eq).toHaveBeenCalledWith('id', 'poll-1')
   })
 })
