@@ -9,6 +9,7 @@ import { useAuthStore } from '../stores/authStore'
 import { ThemeProvider } from '../lib/ThemeContext'
 import { OnboardingModal } from '../components/OnboardingModal'
 import { EnvBanner } from '../components/EnvBanner'
+import { WhatsNewModal } from '../components/WhatsNewModal'
 import '../lib/webAlert' // Alert.alert na webie (react-native-web go nie wyświetla)
 
 if (Platform.OS !== 'web') {
@@ -133,6 +134,8 @@ function AuthGate() {
         visible={showOnboarding}
         onClose={() => setShowOnboarding(false)}
       />
+      {/* „Co nowego” — nie w trakcie samouczka ani na ekranach logowania/rejestracji */}
+      <WhatsNewModal suppressed={showOnboarding || segments[0] === '(auth)'} />
     </>
   )
 }

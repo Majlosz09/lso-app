@@ -109,9 +109,9 @@
   },
   "2026-01-19": {
     "name": "Św. Józefa Sebastiana Pelczara, biskupa",
-    "type": "MEMORIAL",
-    "typeLabel": "Wspomnienie",
-    "color": "WHITE"
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
+    "color": "GREEN"
   },
   "2026-01-20": {
     "name": "Św. Fabiana, papieża i męczennika/Św. Sebastiana, męczennika",
@@ -1621,9 +1621,9 @@
   },
   "2026-09-28": {
     "name": "Św. Wacława, męczennika",
-    "type": "SOLEMNITY",
-    "typeLabel": "Uroczystość",
-    "color": "WHITE"
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
+    "color": "GREEN"
   },
   "2026-09-29": {
     "name": "Świętych Archaniołów Michała, Gabriela i Rafała",
@@ -1717,8 +1717,8 @@
   },
   "2026-10-14": {
     "name": "Św. Małgorzaty Marii Alacoque, dziewicy",
-    "type": "MEMORIAL",
-    "typeLabel": "Wspomnienie",
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
     "color": "GREEN"
   },
   "2026-10-15": {
@@ -1731,7 +1731,7 @@
     "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
-    "color": "GREEN"
+    "color": "WHITE"
   },
   "2026-10-17": {
     "name": "Św. Ignacego Antiocheńskiego, biskupa i męczennika",
@@ -2299,9 +2299,9 @@
   },
   "2027-01-19": {
     "name": "Św. Józefa Sebastiana Pelczara, biskupa",
-    "type": "MEMORIAL",
-    "typeLabel": "Wspomnienie",
-    "color": "WHITE"
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
+    "color": "GREEN"
   },
   "2027-01-20": {
     "name": "Św. Fabiana, papieża i męczennika/Św. Sebastiana, męczennika",
@@ -3811,9 +3811,9 @@
   },
   "2027-09-28": {
     "name": "Św. Wacława, męczennika",
-    "type": "SOLEMNITY",
-    "typeLabel": "Uroczystość",
-    "color": "WHITE"
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
+    "color": "GREEN"
   },
   "2027-09-29": {
     "name": "Świętych Archaniołów Michała, Gabriela i Rafała",
@@ -3907,8 +3907,8 @@
   },
   "2027-10-14": {
     "name": "Św. Małgorzaty Marii Alacoque, dziewicy",
-    "type": "MEMORIAL",
-    "typeLabel": "Wspomnienie",
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
     "color": "GREEN"
   },
   "2027-10-15": {
@@ -3921,7 +3921,7 @@
     "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
-    "color": "GREEN"
+    "color": "WHITE"
   },
   "2027-10-17": {
     "name": "29. Niedziela zwykła",
@@ -4489,9 +4489,9 @@
   },
   "2028-01-19": {
     "name": "Św. Józefa Sebastiana Pelczara, biskupa",
-    "type": "MEMORIAL",
-    "typeLabel": "Wspomnienie",
-    "color": "WHITE"
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
+    "color": "GREEN"
   },
   "2028-01-20": {
     "name": "Św. Fabiana, papieża i męczennika/Św. Sebastiana, męczennika",
@@ -6007,9 +6007,9 @@
   },
   "2028-09-28": {
     "name": "Św. Wacława, męczennika",
-    "type": "SOLEMNITY",
-    "typeLabel": "Uroczystość",
-    "color": "WHITE"
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
+    "color": "GREEN"
   },
   "2028-09-29": {
     "name": "Świętych Archaniołów Michała, Gabriela i Rafała",
@@ -6103,8 +6103,8 @@
   },
   "2028-10-14": {
     "name": "Św. Małgorzaty Marii Alacoque, dziewicy",
-    "type": "MEMORIAL",
-    "typeLabel": "Wspomnienie",
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
     "color": "GREEN"
   },
   "2028-10-15": {
@@ -6117,7 +6117,7 @@
     "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
-    "color": "GREEN"
+    "color": "WHITE"
   },
   "2028-10-17": {
     "name": "Św. Ignacego Antiocheńskiego, biskupa i męczennika",
@@ -6685,9 +6685,9 @@
   },
   "2029-01-19": {
     "name": "Św. Józefa Sebastiana Pelczara, biskupa",
-    "type": "MEMORIAL",
-    "typeLabel": "Wspomnienie",
-    "color": "WHITE"
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
+    "color": "GREEN"
   },
   "2029-01-20": {
     "name": "Św. Fabiana, papieża i męczennika/Św. Sebastiana, męczennika",
@@ -8197,9 +8197,9 @@
   },
   "2029-09-28": {
     "name": "Św. Wacława, męczennika",
-    "type": "SOLEMNITY",
-    "typeLabel": "Uroczystość",
-    "color": "WHITE"
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
+    "color": "GREEN"
   },
   "2029-09-29": {
     "name": "Świętych Archaniołów Michała, Gabriela i Rafała",
@@ -8307,7 +8307,7 @@
     "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
-    "color": "GREEN"
+    "color": "WHITE"
   },
   "2029-10-17": {
     "name": "Św. Ignacego Antiocheńskiego, biskupa i męczennika",
@@ -8875,9 +8875,9 @@
   },
   "2030-01-19": {
     "name": "Św. Józefa Sebastiana Pelczara, biskupa",
-    "type": "MEMORIAL",
-    "typeLabel": "Wspomnienie",
-    "color": "WHITE"
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
+    "color": "GREEN"
   },
   "2030-01-20": {
     "name": "2. Niedziela zwykła",
@@ -10387,9 +10387,9 @@
   },
   "2030-09-28": {
     "name": "Św. Wacława, męczennika",
-    "type": "SOLEMNITY",
-    "typeLabel": "Uroczystość",
-    "color": "WHITE"
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
+    "color": "GREEN"
   },
   "2030-09-29": {
     "name": "26. Niedziela zwykła",
@@ -10483,8 +10483,8 @@
   },
   "2030-10-14": {
     "name": "Św. Małgorzaty Marii Alacoque, dziewicy",
-    "type": "MEMORIAL",
-    "typeLabel": "Wspomnienie",
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
     "color": "GREEN"
   },
   "2030-10-15": {
@@ -10497,7 +10497,7 @@
     "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
-    "color": "GREEN"
+    "color": "WHITE"
   },
   "2030-10-17": {
     "name": "Św. Ignacego Antiocheńskiego, biskupa i męczennika",
@@ -12577,9 +12577,9 @@
   },
   "2031-09-28": {
     "name": "Św. Wacława, męczennika",
-    "type": "SOLEMNITY",
-    "typeLabel": "Uroczystość",
-    "color": "WHITE"
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
+    "color": "GREEN"
   },
   "2031-09-29": {
     "name": "Świętych Archaniołów Michała, Gabriela i Rafała",
@@ -12673,8 +12673,8 @@
   },
   "2031-10-14": {
     "name": "Św. Małgorzaty Marii Alacoque, dziewicy",
-    "type": "MEMORIAL",
-    "typeLabel": "Wspomnienie",
+    "type": "OPT_MEMORIAL",
+    "typeLabel": "Wspomnienie dowolne",
     "color": "GREEN"
   },
   "2031-10-15": {
@@ -12687,7 +12687,7 @@
     "name": "Św. Jadwigi Śląskiej",
     "type": "MEMORIAL",
     "typeLabel": "Wspomnienie",
-    "color": "GREEN"
+    "color": "WHITE"
   },
   "2031-10-17": {
     "name": "Św. Ignacego Antiocheńskiego, biskupa i męczennika",
