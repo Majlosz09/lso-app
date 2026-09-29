@@ -2,7 +2,7 @@ import { memo, useMemo, useState } from 'react'
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { Colors, sans } from '../../lib/theme'
 import { shadow } from '../../lib/shadows'
 import { ChatMessageWithSender, ChatPoll, ChatReaction } from '../../types/chat'
 import { PollBubble } from './PollBubble'
@@ -305,7 +305,7 @@ function createStyles(c: Colors) {
     row: { marginVertical: 2, width: '100%', flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
     rowRight: { justifyContent: 'flex-end' },
     rowLeft: { justifyContent: 'flex-start' },
-    senderName: { fontSize: 11, color: c.subtext, marginBottom: 2, marginLeft: 4 },
+    senderName: { fontSize: 11, color: c.goldInk, marginBottom: 3, marginLeft: 4, ...sans(700) },
     quote: {
       borderLeftWidth: 3, borderRadius: 6,
       paddingVertical: 3, paddingHorizontal: 8,
@@ -314,15 +314,15 @@ function createStyles(c: Colors) {
     messageContentWrapper: { flexDirection: 'column', alignItems: 'flex-start', maxWidth: '92%' },
     messageContentWrapperOwn: { flexDirection: 'column', alignItems: 'flex-end', maxWidth: '92%' },
     quoteAccent: { borderLeftColor: c.primary, backgroundColor: c.primaryAlpha08 },
-    quoteName: { fontSize: 11, fontWeight: '600' },
+    quoteName: { fontSize: 11, ...sans(700) },
     quoteText: { fontSize: 11 },
-    bubble: { borderRadius: 16, padding: 10, paddingHorizontal: 14 },
+    bubble: { borderRadius: 18, paddingVertical: 10, paddingHorizontal: 14 },
     bubbleOwn: { backgroundColor: c.primary, borderBottomRightRadius: 4 },
-    bubbleOther: { backgroundColor: c.surface, borderBottomLeftRadius: 4 },
-    messageText: { fontSize: 15, color: c.text, lineHeight: 20 },
+    bubbleOther: { backgroundColor: c.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: c.border },
+    messageText: { fontSize: 15, color: c.text, lineHeight: 21, ...sans(500) },
     messageTextOwn: { color: '#fff' },
-    deletedText: { fontSize: 13, color: c.subtext, fontStyle: 'italic' },
-    messageTime: { fontSize: 10, color: c.subtext, alignSelf: 'flex-end', marginTop: 4 },
+    deletedText: { fontSize: 13, color: c.subtext, fontStyle: 'italic', ...sans(500) },
+    messageTime: { fontSize: 10, color: c.textTertiary, alignSelf: 'flex-end', marginTop: 4, ...sans(600) },
     messageTimeOwn: { color: 'rgba(255,255,255,0.7)' },
     reactionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 3, marginHorizontal: 4 },
     reactionChip: {

@@ -1,25 +1,28 @@
-// app/(tabs)/chat.tsx
-import { useCallback, useMemo, useState } from 'react'
-import {
-  ActivityIndicator, FlatList, RefreshControl,
-  StyleSheet, Text, TouchableOpacity, View,
-} from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+// app/(tabs)/chat.tsx — lista rozmów (wspólna dla ministranta, opiekuna i rodzica)
+import { useCallback, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { sans } from '../../lib/theme'
 import { ChatChannelListItem, ChatMessageWithSender } from '../../types/chat'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
-import { shadow } from '../../lib/shadows'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
 import { ChannelRow } from '../../components/chat/ChannelRow'
+import { ChatThread } from '../../components/chat/ChatThread'
+import { AppText, Card, Icon, ScreenHeader } from '../../components/ui'
 
 export default function ChatScreen() {
   const router = useRouter()
   const { profile, parish } = useAuthStore()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
+  const isDesktop = useIsDesktop()
+  const { palette } = useLiturgyHeader()
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   const [channels, setChannels] = useState<ChatChannelListItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -102,60 +105,98 @@ export default function ChatScreen() {
     profile?.role === 'admin' || profile?.is_admin ||
     (parish?.allow_member_dm === true && (profile?.role === 'member' || profile?.role === 'parent'))
 
-  const renderItem = useCallback(({ item }: { item: ChatChannelListItem }) => (
-    <ChannelRow
-      item={item}
-      onPress={() => router.push(`/chat/${item.id}` as any)}
+  const unreadTotal = channels.reduce((s, ch) => s + ch.unread_count, 0)
+  const selected = isDesktop ? (channels.find(ch => ch.id === selectedId) ?? channels[0]) : undefined
+
+  const openChannel = (id: string) => {
+    if (isDesktop) {
+      setSelectedId(id)
+      // po otwarciu rozmowy licznik nieprzeczytanych znika od razu
+      setChannels(prev => prev.map(ch => ch.id === id ? { ...ch, unread_count: 0 } : ch))
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: ['nav-badges'] }), 1500)
+    } else {
+      router.push(`/chat/${id}` as any)
+    }
+  }
+
+  const list = (
+    <FlatList
+      data={channels}
+      keyExtractor={(item) => item.id}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.primary} />}
+      ListEmptyComponent={
+        <View style={styles.empty}>
+          <Icon name="forum" size={44} color={c.iconMuted} />
+          <AppText muted>Brak rozmów</AppText>
+        </View>
+      }
+      renderItem={({ item, index }) => (
+        <ChannelRow item={item} first={index === 0} selected={selected?.id === item.id} onPress={() => openChannel(item.id)} />
+      )}
     />
-  ), [router])
+  )
+
+  const newDmButton = canCreateDm ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Nowa wiadomość"
+      onPress={() => router.push('/chat/new-dm')}
+      style={[styles.newBtn, { backgroundColor: isDesktop ? c.primary : palette.chip }]}
+    >
+      <Icon name="pencil" size={20} color={isDesktop ? '#FFFFFF' : palette.fg} filled />
+    </Pressable>
+  ) : null
 
   if (loading) {
+    return <View style={[styles.flex, styles.center, { backgroundColor: c.bg }]}><ActivityIndicator color={c.primary} /></View>
+  }
+
+  if (isDesktop) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <ActivityIndicator color={c.primary} size="large" />
+      <View style={[styles.flex, styles.desktop, { backgroundColor: c.bg }]}>
+        <Card large flush style={styles.split}>
+          <View style={[styles.listPane, { borderRightColor: c.border }]}>
+            <View style={[styles.listHead, { borderBottomColor: c.border }]}>
+              <AppText variant="eyebrow" color={c.goldInk} style={styles.flex}>
+                {`Rozmowy${unreadTotal ? ` · ${unreadTotal} nieprzeczytane` : ''}`}
+              </AppText>
+              {newDmButton}
+            </View>
+            {list}
+          </View>
+          <View style={styles.flex}>
+            {selected
+              ? <ChatThread key={selected.id} channelId={selected.id} embedded />
+              : <View style={[styles.flex, styles.center]}><AppText muted>Wybierz rozmowę.</AppText></View>}
+          </View>
+        </Card>
       </View>
     )
   }
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={channels}
-        keyExtractor={(item) => item.id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={c.primary} />}
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="chatbubbles-outline" size={48} color={c.subtext} />
-            <Text style={styles.emptyText}>Brak kanałów</Text>
-          </View>
-        }
-        renderItem={renderItem}
+    <View style={[styles.flex, { backgroundColor: c.bg }]}>
+      <ScreenHeader
+        eyebrow={unreadTotal ? `${unreadTotal} nieprzeczytane` : 'Parafia'}
+        title="Czat"
+        right={newDmButton}
       />
-      {canCreateDm && (
-        <TouchableOpacity
-          style={[styles.fab, { backgroundColor: c.primary }]}
-          onPress={() => router.push('/chat/new-dm')}
-        >
-          <Ionicons name="create-outline" size={24} color="#fff" />
-        </TouchableOpacity>
-      )}
+      <View style={[styles.flex, styles.mobileList]}>
+        <Card large flush style={styles.shrink}>{list}</Card>
+      </View>
     </View>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    center: { justifyContent: 'center', alignItems: 'center' },
-    empty: { alignItems: 'center', marginTop: 80, gap: 12 },
-    emptyText: { color: c.subtext, fontSize: 15 },
-    listContent: { padding: 16, gap: 4 },
-    fab: {
-      position: 'absolute', right: 20, bottom: 20,
-      width: 52, height: 52, borderRadius: 26,
-      justifyContent: 'center', alignItems: 'center',
-      ...shadow.fab,
-    },
-  })
-}
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  center: { justifyContent: 'center', alignItems: 'center' },
+  empty: { alignItems: 'center', marginTop: 60, gap: 10 },
+  mobileList: { padding: 16 },
+  shrink: { flexShrink: 1 },
+  newBtn: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } as any,
+  desktop: { padding: 28, paddingHorizontal: 32 },
+  split: { flex: 1, flexDirection: 'row' },
+  listPane: { width: 320, borderRightWidth: 1 },
+  listHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, minHeight: 60 },
+})

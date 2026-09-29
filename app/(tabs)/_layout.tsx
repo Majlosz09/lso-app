@@ -42,7 +42,7 @@ export default function TabsLayout() {
         options={{ title: 'Obecność', headerShown: false, tabBarStyle: { display: 'none' }, href: selfCheckIn ? undefined : null, tabBarIcon: tabIcon('qrcode-scan') }}
       />
       <Tabs.Screen name="points" options={{ title: 'Punkty', headerShown: false, tabBarIcon: tabIcon('trophy') }} />
-      <Tabs.Screen name="chat" options={{ title: 'Czat', tabBarIcon: tabIcon('forum') }} />
+      <Tabs.Screen name="chat" options={{ title: 'Czat', headerShown: false, tabBarIcon: tabIcon('forum') }} />
       <Tabs.Screen name="service" options={{ href: null, title: 'Służba', headerShown: false }} />
       <Tabs.Screen name="wiedza" options={{ href: null, title: 'Wiedza', headerLeft }} />
       <Tabs.Screen name="announcements" options={{ href: null, title: 'Ogłoszenia', headerLeft }} />

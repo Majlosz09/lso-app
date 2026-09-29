@@ -46,7 +46,7 @@ export default function AdminTabsLayout() {
         <Tabs.Screen name="schedules" options={{ title: 'Grafik', tabBarIcon: tabIcon('calendar-month') }} />
         <Tabs.Screen name="members" options={{ title: 'Członkowie', tabBarIcon: tabIcon('account-group') }} />
         <Tabs.Screen name="points" options={{ title: 'Punkty', headerRight: pointsHeaderRight, tabBarIcon: tabIcon('trophy') }} />
-        <Tabs.Screen name="chat" options={{ title: 'Czat', tabBarIcon: tabIcon('forum') }} />
+        <Tabs.Screen name="chat" options={{ title: 'Czat', headerShown: false, tabBarIcon: tabIcon('forum') }} />
         <Tabs.Screen name="announcements" options={{ href: null, title: 'Ogłoszenia', headerLeft }} />
         <Tabs.Screen name="profile" options={{ href: null, title: 'Profil', headerLeft, headerRight: undefined }} />
       </Tabs>

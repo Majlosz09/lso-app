@@ -57,7 +57,7 @@ describe('ChannelRow', () => {
       last_message_type: 'poll' as const,
     }
     const { getByText } = render(<ChannelRow item={pollChannel} onPress={jest.fn()} />)
-    expect(getByText('📊 Ankieta')).toBeTruthy()
+    expect(getByText(/^Ankieta: /)).toBeTruthy()
   })
 
   it('shows placeholder when no last message', () => {
