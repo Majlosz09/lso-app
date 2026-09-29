@@ -130,3 +130,7 @@ W raporcie tego zabrakło. Dziś służba **nie ma ról liturgicznych ani liczby
 - „Wybierz co najmniej jedną rolę” przy tworzeniu służby.
 
 Decyzja w toku.
+
+**Decyzja N17 (2026-09-29):** model zostaje: na każdą Mszę potrzeba **min. 1 ministranta**, obsada to 0 lub ≥ 1, zapisy działają jak dziś. Nowa funkcja: opiekun może na **konkretnej** Mszy (uroczystość, święto) włączyć **role** (Ceremoniarz, Lektor, Akolita…) i albo sam przypisać do nich ministrantów, albo dać im wolny wybór (zapis na wolną rolę). Pozostałe Msze bez zmian.
+
+**Słowo dnia:** tekst dostarcza użytkownik. Ja przygotowuję tabelę (data → sigla, werset, źródło), wyświetlanie i import z CSV.
