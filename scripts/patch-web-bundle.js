@@ -5,7 +5,9 @@ const fs = require('fs');
 const path = require('path');
 const glob = require('fs');
 
-const bundleDir = path.join(__dirname, '../dist/_expo/static/js/web');
+// argument: katalog eksportu (domyślnie dist) — np. dist-dev dla builda testowego
+const outDir = process.argv[2] || 'dist';
+const bundleDir = path.join(__dirname, '..', outDir, '_expo/static/js/web');
 const files = fs.readdirSync(bundleDir).filter(f => f.endsWith('.js'));
 
 if (files.length === 0) {

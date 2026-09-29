@@ -2,6 +2,19 @@ import { useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import Toast from 'react-native-toast-message'
+import * as SplashScreen from 'expo-splash-screen'
+import { useFonts } from 'expo-font'
+import {
+  InstrumentSerif_400Regular,
+  InstrumentSerif_400Regular_Italic,
+} from '@expo-google-fonts/instrument-serif'
+import {
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from '@expo-google-fonts/manrope'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import * as Notifications from 'expo-notifications'
 import { supabase } from '../lib/supabase'
@@ -10,6 +23,7 @@ import { ThemeProvider } from '../lib/ThemeContext'
 import { OnboardingModal } from '../components/OnboardingModal'
 import { EnvBanner } from '../components/EnvBanner'
 import { WhatsNewModal } from '../components/WhatsNewModal'
+import { toastConfig } from '../components/ui/toastConfig'
 import '../lib/webAlert' // Alert.alert na webie (react-native-web go nie wyświetla)
 
 if (Platform.OS !== 'web') {
@@ -35,7 +49,29 @@ if (Platform.OS === 'web') {
 
 const queryClient = new QueryClient()
 
+SplashScreen.preventAutoHideAsync().catch(() => {})
+
 export default function RootLayout() {
+  // Fonty redesignu v2 — splash zostaje, dopóki się nie wczytają (albo nie padną)
+  const [fontsLoaded, fontError] = useFonts({
+    InstrumentSerif_400Regular,
+    InstrumentSerif_400Regular_Italic,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
+  })
+  const fontsReady = fontsLoaded || !!fontError
+
+  useEffect(() => {
+    if (fontsReady) SplashScreen.hideAsync().catch(() => {})
+  }, [fontsReady])
+
+  // Web: HTML jest renderowany statycznie — wstrzymanie renderu psuje hydratację (React #418),
+  // więc tam fonty po prostu podmieniają się po wczytaniu.
+  if (!fontsReady && Platform.OS !== 'web') return null
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
@@ -128,7 +164,7 @@ function AuthGate() {
         <Stack.Screen name="(parent)" />
         <Stack.Screen name="wiedza" options={{ headerShown: false }} />
       </Stack>
-      <Toast />
+      <Toast config={toastConfig} />
       <EnvBanner />
       <OnboardingModal
         visible={showOnboarding}
