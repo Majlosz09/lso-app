@@ -1,98 +1,80 @@
-import { useEffect, useState, useMemo } from 'react'
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { BADGE_CATALOG } from '../../lib/badges'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
-import { shadow } from '../../lib/shadows'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { AppText, Badge, Card, ScreenHeader } from '../../components/ui'
 
-type CatalogEntry = {
-  id: string
-  name: string
-  icon: string
-  criteria_key: string
-  parish_id: string | null
-}
+type CatalogEntry = { id: string; name: string; icon: string; criteria_key: string; parish_id: string | null }
 
 export default function BadgeCatalogScreen() {
   const router = useRouter()
+  const isDesktop = useIsDesktop()
   const { profile } = useAuthStore()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
-  const insets = useSafeAreaInsets()
   const [badges, setBadges] = useState<CatalogEntry[]>([])
+  const [earned, setEarned] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!profile?.parish_id) return
-    supabase
-      .from('badge_definitions')
-      .select('id, name, icon, criteria_key, parish_id')
-      .or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`)
-      .order('name')
-      .then(({ data }) => {
-        setBadges(data ?? [])
-        setLoading(false)
-      })
-  }, [profile?.parish_id])
+    Promise.all([
+      supabase.from('badge_definitions').select('id, name, icon, criteria_key, parish_id')
+        .or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`).order('name'),
+      supabase.from('member_badges').select('badge_definition:badge_definitions(criteria_key)')
+        .eq('profile_id', profile.id).eq('is_active', true),
+    ]).then(([defs, mine]) => {
+      setBadges((defs.data ?? []) as CatalogEntry[])
+      setEarned(new Set(((mine.data ?? []) as any[]).map(m => m.badge_definition?.criteria_key).filter(Boolean)))
+      setLoading(false)
+    })
+  }, [profile?.parish_id, profile?.id])
 
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
-  }
+  const list = loading ? <ActivityIndicator color={c.primary} style={styles.loader} /> : (
+    <Card flush>
+      {badges.length === 0 ? <AppText muted style={styles.pad}>Brak odznak w katalogu.</AppText> : badges.map((b, i) => {
+        const has = earned.has(b.criteria_key)
+        return (
+          <View key={b.id} style={[styles.row, i > 0 && { borderTopWidth: 1, borderTopColor: c.borderLight }]}>
+            <View style={[styles.circle, { backgroundColor: has ? c.primary : c.borderLight }]}>
+              <AppText style={[styles.icon, !has && styles.dim]}>{b.icon}</AppText>
+            </View>
+            <View style={styles.flex}>
+              <AppText variant="bodyStrong">{b.name}</AppText>
+              <AppText variant="small" muted>{BADGE_CATALOG[b.criteria_key] ?? 'Przyznawana ręcznie przez opiekuna'}</AppText>
+            </View>
+            {has && <Badge label="Masz" tone="success" />}
+          </View>
+        )
+      })}
+    </Card>
+  )
 
   return (
-    <FlatList
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingTop: 0, paddingBottom: Math.max(insets.bottom, 20) }]}
-      ListHeaderComponent={
-        <TouchableOpacity style={styles.backRow} onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={20} color={c.primary} />
-          <Text style={styles.backText}>Wróć</Text>
-        </TouchableOpacity>
-      }
-      data={badges}
-      keyExtractor={item => item.id}
-      renderItem={({ item }) => (
-        <View style={styles.row}>
-          <Text style={styles.icon}>{item.icon}</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.name}>{item.name}</Text>
-            <Text style={styles.desc}>
-              {BADGE_CATALOG[item.criteria_key] ?? 'Przyznawana ręcznie przez animatora'}
-            </Text>
-          </View>
-        </View>
+    <ScrollView style={{ backgroundColor: c.bg }}>
+      {!isDesktop && (
+        <ScreenHeader
+          eyebrow="Odznaki"
+          title="Katalog odznak"
+          onBack={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/points'))}
+        />
       )}
-      ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-      ListEmptyComponent={
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>Brak odznak w katalogu.</Text>
-        </View>
-      }
-    />
+      <View style={[styles.body, isDesktop && styles.desktop]}>{list}</View>
+    </ScrollView>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    content: { padding: 16 },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    row: {
-      flexDirection: 'row', alignItems: 'flex-start', gap: 14,
-      backgroundColor: c.surface, borderRadius: 12, padding: 14,
-      ...shadow.xs,
-    },
-    icon: { fontSize: 28, lineHeight: 34 },
-    name: { fontSize: 15, fontWeight: '600', color: c.text },
-    desc: { fontSize: 13, color: c.subtext, marginTop: 2 },
-    empty: { alignItems: 'center', padding: 32 },
-    emptyText: { fontSize: 14, color: c.textTertiary },
-    backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 12, paddingBottom: 8 },
-    backText: { fontSize: 15, color: c.primary, fontWeight: '500' },
-  })
-}
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  loader: { marginTop: 40 },
+  pad: { padding: 14 },
+  body: { padding: 16, paddingBottom: 32 },
+  desktop: { padding: 28, paddingHorizontal: 32, maxWidth: 820, width: '100%', alignSelf: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 14, paddingVertical: 12 },
+  circle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  icon: { fontSize: 20 },
+  dim: { opacity: 0.45 },
+})

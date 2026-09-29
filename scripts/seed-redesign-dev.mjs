@@ -104,7 +104,7 @@ for (const [key, name] of [['kacper', 'Kacper Nowicki'], ['bartek', 'Bartek Sowa
 }
 
 // Rangi: pierwsze z parafii po kolei (jeśli są)
-const { data: ranks } = await admin.c.from('ranks').select('id, name, "order"').eq('parish_id', parishId).order('order')
+const { data: ranks } = await admin.c.from('ranks').select('id, name, "order"').or(`parish_id.is.null,parish_id.eq.${parishId}`).order('order')
 if (ranks?.length) {
   const pick = (i) => ranks[Math.min(i, ranks.length - 1)].id
   const rankOf = { tomek: 4, kuba: 3, filip: 3, michal: 2, antek: 2, olek: 1, szymon: 1, janek: 0, stas: 0 }

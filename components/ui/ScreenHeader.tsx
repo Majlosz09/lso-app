@@ -8,7 +8,8 @@ import { AppText } from './AppText'
 import { Icon } from './Icon'
 
 type Props = {
-  title: string
+  /** tytuł (Instrument Serif 36); można pominąć, gdy nagłówek ma własną treść (np. liczba punktów) */
+  title?: string
   eyebrow?: string
   subtitle?: string
   /** pokazuje „‹ Wstecz” nad tytułem */
@@ -63,9 +64,11 @@ export function ScreenHeader({
       <View style={styles.titleRow}>
         <View style={styles.flex}>
           {!!eyebrow && <AppText variant="eyebrow" color={p.accent}>{eyebrow}</AppText>}
-          <AppText variant="display" color={p.fg} style={!!eyebrow && styles.titleGap} accessibilityRole="header">
-            {title}
-          </AppText>
+          {!!title && (
+            <AppText variant="display" color={p.fg} style={!!eyebrow && styles.titleGap} accessibilityRole="header">
+              {title}
+            </AppText>
+          )}
           {!!subtitle && <AppText variant="body" color={p.fg} style={styles.subtitle}>{subtitle}</AppText>}
         </View>
         {right}

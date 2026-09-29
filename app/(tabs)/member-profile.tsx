@@ -1,76 +1,93 @@
-import { useCallback, useEffect, useState, useMemo } from 'react'
-import {
-  View, Text, StyleSheet, ScrollView,
-  ActivityIndicator, Modal, TouchableOpacity
-} from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
-import { shadow } from '../../lib/shadows'
-import { FormationSection, BadgesSection, BadgeWithDef } from '../../components/FormationBadges'
+import { sans } from '../../lib/theme'
+import { pl } from '../../lib/dates'
+import { FormationSection, BadgeWithDef } from '../../components/FormationBadges'
+import { BadgeGrid } from '../../components/BadgeGrid'
+import { AppText, Avatar, Button, Card, HeaderChip, ScreenHeader, SectionHeader } from '../../components/ui'
 
 type MemberData = {
   id: string
   full_name: string
+  avatar_url: string | null
   rank_id: string | null
   ranks: { name: string } | null
   member_badges: (BadgeWithDef & { is_active: boolean })[]
 }
 
+type Stats = { points: number; services: number; position: number; attendance: number | null }
+
+/** Frekwencja: obecny / (obecny + nieobecny + usprawiedliwiony) na minionych służbach. */
+export function attendanceRate(statuses: string[]): number | null {
+  const counted = statuses.filter(s => ['present', 'absent', 'excused', 'confirmed'].includes(s))
+  if (counted.length === 0) return null
+  return Math.round((counted.filter(s => s === 'present').length / counted.length) * 100)
+}
+
 export default function MemberProfileScreen() {
   const router = useRouter()
+  const isDesktop = useIsDesktop()
   const { id } = useLocalSearchParams<{ id: string }>()
   const { profile } = useAuthStore()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
-  const insets = useSafeAreaInsets()
+  const { palette } = useLiturgyHeader()
 
   const [member, setMember] = useState<MemberData | null>(null)
+  const [stats, setStats] = useState<Stats | null>(null)
   const [allRanks, setAllRanks] = useState<{ id: string; name: string; order: number }[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
-  const [selectedBadge, setSelectedBadge] = useState<BadgeWithDef | null>(null)
 
-  const fetchData = useCallback(() => {
+  const fetchData = useCallback(async () => {
     if (!id || !profile?.parish_id) return
-    Promise.all([
-      supabase
-        .from('profiles')
-        .select(`
-          id, full_name, rank_id,
-          ranks(name),
-          member_badges(
-            id, awarded_at, is_active,
-            badge_definition:badge_definitions(id, name, icon, criteria_key)
-          )
-        `)
-        .eq('id', id)
-        .single(),
-      supabase
-        .from('ranks')
-        .select('id, name, order')
-        .or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`)
-        .order('order'),
-    ]).then(([memberRes, ranksRes]) => {
-      if (memberRes.error || !memberRes.data) {
-        setNotFound(true)
-      } else {
-        setMember(memberRes.data as unknown as MemberData)
-      }
+    try {
+      const [memberRes, ranksRes, rankingRes, assignRes] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select(`
+            id, full_name, avatar_url, rank_id,
+            ranks(name),
+            member_badges(
+              id, awarded_at, is_active,
+              badge_definition:badge_definitions(id, name, icon, criteria_key)
+            )
+          `)
+          .eq('id', id)
+          .single(),
+        supabase.from('ranks').select('id, name, order')
+          .or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`).order('order'),
+        supabase.from('points_summary').select('profile_id, total_points, services_count')
+          .eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
+        supabase.from('schedule_assignments').select('status, schedule:schedules!inner(date)')
+          .eq('profile_id', id).lt('schedule.date', new Date().toISOString().slice(0, 10)),
+      ])
+      if (memberRes.error || !memberRes.data) setNotFound(true)
+      else setMember(memberRes.data as unknown as MemberData)
       setAllRanks(ranksRes.data ?? [])
-      setLoading(false)
-    }).catch(() => { setLoading(false); setNotFound(true) })
+      const rows = (rankingRes.data ?? []) as any[]
+      const idx = rows.findIndex(r => r.profile_id === id)
+      setStats({
+        points: idx >= 0 ? rows[idx].total_points : 0,
+        services: idx >= 0 ? rows[idx].services_count : 0,
+        position: idx + 1,
+        attendance: attendanceRate(((assignRes.data ?? []) as any[]).map(a => a.status)),
+      })
+    } catch {
+      setNotFound(true)
+    }
+    setLoading(false)
   }, [id, profile?.parish_id])
 
   useEffect(() => { fetchData() }, [fetchData])
-
-  useRealtimeTable('profiles', fetchData, id ? `id=eq.${id}` : undefined)
-  useRealtimeTable('member_badges', fetchData, id ? `profile_id=eq.${id}` : undefined)
+  useRealtimeTable('profiles', () => { fetchData() }, id ? `id=eq.${id}` : undefined)
+  useRealtimeTable('member_badges', () => { fetchData() }, id ? `profile_id=eq.${id}` : undefined)
 
   const seen = new Set<string>()
   const activeBadges = (member?.member_badges ?? [])
@@ -82,128 +99,86 @@ export default function MemberProfileScreen() {
       return true
     })
 
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
-  }
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)/points'))
 
+  if (loading) {
+    return <View style={[styles.center, { backgroundColor: c.bg }]}><ActivityIndicator color={c.primary} /></View>
+  }
   if (notFound || !member) {
     return (
-      <View style={styles.center}>
-        <Ionicons name="person-outline" size={48} color={c.iconMuted} />
-        <Text style={styles.notFound}>Nie znaleziono profilu</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={16} color={c.primary} />
-          <Text style={styles.backBtnText}>Wróć</Text>
-        </TouchableOpacity>
+      <View style={[styles.center, { backgroundColor: c.bg, gap: 12 }]}>
+        <AppText muted>Nie znaleziono profilu.</AppText>
+        <Button label="Wróć" variant="secondary" onPress={back} />
       </View>
     )
   }
 
-  const initials = member.full_name.split(' ').map(n => n[0]).slice(0, 2).join('')
+  const statTiles = (
+    <View style={styles.stats}>
+      {[
+        [String(stats?.points ?? 0), 'pkt'],
+        [stats?.attendance != null ? `${stats.attendance}%` : '—', 'frekwencja'],
+        [String(stats?.services ?? 0), pl(stats?.services ?? 0, ['służba', 'służby', 'służb'])],
+      ].map(([v, l]) => (
+        <Card key={l} style={styles.stat}>
+          <AppText style={[styles.statValue, { color: c.text }]}>{v}</AppText>
+          <AppText variant="small" muted>{l}</AppText>
+        </Card>
+      ))}
+    </View>
+  )
 
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 20) }]}
-    >
-      <TouchableOpacity style={styles.backRow} onPress={() => router.back()} activeOpacity={0.7}>
-        <Ionicons name="arrow-back" size={20} color={c.primary} />
-        <Text style={styles.backRowText}>Wróć</Text>
-      </TouchableOpacity>
-      <View style={styles.headerCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarInitials}>{initials}</Text>
-        </View>
-        <View style={{ flex: 1, gap: 6 }}>
-          <Text style={styles.memberName}>{member.full_name}</Text>
-          {member.ranks?.name ? (
-            <View style={styles.rankChip}>
-              <Text style={styles.rankChipText}>{member.ranks.name}</Text>
-            </View>
-          ) : (
-            <Text style={styles.noRank}>Brak rangi</Text>
-          )}
+  const identity = (fg: string) => (
+    <View style={styles.identity}>
+      <Avatar name={member.full_name} avatarUrl={member.avatar_url} size={64} />
+      <View style={styles.flex}>
+        <AppText variant="display" color={fg} style={styles.name}>{member.full_name}</AppText>
+        <View style={styles.chips}>
+          <HeaderChip label={member.ranks?.name ?? 'Ministrant'} palette={palette} />
+          {!!stats?.position && <HeaderChip label={`#${stats.position}`} palette={palette} />}
         </View>
       </View>
+    </View>
+  )
 
-      {allRanks.length > 0 && (
-        <FormationSection ranks={allRanks} currentRankId={member.rank_id} c={c} />
-      )}
+  const body = (
+    <View style={styles.body}>
+      {statTiles}
+      {allRanks.length > 0 && <FormationSection ranks={allRanks} currentRankId={member.rank_id} c={c} />}
+      <View>
+        <SectionHeader title="Wyróżnienia" />
+        <Card><BadgeGrid badges={activeBadges} emptyText="Brak wyróżnień." /></Card>
+      </View>
+    </View>
+  )
 
-      {activeBadges.length > 0 && (
-        <BadgesSection badges={activeBadges} onBadgePress={setSelectedBadge} c={c} />
-      )}
+  if (isDesktop) {
+    return (
+      <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={styles.desktop}>
+        <View style={[styles.desktopHead, { backgroundColor: palette.bg }]}>{identity(palette.fg)}</View>
+        {body}
+      </ScrollView>
+    )
+  }
 
-      <Modal
-        visible={selectedBadge !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedBadge(null)}
-      >
-        <TouchableOpacity
-          style={styles.tooltipOverlay}
-          activeOpacity={1}
-          onPress={() => setSelectedBadge(null)}
-        >
-          <View style={styles.tooltip}>
-            <Text style={styles.tooltipIcon}>{selectedBadge?.badge_definition?.icon ?? ''}</Text>
-            <Text style={styles.tooltipName}>{selectedBadge?.badge_definition?.name ?? ''}</Text>
-            <Text style={styles.tooltipDate}>
-              {selectedBadge
-                ? new Date(selectedBadge.awarded_at).toLocaleDateString('pl-PL', {
-                    day: 'numeric', month: 'long', year: 'numeric',
-                  })
-                : ''}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+  return (
+    <ScrollView style={{ backgroundColor: c.bg }}>
+      <ScreenHeader onBack={back}>{identity(palette.fg)}</ScreenHeader>
+      {body}
     </ScrollView>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    content: { padding: 16, gap: 16 },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    notFound: { fontSize: 16, color: c.textTertiary, marginTop: 12 },
-    backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: c.surface, borderRadius: 10 },
-    backBtnText: { fontSize: 15, color: c.primary, fontWeight: '500' },
-    backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingBottom: 8 },
-    backRowText: { fontSize: 15, color: c.primary, fontWeight: '500' },
-
-    headerCard: {
-      flexDirection: 'row', alignItems: 'center', gap: 16,
-      backgroundColor: c.surface, borderRadius: 16, padding: 20,
-      ...shadow.md,
-    },
-    avatar: {
-      width: 56, height: 56, borderRadius: 28,
-      backgroundColor: c.primaryAlpha08,
-      justifyContent: 'center', alignItems: 'center',
-    },
-    avatarInitials: { fontSize: 20, fontWeight: '700', color: c.primary },
-    memberName: { fontSize: 18, fontWeight: '700', color: c.text },
-    rankChip: {
-      alignSelf: 'flex-start',
-      backgroundColor: c.primaryAlpha08, borderRadius: 12,
-      paddingHorizontal: 10, paddingVertical: 4,
-      borderWidth: 1, borderColor: c.primaryAlpha12,
-    },
-    rankChipText: { fontSize: 13, fontWeight: '600', color: c.primary },
-    noRank: { fontSize: 13, color: c.textTertiary },
-
-    tooltipOverlay: {
-      flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
-      justifyContent: 'center', alignItems: 'center', padding: 40,
-    },
-    tooltip: {
-      backgroundColor: c.surface, borderRadius: 16, padding: 24,
-      alignItems: 'center', gap: 6, ...shadow.md, minWidth: 180,
-    },
-    tooltipIcon: { fontSize: 40 },
-    tooltipName: { fontSize: 17, fontWeight: '700', color: c.text },
-    tooltipDate: { fontSize: 13, color: c.subtext },
-  })
-}
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  name: { fontSize: 30, lineHeight: 33 },
+  chips: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  body: { padding: 16, gap: 16, paddingBottom: 32 },
+  stats: { flexDirection: 'row', gap: 10 },
+  stat: { flex: 1, alignItems: 'center', gap: 2 },
+  statValue: { ...sans(800), fontSize: 22, fontVariant: ['tabular-nums'] },
+  desktop: { padding: 28, paddingHorizontal: 32, maxWidth: 820, width: '100%', alignSelf: 'center' },
+  desktopHead: { borderRadius: 22, padding: 24 },
+})

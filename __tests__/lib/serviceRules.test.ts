@@ -78,3 +78,13 @@ describe('dates', () => {
     expect(pl(22, ['punkt', 'punkty', 'punktów'])).toBe('punkty')
   })
 })
+
+describe('attendanceRate', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { attendanceRate } = require('../../app/(tabs)/member-profile')
+  it('present / counted past services', () => {
+    expect(attendanceRate(['present', 'present', 'absent', 'assigned'])).toBe(67)
+    expect(attendanceRate(['assigned'])).toBeNull()
+    expect(attendanceRate(['present', 'excused'])).toBe(50)
+  })
+})

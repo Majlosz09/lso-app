@@ -41,14 +41,14 @@ export default function TabsLayout() {
         name="attendance"
         options={{ title: 'Obecność', headerShown: false, tabBarStyle: { display: 'none' }, href: selfCheckIn ? undefined : null, tabBarIcon: tabIcon('qrcode-scan') }}
       />
-      <Tabs.Screen name="points" options={{ title: 'Punkty', tabBarIcon: tabIcon('trophy') }} />
+      <Tabs.Screen name="points" options={{ title: 'Punkty', headerShown: false, tabBarIcon: tabIcon('trophy') }} />
       <Tabs.Screen name="chat" options={{ title: 'Czat', tabBarIcon: tabIcon('forum') }} />
       <Tabs.Screen name="service" options={{ href: null, title: 'Służba', headerShown: false }} />
       <Tabs.Screen name="wiedza" options={{ href: null, title: 'Wiedza', headerLeft }} />
       <Tabs.Screen name="announcements" options={{ href: null, title: 'Ogłoszenia', headerLeft }} />
       <Tabs.Screen name="profile" options={{ href: null, title: 'Profil', headerLeft, headerRight: undefined }} />
-      <Tabs.Screen name="badge-catalog" options={{ href: null, title: 'Katalog odznak', headerLeft }} />
-      <Tabs.Screen name="member-profile" options={{ href: null, title: 'Profil ministranta', headerLeft }} />
+      <Tabs.Screen name="badge-catalog" options={{ href: null, title: 'Katalog odznak', headerShown: false }} />
+      <Tabs.Screen name="member-profile" options={{ href: null, title: 'Profil ministranta', headerShown: false }} />
     </Tabs>
   )
 }
