@@ -72,7 +72,7 @@ export function Sheet({ visible, onClose, title, eyebrow, children, footer, test
                 hitSlop={10}
                 style={[styles.close, { backgroundColor: c.borderLight }]}
               >
-                <Icon name="close" size={20} color={c.subtext} />
+                <Icon name="close" size={20} color={c.subtext} filled />
               </Pressable>
             </View>
           )}

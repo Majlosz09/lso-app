@@ -1,26 +1,20 @@
-import { useEffect, useState, useMemo } from 'react'
-import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
-  KeyboardAvoidingView, Platform, ScrollView, Linking
-} from 'react-native'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 import Toast from 'react-native-toast-message'
-import { Link } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import { shadow } from '../../lib/shadows'
+import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { sans } from '../../lib/theme'
+import { AuthDivider, AuthLayout } from '../../components/auth/AuthLayout'
+import {
+  ChoiceCard, ConsentCheckbox, LegalLink, PasswordField, WebFormWrapper,
+} from '../../components/auth/formParts'
+import { AppText, Button, Chip, Icon, TextField } from '../../components/ui'
 
 type Step = 'choose' | 'member' | 'admin'
 type MemberRole = 'member' | 'parent'
-
-function WebFormWrapper({ onSubmit, children }: { onSubmit: () => void; children: React.ReactNode }) {
-  if (Platform.OS !== 'web') return <>{children}</>
-  // @ts-ignore — form is valid HTML on web
-  return <form onSubmit={(e: any) => { e.preventDefault(); onSubmit() }} style={{ display: 'contents' }}>{children}</form>
-}
 
 // Alert.alert nie wyświetla się na webie (react-native-web) — Toast działa wszędzie
 function showError(title: string, message?: string) {
@@ -29,30 +23,6 @@ function showError(title: string, message?: string) {
 
 const TERMS_URL = 'https://lsoapp.com/regulamin'
 const PRIVACY_URL = 'https://lsoapp.com/privacy'
-
-function ConsentCheckbox({ checked, onToggle, children }: {
-  checked: boolean; onToggle: () => void; children: React.ReactNode
-}) {
-  const { colors: c } = useTheme()
-  return (
-    <TouchableOpacity
-      onPress={onToggle}
-      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 4 }}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked }}
-    >
-      <Ionicons name={checked ? 'checkbox' : 'square-outline'} size={22} color={checked ? c.primary : c.subtext} />
-      <Text style={{ flex: 1, fontSize: 13, lineHeight: 19, color: c.subtext }}>{children}</Text>
-    </TouchableOpacity>
-  )
-}
-
-function LegalLink({ url, label }: { url: string; label: string }) {
-  const { colors: c } = useTheme()
-  return (
-    <Text style={{ color: c.primary, fontWeight: '600' }} onPress={() => Linking.openURL(url)}>{label}</Text>
-  )
-}
 
 export default function RegisterScreen() {
   const [step, setStep] = useState<Step>('choose')
@@ -63,52 +33,43 @@ export default function RegisterScreen() {
 }
 
 function ChooseScreen({ onMember, onAdmin }: { onMember: () => void; onAdmin: () => void }) {
+  const router = useRouter()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
-
+  const isDesktop = useIsDesktop()
   return (
-    <View style={styles.chooseContainer}>
-      <View style={styles.chooseInner}>
-        <View style={styles.logoWrapper}>
-          <Ionicons name="shield-half-outline" size={52} color={c.primary} />
-        </View>
-        <Text style={styles.chooseTitle}>Dołącz do parafii</Text>
-        <Text style={styles.chooseSub}>Liturgiczna Służba Ołtarza</Text>
-
-        <View style={styles.cardsWrapper}>
-          <TouchableOpacity style={styles.chooseCard} onPress={onMember} activeOpacity={0.75}>
-            <View style={[styles.cardIcon, { backgroundColor: c.primary + '11' }]}>
-              <Ionicons name="person-add-outline" size={28} color={c.primary} />
-            </View>
-            <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>Jestem ministrantem lub rodzicem</Text>
-              <Text style={styles.cardSub}>Dołącz do parafii za pomocą kodu zaproszenia</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={c.iconMuted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.chooseCard} onPress={onAdmin} activeOpacity={0.75}>
-            <View style={[styles.cardIcon, { backgroundColor: '#16A34A11' }]}>
-              <Ionicons name="business-outline" size={28} color="#16A34A" />
-            </View>
-            <View style={styles.cardText}>
-              <Text style={styles.cardTitle}>Tworzę parafię</Text>
-              <Text style={styles.cardSub}>Administrator / ksiądz — nowa parafia w systemie</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={c.iconMuted} />
-          </TouchableOpacity>
-        </View>
-
-        <Link href="/(auth)/login" style={styles.loginLink}>
-          Masz już konto? Zaloguj się
-        </Link>
+    <AuthLayout
+      variant="hero"
+      title="Dołącz do"
+      titleAccent="parafii"
+      subtitle="Liturgiczna Służba Ołtarza"
+      onBack={() => (router.canGoBack() ? router.back() : router.replace('/(auth)/welcome'))}
+    >
+      <View style={styles.cards}>
+        <ChoiceCard
+          icon="account-group"
+          title="Jestem ministrantem lub rodzicem"
+          subtitle="Dołącz do parafii za pomocą kodu zaproszenia"
+          onPress={onMember}
+        />
+        <ChoiceCard
+          icon="church"
+          tone={isDesktop ? 'light' : 'navy'}
+          title="Tworzę parafię"
+          subtitle="Administrator / ksiądz — nowa parafia w systemie"
+          onPress={onAdmin}
+        />
       </View>
-    </View>
+      <Pressable onPress={() => router.replace('/(auth)/login')} accessibilityRole="link" style={styles.loginLink}>
+        <AppText style={[styles.loginLinkText, { color: isDesktop ? c.subtext : '#C9D3E3' }]}>
+          Masz już konto? <AppText style={[styles.loginLinkStrong, { color: isDesktop ? c.primary : c.gold }]}>Zaloguj się</AppText>
+        </AppText>
+      </Pressable>
+    </AuthLayout>
   )
 }
 
 function MemberForm({ onBack }: { onBack: () => void }) {
-  const { fetchProfile, setSession } = useAuthStore()
+  const { setSession } = useAuthStore()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -118,7 +79,6 @@ function MemberForm({ onBack }: { onBack: () => void }) {
   const [rocznik, setRocznik] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
 
   const [parishIdPreview, setParishIdPreview] = useState<string | null>(null)
   const [membersList, setMembersList] = useState<{ id: string; full_name: string }[]>([])
@@ -130,7 +90,6 @@ function MemberForm({ onBack }: { onBack: () => void }) {
   const isMinor = role === 'member' && rocznik.length === 4 && new Date().getFullYear() - parseInt(rocznik) < 16
 
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
 
   useEffect(() => {
     if (role !== 'parent' || inviteCode.length !== 6) {
@@ -160,7 +119,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
       if (!rocznik || yr < 1990) return 'Podaj poprawny rocznik (np. 2018).'
     }
     if (inviteCode.trim().length !== 6) return 'Wpisz 6-znakowy kod parafii.'
-    if (!acceptTerms) return 'Zaakceptuj Regulamin i Politykę prywatności.'
+    if (!acceptTerms) return 'Zaakceptuj regulamin, aby kontynuować.'
     if (isMinor && !parentConsent) return 'Osoba poniżej 16 lat potrzebuje zgody rodzica lub opiekuna.'
     return null
   }
@@ -245,103 +204,87 @@ function MemberForm({ onBack }: { onBack: () => void }) {
     setSession(activeSession)
   }
 
+  const codeComplete = inviteCode.length === 6
+
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView style={styles.formContainer} contentContainerStyle={styles.formInner} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <Ionicons name="arrow-back-outline" size={20} color={c.primary} />
-          <Text style={styles.backBtnText}>Wróć</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.formTitle}>Rejestracja</Text>
-        <Text style={styles.formSub}>Ministrant lub rodzic</Text>
-
-        <WebFormWrapper onSubmit={handleSubmit}>
-        <View style={styles.nameRow}>
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Imię" placeholderTextColor={c.textTertiary}
-            value={firstName} onChangeText={setFirstName} />
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Nazwisko" placeholderTextColor={c.textTertiary}
-            value={lastName} onChangeText={setLastName} />
-        </View>
-
-        <TextInput style={styles.input} placeholder="Email" placeholderTextColor={c.textTertiary}
-          autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
-        <View style={styles.passwordRow}>
-          <TextInput style={styles.passwordInput} placeholder="Hasło (min. 8 znaków)" placeholderTextColor={c.textTertiary}
-            secureTextEntry={!showPassword} value={password} onChangeText={setPassword} />
-          <TouchableOpacity onPress={() => setShowPassword(p => !p)} hitSlop={8}>
-            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={c.textTertiary} />
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.label}>Rola</Text>
-        <View style={styles.roleRow}>
-          {([{ key: 'member', label: 'Ministrant' }, { key: 'parent', label: 'Rodzic' }] as { key: MemberRole; label: string }[]).map(r => (
-            <TouchableOpacity key={r.key} style={[styles.roleChip, role === r.key && styles.roleChipActive]}
-              onPress={() => setRole(r.key)}>
-              <Text style={[styles.roleChipText, role === r.key && styles.roleChipTextActive]}>{r.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <TextInput style={styles.input} placeholder="Numer telefonu" placeholderTextColor={c.textTertiary}
-          keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
-
-        {role === 'member' && (
-          <TextInput style={styles.input} placeholder="Rocznik ministranta (np. 2018)" placeholderTextColor={c.textTertiary}
-            keyboardType="number-pad" value={rocznik} onChangeText={setRocznik} maxLength={4} />
-        )}
-
-        <Text style={styles.label}>Kod parafii</Text>
-        <View style={styles.codeInputWrapper}>
-          <Ionicons name="key-outline" size={18} color={c.textTertiary} style={{ marginRight: 8 }} />
-          <TextInput
-            style={styles.codeInput}
-            placeholder="6-znakowy kod (np. AB12CD)"
-            placeholderTextColor={c.textTertiary}
-            autoCapitalize="characters"
-            value={inviteCode}
-            onChangeText={t => setInviteCode(t.toUpperCase())}
-            maxLength={6}
+    <AuthLayout title="Dołącz do parafii" subtitle="Kod dostaniesz od opiekuna ministrantów." onBack={onBack}>
+      <WebFormWrapper onSubmit={handleSubmit}>
+        <View style={styles.group}>
+          <AppText variant="label" muted>Kim jesteś?</AppText>
+          <ChoiceCard
+            icon="account"
+            title="Ministrant"
+            subtitle="Służę przy ołtarzu"
+            selected={role === 'member'}
+            onPress={() => setRole('member')}
           />
-          {inviteCode.length === 6 && (
-            <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
-          )}
+          <ChoiceCard
+            icon="human-male-female-child"
+            title="Rodzic"
+            subtitle="Śledzę dyżury i punkty dziecka"
+            selected={role === 'parent'}
+            onPress={() => setRole('parent')}
+          />
         </View>
 
-        {role === 'parent' && inviteCode.length === 6 && (
-          <>
-            <Text style={styles.label}>Twoje dziecko <Text style={{ color: c.textTertiary, fontWeight: '400' }}>(opcjonalnie)</Text></Text>
+        <TextField
+          label="Kod parafii"
+          placeholder="6-znakowy kod (np. AB12CD)"
+          autoCapitalize="characters"
+          value={inviteCode}
+          onChangeText={t => setInviteCode(t.toUpperCase())}
+          maxLength={6}
+          style={styles.code}
+          hint={codeComplete ? 'Kod ma poprawną długość — sprawdzimy go przy zapisie.' : undefined}
+          hintTone="success"
+        />
+
+        {role === 'parent' && codeComplete && (
+          <View style={styles.group}>
+            <AppText variant="label" muted>Twoje dziecko (opcjonalnie)</AppText>
             {loadingMembers ? (
-              <ActivityIndicator color={c.primary} style={{ marginBottom: 12 }} />
+              <ActivityIndicator color={c.primary} />
             ) : membersList.length === 0 ? (
-              <View style={styles.childEmptyBox}>
-                <Ionicons name="people-outline" size={20} color={c.textTertiary} />
-                <Text style={styles.childEmptyText}>Brak ministrantów w parafii</Text>
+              <View style={[styles.empty, { borderColor: c.inputBorder }]}>
+                <Icon name="account-group" size={18} color={c.textTertiary} />
+                <AppText variant="small" muted>Brak ministrantów w parafii o tym kodzie</AppText>
               </View>
             ) : (
-              <View style={styles.childList}>
-                {membersList.map(m => {
-                  const selected = selectedChildIds.includes(m.id)
-                  return (
-                    <TouchableOpacity
-                      key={m.id}
-                      style={[styles.childOption, selected && styles.childOptionSelected]}
-                      onPress={() => toggleChild(m.id)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="person-outline" size={16} color={selected ? c.primary : c.subtext} />
-                      <Text style={[styles.childOptionText, selected && styles.childOptionTextSelected]}>
-                        {m.full_name}
-                      </Text>
-                      {selected && <Ionicons name="checkmark-circle" size={18} color={c.primary} />}
-                    </TouchableOpacity>
-                  )
-                })}
+              <View style={styles.chips}>
+                {membersList.map(m => (
+                  <Chip
+                    key={m.id}
+                    label={m.full_name}
+                    selected={selectedChildIds.includes(m.id)}
+                    onPress={() => toggleChild(m.id)}
+                  />
+                ))}
               </View>
             )}
-          </>
+          </View>
         )}
+
+        <View style={styles.row}>
+          <TextField label="Imię" placeholder="Imię" value={firstName} onChangeText={setFirstName} containerStyle={styles.flex} autoComplete="given-name" />
+          <TextField label="Nazwisko" placeholder="Nazwisko" value={lastName} onChangeText={setLastName} containerStyle={styles.flex} autoComplete="family-name" />
+        </View>
+        <TextField
+          label="E-mail" placeholder="Email" autoCapitalize="none" keyboardType="email-address"
+          autoComplete="email" value={email} onChangeText={setEmail}
+        />
+        <PasswordField label="Hasło" placeholder="Min. 8 znaków" autoComplete="new-password" value={password} onChangeText={setPassword} />
+        <View style={styles.row}>
+          <TextField
+            label="Telefon" placeholder="Numer telefonu" keyboardType="phone-pad" autoComplete="tel"
+            value={phone} onChangeText={setPhone} containerStyle={styles.flex}
+          />
+          {role === 'member' && (
+            <TextField
+              label="Rocznik" placeholder="np. 2014" keyboardType="number-pad"
+              value={rocznik} onChangeText={setRocznik} maxLength={4} containerStyle={styles.rocznik}
+            />
+          )}
+        </View>
 
         <ConsentCheckbox checked={acceptTerms} onToggle={() => setAcceptTerms(v => !v)}>
           Akceptuję <LegalLink url={TERMS_URL} label="Regulamin" /> i zapoznałem/-am się
@@ -353,12 +296,9 @@ function MemberForm({ onBack }: { onBack: () => void }) {
           </ConsentCheckbox>
         )}
 
-        <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleSubmit} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Zarejestruj się</Text>}
-        </TouchableOpacity>
-        </WebFormWrapper>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <Button label="Wyślij zgłoszenie" onPress={handleSubmit} loading={loading} />
+      </WebFormWrapper>
+    </AuthLayout>
   )
 }
 
@@ -374,10 +314,6 @@ function AdminForm({ onBack }: { onBack: () => void }) {
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [authorized, setAuthorized] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-
-  const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
 
   const validate = () => {
     if (!firstName.trim()) return 'Wpisz imię.'
@@ -386,7 +322,7 @@ function AdminForm({ onBack }: { onBack: () => void }) {
     if (password.length < 8) return 'Hasło musi mieć minimum 8 znaków.'
     if (!phone.trim()) return 'Wpisz numer telefonu.'
     if (!parishName.trim()) return 'Wpisz nazwę parafii.'
-    if (!acceptTerms) return 'Zaakceptuj Regulamin i Politykę prywatności.'
+    if (!acceptTerms) return 'Zaakceptuj regulamin, aby kontynuować.'
     if (!authorized) return 'Potwierdź, że działasz w imieniu parafii.'
     return null
   }
@@ -468,46 +404,26 @@ function AdminForm({ onBack }: { onBack: () => void }) {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView style={styles.formContainer} contentContainerStyle={styles.formInner} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <Ionicons name="arrow-back-outline" size={20} color={c.primary} />
-          <Text style={styles.backBtnText}>Wróć</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.formTitle}>Nowa parafia</Text>
-        <Text style={styles.formSub}>Administrator / ksiądz</Text>
-
-        <WebFormWrapper onSubmit={handleSubmit}>
-        <View style={styles.nameRow}>
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Imię" placeholderTextColor={c.textTertiary}
-            value={firstName} onChangeText={setFirstName} />
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="Nazwisko" placeholderTextColor={c.textTertiary}
-            value={lastName} onChangeText={setLastName} />
+    <AuthLayout title="Nowa parafia" subtitle="Administrator / ksiądz" onBack={onBack}>
+      <WebFormWrapper onSubmit={handleSubmit}>
+        <View style={styles.row}>
+          <TextField label="Imię" placeholder="Imię" value={firstName} onChangeText={setFirstName} containerStyle={styles.flex} autoComplete="given-name" />
+          <TextField label="Nazwisko" placeholder="Nazwisko" value={lastName} onChangeText={setLastName} containerStyle={styles.flex} autoComplete="family-name" />
         </View>
+        <TextField
+          label="E-mail" placeholder="Email" autoCapitalize="none" keyboardType="email-address"
+          autoComplete="email" value={email} onChangeText={setEmail}
+        />
+        <PasswordField label="Hasło" placeholder="Min. 8 znaków" autoComplete="new-password" value={password} onChangeText={setPassword} />
+        <TextField label="Telefon" placeholder="Numer telefonu" keyboardType="phone-pad" autoComplete="tel" value={phone} onChangeText={setPhone} />
 
-        <TextInput style={styles.input} placeholder="Email" placeholderTextColor={c.textTertiary}
-          autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
-        <View style={styles.passwordRow}>
-          <TextInput style={styles.passwordInput} placeholder="Hasło (min. 8 znaków)" placeholderTextColor={c.textTertiary}
-            secureTextEntry={!showPassword} value={password} onChangeText={setPassword} />
-          <TouchableOpacity onPress={() => setShowPassword(p => !p)} hitSlop={8}>
-            <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={c.textTertiary} />
-          </TouchableOpacity>
-        </View>
-        <TextInput style={styles.input} placeholder="Numer telefonu" placeholderTextColor={c.textTertiary}
-          keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+        <AuthDivider label="Dane parafii" />
 
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>Dane parafii</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <TextInput style={styles.input} placeholder="Nazwa parafii *" placeholderTextColor={c.textTertiary}
-          value={parishName} onChangeText={setParishName} />
-        <TextInput style={styles.input} placeholder="Miejscowość (opcjonalnie)" placeholderTextColor={c.textTertiary}
-          value={parishCity} onChangeText={setParishCity} />
+        <TextField label="Nazwa parafii *" placeholder="np. Parafia św. Michała Archanioła" value={parishName} onChangeText={setParishName} />
+        <TextField label="Miejscowość (opcjonalnie)" placeholder="Miejscowość" value={parishCity} onChangeText={setParishCity} />
+        <AppText variant="small" muted>
+          Metody obecności, rozkład Mszy i punktację ustawisz w następnym kroku.
+        </AppText>
 
         <ConsentCheckbox checked={acceptTerms} onToggle={() => setAcceptTerms(v => !v)}>
           Akceptuję <LegalLink url={TERMS_URL} label="Regulamin" /> (w tym zasady powierzenia
@@ -518,126 +434,22 @@ function AdminForm({ onBack }: { onBack: () => void }) {
           o zgody rodziców niepełnoletnich ministrantów.
         </ConsentCheckbox>
 
-        <TouchableOpacity style={[styles.button, { backgroundColor: '#16A34A' }, loading && styles.buttonDisabled]}
-          onPress={handleSubmit} disabled={loading}>
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Utwórz parafię</Text>}
-        </TouchableOpacity>
-        </WebFormWrapper>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <Button label="Utwórz parafię" onPress={handleSubmit} loading={loading} />
+      </WebFormWrapper>
+    </AuthLayout>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    // ── Ekran wyboru ──────────────────────────────────────────
-    chooseContainer: { flex: 1, backgroundColor: c.bg },
-    chooseInner: { flex: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 48 },
-
-    logoWrapper: {
-      width: 88, height: 88, borderRadius: 28,
-      backgroundColor: c.primary + '11', justifyContent: 'center', alignItems: 'center',
-      alignSelf: 'center', marginBottom: 20,
-    },
-    chooseTitle: { fontSize: 30, fontWeight: '800', textAlign: 'center', color: c.text, marginBottom: 6 },
-    chooseSub: { fontSize: 14, textAlign: 'center', color: c.subtext, marginBottom: 36 },
-
-    cardsWrapper: { gap: 14, marginBottom: 36 },
-    chooseCard: {
-      flexDirection: 'row', alignItems: 'center', gap: 14,
-      backgroundColor: c.surface, borderRadius: 16, padding: 18,
-      borderWidth: 1, borderColor: c.border,
-      ...shadow.md,
-    },
-    cardIcon: {
-      width: 52, height: 52, borderRadius: 16,
-      justifyContent: 'center', alignItems: 'center',
-    },
-    cardText: { flex: 1 },
-    cardTitle: { fontSize: 15, fontWeight: '700', color: c.text, marginBottom: 3 },
-    cardSub: { fontSize: 12, color: c.subtext, lineHeight: 17 },
-
-    loginLink: { textAlign: 'center', color: c.primary, fontSize: 14 },
-
-    // ── Formularz ─────────────────────────────────────────────
-    formContainer: { flex: 1, backgroundColor: c.bg },
-    formInner: { paddingHorizontal: 28, paddingTop: 56, paddingBottom: 40 },
-
-    backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 24 },
-    backBtnText: { fontSize: 15, color: c.primary, fontWeight: '500' },
-
-    formTitle: { fontSize: 28, fontWeight: '800', color: c.text, marginBottom: 4 },
-    formSub: { fontSize: 14, color: c.subtext, marginBottom: 24 },
-
-    nameRow: { flexDirection: 'row', gap: 10 },
-    label: { fontSize: 13, fontWeight: '600', color: c.subtext, marginBottom: 6, marginTop: 4 },
-
-    roleRow: { flexDirection: 'row', gap: 10, marginBottom: 4 },
-    roleChip: {
-      flex: 1, paddingVertical: 11, borderRadius: 12,
-      backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, alignItems: 'center',
-    },
-    roleChipActive: { backgroundColor: c.primary, borderColor: c.primary },
-    roleChipText: { fontSize: 14, fontWeight: '500', color: c.subtext },
-    roleChipTextActive: { color: '#fff', fontWeight: '600' },
-
-    input: {
-      backgroundColor: c.surface, borderRadius: 12,
-      paddingHorizontal: 16, paddingVertical: 14,
-      fontSize: 16, marginBottom: 12,
-      borderWidth: 1, borderColor: c.border, color: c.text,
-    },
-
-    passwordRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: c.surface,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      borderWidth: 1,
-      borderColor: c.border,
-      marginBottom: 12,
-    },
-    passwordInput: {
-      flex: 1,
-      fontSize: 16,
-      color: c.text,
-    },
-    codeInputWrapper: {
-      flexDirection: 'row', alignItems: 'center',
-      backgroundColor: c.surface, borderRadius: 12,
-      paddingHorizontal: 16, paddingVertical: 14,
-      borderWidth: 1, borderColor: c.border, marginBottom: 12,
-    },
-    codeInput: { flex: 1, fontSize: 16, color: c.text, letterSpacing: 2 },
-
-    divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 16 },
-    dividerLine: { flex: 1, height: 1, backgroundColor: c.border },
-    dividerText: { fontSize: 12, fontWeight: '600', color: c.textTertiary, textTransform: 'uppercase', letterSpacing: 0.8 },
-
-    button: {
-      backgroundColor: c.primary, borderRadius: 12,
-      paddingVertical: 16, alignItems: 'center', marginTop: 8,
-    },
-    buttonDisabled: { opacity: 0.6 },
-    buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-
-    childList: { gap: 6, marginBottom: 12 },
-    childOption: {
-      flexDirection: 'row', alignItems: 'center', gap: 10,
-      backgroundColor: c.surface, borderRadius: 10,
-      borderWidth: 1.5, borderColor: c.border,
-      paddingHorizontal: 14, paddingVertical: 12,
-    },
-    childOptionSelected: { borderColor: c.primary, backgroundColor: c.primary + '0a' },
-    childOptionText: { flex: 1, fontSize: 14, color: c.subtext },
-    childOptionTextSelected: { color: c.primary, fontWeight: '600' },
-    childEmptyBox: {
-      flexDirection: 'row', alignItems: 'center', gap: 8,
-      backgroundColor: c.bg, borderRadius: 10,
-      paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12,
-    },
-    childEmptyText: { fontSize: 13, color: c.textTertiary },
-  })
-}
+const styles = StyleSheet.create({
+  cards: { gap: 12, marginTop: 10 },
+  loginLink: { alignSelf: 'center', marginTop: 12, cursor: 'pointer' } as any,
+  loginLinkText: { ...sans(500), fontSize: 13 },
+  loginLinkStrong: { ...sans(800), fontSize: 13 },
+  group: { gap: 8 },
+  row: { flexDirection: 'row', gap: 10 },
+  flex: { flex: 1 },
+  rocznik: { width: 110 },
+  code: { ...sans(800), letterSpacing: 1 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  empty: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed' },
+})

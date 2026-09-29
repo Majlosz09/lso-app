@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Platform } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { AuthLayout } from '../../components/auth/AuthLayout'
+import { FormError, PasswordField, WebFormWrapper } from '../../components/auth/formParts'
+import { AppText, Button } from '../../components/ui'
 
 type Status = 'checking' | 'ready' | 'invalid' | 'done'
 
@@ -14,11 +15,9 @@ type Status = 'checking' | 'ready' | 'invalid' | 'done'
 export default function ResetPasswordScreen() {
   const router = useRouter()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
   const [status, setStatus] = useState<Status>('checking')
   const [password, setPassword] = useState('')
   const [repeat, setRepeat] = useState('')
-  const [show, setShow] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -51,79 +50,54 @@ export default function ResetPasswordScreen() {
     Toast.show({ type: 'success', text1: 'Hasło zmienione', text2: 'Zaloguj się nowym hasłem.' })
   }
 
+  const toLogin = () => router.replace('/(auth)/login')
+
+  if (status === 'checking') {
+    return (
+      <AuthLayout title="Nowe hasło" subtitle="Sprawdzamy link…">
+        <ActivityIndicator color={c.primary} />
+      </AuthLayout>
+    )
+  }
+
+  if (status === 'invalid') {
+    return (
+      <AuthLayout title="Link wygasł" subtitle="Link do zmiany hasła działa tylko raz i przez ograniczony czas.">
+        <AppText muted>Poproś o nowy na ekranie logowania („Nie pamiętasz hasła?”).</AppText>
+        <Button label="Przejdź do logowania" onPress={toLogin} />
+      </AuthLayout>
+    )
+  }
+
+  if (status === 'done') {
+    return (
+      <AuthLayout title="Hasło zmienione" subtitle="Możesz zalogować się nowym hasłem — na tej stronie lub w aplikacji na telefonie.">
+        <Button label="Zaloguj się" onPress={toLogin} />
+      </AuthLayout>
+    )
+  }
+
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.iconWrap}>
-          <Ionicons name={status === 'done' ? 'checkmark-circle' : status === 'invalid' ? 'alert-circle' : 'key'} size={36} color={status === 'invalid' ? c.danger : c.primary} />
-        </View>
-
-        {status === 'checking' && <ActivityIndicator color={c.primary} />}
-
-        {status === 'invalid' && (
-          <>
-            <Text style={styles.title}>Link wygasł lub jest nieprawidłowy</Text>
-            <Text style={styles.text}>Link do zmiany hasła działa tylko raz i przez ograniczony czas. Poproś o nowy na ekranie logowania („Nie pamiętasz hasła?”).</Text>
-            <TouchableOpacity style={styles.primary} onPress={() => router.replace('/(auth)/login')}>
-              <Text style={styles.primaryText}>Przejdź do logowania</Text>
-            </TouchableOpacity>
-          </>
-        )}
-
-        {status === 'ready' && (
-          <>
-            <Text style={styles.title}>Ustaw nowe hasło</Text>
-            <View style={styles.passwordRow}>
-              <TextInput style={styles.passwordInput} placeholder="Nowe hasło (min. 8 znaków)" placeholderTextColor={c.textTertiary}
-                secureTextEntry={!show} value={password} onChangeText={setPassword} autoComplete="new-password" />
-              <TouchableOpacity onPress={() => setShow(v => !v)} hitSlop={8}>
-                <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={20} color={c.textTertiary} />
-              </TouchableOpacity>
-            </View>
-            <TextInput style={styles.input} placeholder="Powtórz hasło" placeholderTextColor={c.textTertiary}
-              secureTextEntry={!show} value={repeat} onChangeText={setRepeat} autoComplete="new-password" />
-            {error && <Text style={styles.error}>{error}</Text>}
-            <TouchableOpacity style={styles.primary} onPress={save} disabled={saving}>
-              {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Zapisz hasło</Text>}
-            </TouchableOpacity>
-          </>
-        )}
-
-        {status === 'done' && (
-          <>
-            <Text style={styles.title}>Hasło zostało zmienione</Text>
-            <Text style={styles.text}>Możesz zalogować się nowym hasłem — na tej stronie lub w aplikacji na telefonie.</Text>
-            <TouchableOpacity style={styles.primary} onPress={() => router.replace('/(auth)/login')}>
-              <Text style={styles.primaryText}>Zaloguj się</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-    </View>
+    <AuthLayout title="Nowe hasło" subtitle="Ustaw hasło do swojego konta LSO.">
+      <WebFormWrapper onSubmit={save}>
+        <PasswordField
+          label="Nowe hasło"
+          placeholder="Min. 8 znaków"
+          value={password}
+          onChangeText={setPassword}
+          autoComplete="new-password"
+        />
+        <PasswordField
+          label="Powtórz hasło"
+          placeholder="Powtórz hasło"
+          value={repeat}
+          onChangeText={setRepeat}
+          autoComplete="new-password"
+          onSubmitEditing={save}
+        />
+        <FormError message={error} />
+        <Button label="Zapisz hasło" onPress={save} loading={saving} />
+      </WebFormWrapper>
+    </AuthLayout>
   )
-}
-
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg, justifyContent: 'center', padding: 24 },
-    card: { backgroundColor: c.surface, borderRadius: 18, padding: 24, gap: 14, width: '100%', maxWidth: 420, alignSelf: 'center' },
-    iconWrap: {
-      width: 64, height: 64, borderRadius: 20, alignSelf: 'center',
-      backgroundColor: c.primarySurface, justifyContent: 'center', alignItems: 'center',
-    },
-    title: { fontSize: 21, fontWeight: '800', color: c.text, textAlign: 'center' },
-    text: { fontSize: 14, lineHeight: 21, color: c.subtext, textAlign: 'center' },
-    input: {
-      backgroundColor: c.bg, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13,
-      fontSize: 16, borderWidth: 1, borderColor: c.border, color: c.text,
-    },
-    passwordRow: {
-      flexDirection: 'row', alignItems: 'center', gap: 8,
-      backgroundColor: c.bg, borderRadius: 12, paddingHorizontal: 14, borderWidth: 1, borderColor: c.border,
-    },
-    passwordInput: { flex: 1, paddingVertical: 13, fontSize: 16, color: c.text },
-    error: { fontSize: 13, color: c.danger, textAlign: 'center' },
-    primary: { padding: 15, borderRadius: 12, backgroundColor: c.primary, alignItems: 'center' },
-    primaryText: { fontSize: 16, fontWeight: '700', color: '#fff' },
-  })
 }

@@ -1,15 +1,14 @@
 // app/(auth)/login.tsx
-import { useRef, useState, useMemo } from 'react'
-import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform
-} from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import { Link } from 'expo-router'
+import { useRef, useState } from 'react'
+import { Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { sans } from '../../lib/theme'
 import { ForgotPasswordModal } from '../../components/ForgotPasswordModal'
+import { AuthLayout } from '../../components/auth/AuthLayout'
+import { FormError, PasswordField, WebFormWrapper } from '../../components/auth/formParts'
+import { AppText, Button, TextField } from '../../components/ui'
 
 function translateAuthError(msg: string): string {
   if (msg.includes('Invalid login credentials')) return 'Nieprawidłowy email lub hasło'
@@ -19,28 +18,15 @@ function translateAuthError(msg: string): string {
   return msg
 }
 
-// Wraps children in <form> on web for proper browser autofill support
-function WebFormWrapper({ onSubmit, children }: { onSubmit: () => void; children: React.ReactNode }) {
-  if (Platform.OS !== 'web') return <>{children}</>
-  return (
-    // @ts-ignore — form is valid HTML on web
-    <form onSubmit={(e: any) => { e.preventDefault(); onSubmit() }} style={{ display: 'contents' }}>
-      {children}
-    </form>
-  )
-}
-
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
   const [loginError, setLoginError] = useState<string | null>(null)
   const [forgotOpen, setForgotOpen] = useState(false)
   const passwordRef = useRef<TextInput>(null)
-
+  const router = useRouter()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -60,151 +46,57 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <AuthLayout
+      title="Króluj nam Chryste!"
+      subtitle="Zaloguj się do swojej parafii."
+      onBack={() => (router.canGoBack() ? router.back() : router.replace('/(auth)/welcome'))}
     >
-      <View style={styles.inner}>
-        <Text style={styles.title}>LSO</Text>
-        <Text style={styles.subtitle}>Liturgiczna Służba Ołtarza</Text>
+      <WebFormWrapper onSubmit={handleLogin}>
+        <TextField
+          label="E-mail"
+          placeholder="Email"
+          autoCapitalize="none"
+          autoComplete="email"
+          keyboardType="email-address"
+          returnKeyType="next"
+          value={email}
+          onChangeText={v => { setEmail(v); setLoginError(null) }}
+          onSubmitEditing={() => passwordRef.current?.focus()}
+          blurOnSubmit={false}
+        />
+        <PasswordField
+          ref={passwordRef}
+          label="Hasło"
+          placeholder="Hasło"
+          autoComplete="current-password"
+          returnKeyType="done"
+          value={password}
+          onChangeText={v => { setPassword(v); setLoginError(null) }}
+          onSubmitEditing={handleLogin}
+        />
+        <Pressable onPress={() => setForgotOpen(true)} style={styles.forgot} accessibilityRole="button">
+          <AppText style={[styles.forgotText, { color: c.primary }]}>Nie pamiętasz hasła?</AppText>
+        </Pressable>
+        <FormError message={loginError} />
+        <Button label="Zaloguj się" onPress={handleLogin} loading={loading} />
+      </WebFormWrapper>
 
-        <WebFormWrapper onSubmit={handleLogin}>
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            placeholderTextColor={c.textTertiary}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            returnKeyType="next"
-            value={email}
-            onChangeText={v => { setEmail(v); setLoginError(null) }}
-            onSubmitEditing={() => passwordRef.current?.focus()}
-            blurOnSubmit={false}
-          />
-          <View style={styles.passwordRow}>
-            <TextInput
-              ref={passwordRef}
-              style={styles.passwordInput}
-              placeholder="Hasło"
-              placeholderTextColor={c.textTertiary}
-              secureTextEntry={!showPassword}
-              returnKeyType="done"
-              value={password}
-              onChangeText={v => { setPassword(v); setLoginError(null) }}
-              onSubmitEditing={handleLogin}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(p => !p)} hitSlop={8}>
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={c.textTertiary} />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.buttonText}>Zaloguj się</Text>
-            }
-          </TouchableOpacity>
-        </WebFormWrapper>
-
-        {loginError && <Text style={styles.errorText}>{loginError}</Text>}
-
-        <TouchableOpacity onPress={() => setForgotOpen(true)} style={styles.forgot}>
-          <Text style={styles.forgotText}>Nie pamiętasz hasła?</Text>
-        </TouchableOpacity>
-
-        <Link href="/(auth)/register" style={styles.link}>
-          Nie masz konta? Zarejestruj się
-        </Link>
-
-        <ForgotPasswordModal visible={forgotOpen} initialEmail={email} onClose={() => setForgotOpen(false)} />
+      <View style={styles.registerRow}>
+        <AppText muted style={styles.registerText}>Nie masz konta? </AppText>
+        <Pressable onPress={() => router.push('/(auth)/register')} accessibilityRole="link">
+          <AppText style={[styles.registerLink, { color: c.primary }]}>Zarejestruj się</AppText>
+        </Pressable>
       </View>
-    </KeyboardAvoidingView>
+
+      <ForgotPasswordModal visible={forgotOpen} initialEmail={email} onClose={() => setForgotOpen(false)} />
+    </AuthLayout>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: c.bg,
-    },
-    inner: {
-      flex: 1,
-      justifyContent: 'center',
-      paddingHorizontal: 32,
-    },
-    title: {
-      fontSize: 48,
-      fontWeight: 'bold',
-      textAlign: 'center',
-      color: c.text,
-      marginBottom: 8,
-    },
-    subtitle: {
-      fontSize: 16,
-      textAlign: 'center',
-      color: c.subtext,
-      marginBottom: 48,
-    },
-    input: {
-      backgroundColor: c.surface,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      fontSize: 16,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: c.border,
-      color: c.text,
-    },
-    button: {
-      backgroundColor: c.primary,
-      borderRadius: 12,
-      paddingVertical: 16,
-      alignItems: 'center',
-      marginTop: 8,
-    },
-    buttonDisabled: {
-      opacity: 0.6,
-    },
-    buttonText: {
-      color: '#fff',
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    passwordRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: c.surface,
-      borderRadius: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      borderWidth: 1,
-      borderColor: c.border,
-      marginBottom: 12,
-    },
-    passwordInput: {
-      flex: 1,
-      fontSize: 16,
-      color: c.text,
-    },
-    forgot: { alignSelf: 'center', paddingVertical: 6, marginTop: 4 },
-    forgotText: { fontSize: 14, color: c.subtext, textDecorationLine: 'underline' },
-    link: {
-      textAlign: 'center',
-      marginTop: 24,
-      color: c.primary,
-      fontSize: 14,
-    },
-    errorText: {
-      color: c.danger,
-      fontSize: 14,
-      textAlign: 'center',
-      marginTop: 8,
-    },
-  })
-}
+const styles = StyleSheet.create({
+  forgot: { alignSelf: 'flex-end', paddingVertical: 2, cursor: 'pointer' } as any,
+  forgotText: { ...sans(700), fontSize: 13 },
+  registerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  registerText: { fontSize: 13 },
+  registerLink: { ...sans(800), fontSize: 13 },
+})

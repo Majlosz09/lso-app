@@ -1,19 +1,20 @@
-import { useMemo, useState } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
+import { useState } from 'react'
+import { Pressable, StyleSheet, View } from 'react-native'
 import Toast from 'react-native-toast-message'
-import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { sans } from '../../lib/theme'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { AuthLayout } from '../../components/auth/AuthLayout'
+import { AppText, Button, Icon, Sheet } from '../../components/ui'
 
 // Konto dołączyło do parafii kodem i czeka na zatwierdzenie przez admina.
 // Po zatwierdzeniu profil odświeża się sam (realtime w authStore) i layout przenosi do aplikacji.
 export default function PendingApprovalScreen() {
-  const { profile, fetchProfile, signOut } = useAuthStore()
+  const { profile, parish, fetchProfile, signOut } = useAuthStore()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
+  const isDesktop = useIsDesktop()
   const [refreshing, setRefreshing] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
 
@@ -31,60 +32,77 @@ export default function PendingApprovalScreen() {
     setConfirmCancel(false)
     const { error } = await supabase.from('profiles').update({ parish_id: null }).eq('id', profile!.id)
     if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    Toast.show({ type: 'success', text1: 'Prośba wycofana — możesz podać inny kod' })
     await fetchProfile()
   }
 
+  const onNavy = !isDesktop
+  const textColor = onNavy ? '#FFFFFF' : c.text
+  const steps: [string, string, boolean][] = [
+    ['Konto założone', 'check-circle-outline', true],
+    ['Kod parafii poprawny', 'check-circle-outline', true],
+    ['Zatwierdzenie przez opiekuna', 'clock-outline', false],
+  ]
+
   return (
-    <View style={styles.container}>
-      <View style={styles.iconWrap}>
-        <Ionicons name="hourglass-outline" size={44} color={c.primary} />
+    <AuthLayout
+      variant="hero"
+      title="Czekamy na"
+      titleAccent="zatwierdzenie"
+      subtitle={`Opiekun ${parish?.name ? `parafii ${parish.name} ` : 'parafii '}dostał Twoje zgłoszenie. Damy znać powiadomieniem, gdy konto będzie aktywne. Dzięki temu do danych ministrantów mają dostęp tylko osoby z parafii.`}
+      heroTop={
+        <View style={[styles.hourglass, { borderColor: c.gold }]}>
+          <Icon name="timer-sand" size={36} color={c.gold} />
+        </View>
+      }
+      footer={
+        <>
+          <Button label="Sprawdź ponownie" variant={onNavy ? 'gold' : 'primary'} onPress={refresh} loading={refreshing} />
+          <Button
+            label="Wycofaj prośbę / zmień kod"
+            variant={onNavy ? 'outlineLight' : 'secondary'}
+            onPress={() => setConfirmCancel(true)}
+          />
+          <Pressable onPress={signOut} accessibilityRole="button" style={styles.logout}>
+            <AppText style={[styles.logoutText, { color: onNavy ? '#C9D3E3' : c.subtext }]}>Wyloguj się</AppText>
+          </Pressable>
+        </>
+      }
+    >
+      <View style={styles.steps}>
+        {steps.map(([label, icon, done]) => (
+          <View key={label} style={styles.step}>
+            <Icon name={icon} size={20} color={done ? '#7FC29B' : c.gold} />
+            <AppText style={[styles.stepText, { color: done ? textColor : (onNavy ? '#E3C98E' : c.goldInk) }]}>{label}</AppText>
+          </View>
+        ))}
       </View>
-      <Text style={styles.title}>Czekasz na zatwierdzenie</Text>
-      <Text style={styles.text}>
-        Twoja prośba o dołączenie do parafii została wysłana. Administrator (ksiądz lub opiekun grupy)
-        musi ją zatwierdzić — dostaniesz powiadomienie, gdy to nastąpi.
-      </Text>
-      <Text style={styles.hint}>Dzięki temu do danych ministrantów mają dostęp tylko osoby z parafii.</Text>
 
-      <TouchableOpacity style={styles.primary} onPress={refresh} disabled={refreshing}>
-        {refreshing
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.primaryText}>Sprawdź ponownie</Text>}
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.secondary} onPress={() => setConfirmCancel(true)}>
-        <Text style={styles.secondaryText}>Wycofaj prośbę / zmień kod</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.link} onPress={signOut}>
-        <Text style={styles.linkText}>Wyloguj</Text>
-      </TouchableOpacity>
-
-      <ConfirmDialog
+      <Sheet
         visible={confirmCancel}
+        onClose={() => setConfirmCancel(false)}
         title="Wycofać prośbę?"
-        message="Wrócisz do ekranu wyboru parafii i możesz wpisać inny kod."
-        confirmText="Wycofaj"
-        onConfirm={cancelRequest}
-        onCancel={() => setConfirmCancel(false)}
-      />
-    </View>
+        footer={
+          <>
+            <Button label="Wycofaj" variant="danger" onPress={cancelRequest} />
+            <Button label="Anuluj" variant="secondary" onPress={() => setConfirmCancel(false)} />
+          </>
+        }
+      >
+        <AppText muted>Wrócisz do ekranu wyboru parafii i możesz wpisać inny kod.</AppText>
+      </Sheet>
+    </AuthLayout>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg, justifyContent: 'center', paddingHorizontal: 32, gap: 14 },
-    iconWrap: {
-      width: 88, height: 88, borderRadius: 28, alignSelf: 'center',
-      backgroundColor: c.primarySurface, justifyContent: 'center', alignItems: 'center', marginBottom: 6,
-    },
-    title: { fontSize: 24, fontWeight: '800', color: c.text, textAlign: 'center' },
-    text: { fontSize: 15, color: c.subtext, textAlign: 'center', lineHeight: 22 },
-    hint: { fontSize: 13, color: c.textTertiary, textAlign: 'center' },
-    primary: { backgroundColor: c.primary, borderRadius: 12, paddingVertical: 15, alignItems: 'center', marginTop: 10 },
-    primaryText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-    secondary: { borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: c.border },
-    secondaryText: { color: c.primary, fontSize: 15, fontWeight: '600' },
-    link: { alignItems: 'center', paddingVertical: 8 },
-    linkText: { color: c.subtext, fontSize: 14 },
-  })
-}
+const styles = StyleSheet.create({
+  hourglass: {
+    width: 76, height: 76, borderRadius: 38, borderWidth: 1,
+    backgroundColor: 'rgba(201,165,90,0.16)', alignItems: 'center', justifyContent: 'center',
+  },
+  steps: { gap: 10, marginTop: 4 },
+  step: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  stepText: { ...sans(600), fontSize: 14 },
+  logout: { alignSelf: 'center', padding: 10, cursor: 'pointer' } as any,
+  logoutText: { ...sans(700), fontSize: 14 },
+})
