@@ -1,465 +1,371 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
-import {
-  View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, ActivityIndicator, useWindowDimensions
-} from 'react-native'
+import { useEffect, useMemo, useState } from 'react'
+import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { StatusBar } from 'expo-status-bar'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
-import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
-import { getLiturgicalDay, getLiturgicalAccentColor, getLiturgicalBgColor } from '../../lib/liturgy'
-import { CATEGORY_CONFIG, getCatColors, ScheduleCategory, MassTemplate } from '../../types/database'
-import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { headerPalette, sans, serif, VESTMENT_DOT, VESTMENT_NAMES, VestmentColor } from '../../lib/theme'
+import { shadow } from '../../lib/shadows'
+import { getLiturgicalDay } from '../../lib/liturgy'
+import { addDays, dayMonth, dayNum, dayShort, localDateStr, longDate, relativeDay, weekdayShortDate } from '../../lib/dates'
+import { serviceAvailability } from '../../lib/serviceRules'
+import { CATEGORY_CONFIG } from '../../types/database'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
+import { useRealtimeTable } from '../../hooks/useRealtimeTable'
+import { Service, useServices } from '../../hooks/useServices'
+import { useServiceActions } from '../../components/services/useServiceActions'
+import { DayStrip } from '../../components/services/DayStrip'
+import { AppText, Avatar, Badge, Button, Card, HeaderChip, Icon, IconButton, SectionHeader } from '../../components/ui'
 
-function localDateStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+type Ann = { id: string; title: string; created_at: string; author: { full_name: string } | null }
 
-function getTemplatesForDate(dateStr: string, templates: MassTemplate[]): MassTemplate[] {
-  const dow = new Date(dateStr + 'T12:00:00').getDay()
-  return templates.filter(t => t.day_of_week === dow)
-}
+function useHomeData() {
+  const profile = useAuthStore(s => s.profile)
+  const [points, setPoints] = useState<{ total: number; services: number; rank: number } | null>(null)
+  const [anns, setAnns] = useState<Ann[]>([])
+  const [rankName, setRankName] = useState<string | null>(null)
 
-const DAY_SHORT = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb']
-
-export default function HomeScreen() {
-  return <MemberHomeView />
-}
-
-function MemberHomeView() {
-  const { profile } = useAuthStore()
-  const router = useRouter()
-  const { width } = useWindowDimensions()
-  const isWide = width >= 768
-
-  const [summary, setSummary] = useState<{ total_points: number; services_count: number } | null>(null)
-  const [rankPos, setRankPos] = useState<number>(0)
-  const [nextDuties, setNextDuties] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [massTemplates, setMassTemplates] = useState<MassTemplate[]>([])
-  const [upcomingSchedules, setUpcomingSchedules] = useState<any[]>([])
-
-  const { colors: c, isDark } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
-
-  const today = localDateStr(new Date())
-  const [selectedDay, setSelectedDay] = useState(today)
-
-  const days = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() + i)
-    return localDateStr(d)
-  })
-
-  const todayLiturgy = getLiturgicalDay(today)
-  const litAccent = getLiturgicalAccentColor(todayLiturgy)
-  const litBg = getLiturgicalBgColor(todayLiturgy)
-  const firstName = profile?.full_name?.split(' ')[0] ?? '—'
-
-  const fetchData = async () => {
-    if (!profile?.id || !profile?.parish_id) return
-    const [summaryRes, rankingRes, nextRes, templatesRes, schedulesRes] = await Promise.all([
+  const load = async () => {
+    if (!profile?.id || !profile.parish_id) return
+    const targets = ['all', 'members', ...(profile.rank_id ? [profile.rank_id] : [])]
+    const [mine, ranking, annRes, rankRes] = await Promise.all([
       supabase.from('points_summary').select('total_points, services_count').eq('profile_id', profile.id).maybeSingle(),
       supabase.from('points_summary').select('profile_id').eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
-      supabase.from('schedule_assignments')
-        .select('id, status, schedule:schedules(id, title, date, time, category)')
-        .eq('profile_id', profile.id)
-        .gte('schedule.date', today)
-        .order('schedule(date)', { ascending: true })
-        .order('schedule(time)', { ascending: true })
-        .limit(5),
-      supabase.from('mass_templates')
-        .select('*')
-        .eq('parish_id', profile.parish_id)
-        .order('day_of_week').order('time'),
-      supabase.from('schedules')
-        .select('*, group:groups(name)')
-        .eq('parish_id', profile.parish_id)
-        .gte('date', today)
-        .lte('date', days[days.length - 1])
-        .order('date').order('time'),
+      supabase.from('announcements').select('id, title, created_at, author:profiles(full_name)')
+        .eq('parish_id', profile.parish_id).in('target_audience', targets)
+        .order('is_pinned', { ascending: false }).order('created_at', { ascending: false }).limit(2),
+      profile.rank_id ? supabase.from('ranks').select('name').eq('id', profile.rank_id).maybeSingle() : Promise.resolve({ data: null }),
     ])
-    if (summaryRes.data) setSummary(summaryRes.data as any)
-    if (rankingRes.data) {
-      const pos = (rankingRes.data as any[]).findIndex(r => r.profile_id === profile.id) + 1
-      setRankPos(pos)
-    }
-    const valid = (nextRes.data ?? []).filter((a: any) => a.schedule !== null)
-    setNextDuties(valid.slice(0, 3))
-    setMassTemplates((templatesRes.data as MassTemplate[]) ?? [])
-    setUpcomingSchedules(schedulesRes.data ?? [])
-    setLoading(false)
+    const pos = ((ranking.data ?? []) as any[]).findIndex(r => r.profile_id === profile.id) + 1
+    setPoints({ total: mine.data?.total_points ?? 0, services: mine.data?.services_count ?? 0, rank: pos })
+    setAnns((annRes.data ?? []) as any)
+    setRankName((rankRes as any).data?.name ?? null)
   }
 
-  useEffect(() => { fetchData() }, [profile?.id])
-  useRealtimeTable('schedule_assignments', fetchData, profile?.id ? `profile_id=eq.${profile.id}` : undefined)
+  useEffect(() => { load() }, [profile?.id, profile?.rank_id])
+  useRealtimeTable('announcements', () => { load() }, profile?.parish_id ? `parish_id=eq.${profile.parish_id}` : undefined)
+  return { points, anns, rankName, reload: load }
+}
 
-  const eventsForDay = (() => {
-    const templateSlots = getTemplatesForDate(selectedDay, massTemplates)
-    const templateTimes = new Set(templateSlots.map(t => t.time.slice(0, 5)))
-    const daySchedules = upcomingSchedules.filter(s => s.date === selectedDay)
-    const extraSchedules = daySchedules.filter(s => !templateTimes.has(s.time?.slice(0, 5)))
+/** Najbliższa moja służba (jeśli nie ma jej w bieżącym tygodniu — szukamy dalej). */
+function useNextService(week: Service[]) {
+  const profile = useAuthStore(s => s.profile)
+  const today = localDateStr()
+  const inWeek = week.find(s => s.mine && !s.attended && s.mine.status === 'assigned' && s.date >= today
+    && new Date(`${s.date}T${s.time}`).getTime() + 90 * 60_000 > Date.now())
+  const [later, setLater] = useState<{ id: string; date: string; time: string; title: string } | null>(null)
+  useEffect(() => {
+    if (inWeek || !profile?.id) { setLater(null); return }
+    supabase.from('schedule_assignments')
+      .select('schedule:schedules!inner(id, date, time, title)')
+      .eq('profile_id', profile.id).eq('status', 'assigned')
+      .gt('schedule.date', addDays(today, 6))
+      .order('schedule(date)').limit(1)
+      .then(({ data }) => {
+        const s = (data?.[0] as any)?.schedule
+        setLater(s ? { id: s.id, date: s.date, time: s.time.slice(0, 5), title: s.title } : null)
+      })
+  }, [inWeek?.id, profile?.id])
+  return { next: inWeek, later }
+}
 
-    const all: Array<{ time: string; title: string; category: ScheduleCategory; id: string }> = [
-      ...templateSlots.map(t => ({
-        time: t.time.slice(0, 5),
-        title: t.label ?? 'Msza Święta',
-        category: 'msza' as ScheduleCategory,
-        id: `tpl-${t.id}`,
-      })),
-      ...extraSchedules.map(s => ({
-        time: s.time?.slice(0, 5) ?? '',
-        title: s.title,
-        category: (s.category ?? 'msza') as ScheduleCategory,
-        id: s.id,
-      })),
-    ]
-    return all.sort((a, b) => a.time.localeCompare(b.time))
-  })()
+export default function HomeScreen() {
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const isDesktop = useIsDesktop()
+  const { colors: c, isDark } = useTheme()
+  const { profile, parish } = useAuthStore()
+  const today = localDateStr()
+  const liturgy = useLiturgyHeader()
+  const pal = liturgy.palette
+  const [day, setDay] = useState(today)
+  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(today, i)), [today])
+  const { services, refresh } = useServices(today, days[6])
+  const actions = useServiceActions(refresh)
+  const { points, anns, rankName, reload } = useHomeData()
+  const { next, later } = useNextService(services)
+  const [refreshing, setRefreshing] = useState(false)
 
-  const selectedLiturgy = getLiturgicalDay(selectedDay)
+  const firstName = (profile?.full_name ?? '').split(' ')[0]
+  const dayServices = services.filter(s => s.date === day)
+  const mode = parish?.attendance_mode ?? 'button'
+  const goService = (s: { id: string; date: string; time: string }) =>
+    router.push({ pathname: isDesktop ? '/(tabs)/schedule' : '/(tabs)/service', params: { id: s.id, date: s.date, time: s.time } } as any)
 
-  const churchSection = (
-    <View style={styles.section}>
-      <Text style={styles.sectionLabel}>Co w kościele</Text>
+  const pointsChip = points ? `${points.total} pkt · #${points.rank || '—'} w parafii` : '…'
 
-      {/* Day strip — wrapped grid on wide, horizontal scroll on narrow */}
-      {isWide ? (
-        <View style={styles.dayStripWrap}>
-          {days.map(d => {
-            const date = new Date(d + 'T12:00:00')
-            const isToday = d === today
-            const isSelected = d === selectedDay
-            return (
-              <TouchableOpacity
-                key={d}
-                style={[styles.dayChip, styles.dayChipFill, isSelected && styles.dayChipSelected]}
-                onPress={() => setSelectedDay(d)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.dayChipDow, isSelected && styles.dayChipTextSelected]}>
-                  {isToday ? 'Dziś' : DAY_SHORT[date.getDay()]}
-                </Text>
-                <Text style={[styles.dayChipNum, isSelected && styles.dayChipTextSelected]}>
-                  {date.getDate()}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
+  // ── Karta „Twoja najbliższa służba” ──────────────────────────────────────
+  const nextCard = (hero: boolean) => {
+    const target = next ?? later
+    if (!target) {
+      return (
+        <Card large style={[styles.nextCard, !hero && shadow.hero]}>
+          <AppText variant="eyebrow" color={c.goldInk}>Twoja najbliższa służba</AppText>
+          <AppText variant="heading">Nie masz zaplanowanych służb</AppText>
+          <AppText muted>Zajrzyj do grafiku i zapisz się na wolną Mszę.</AppText>
+          <Button label="Przejdź do grafiku" icon="calendar-month" onPress={() => router.push('/(tabs)/schedule')} />
+        </Card>
+      )
+    }
+    const avail = next ? serviceAvailability(next, mode) : null
+    const lit = getLiturgicalDay(target.date)
+    const vest = (lit.color ?? 'GREEN') as VestmentColor
+    const heroPal = headerPalette(vest, isDark)
+    const fg = hero ? heroPal.fg : c.text
+    const sub = hero ? heroPal.accent : c.subtext
+    return (
+      <Card
+        large
+        style={[styles.nextCard, hero ? { backgroundColor: heroPal.bg, borderColor: heroPal.bg } : shadow.hero]}
+        onPress={() => goService(target)}
+      >
+        <View style={styles.nextHead}>
+          <AppText variant="eyebrow" color={hero ? heroPal.accent : c.goldInk} style={styles.flex}>
+            {`Twoja najbliższa służba${hero ? ` · ${relativeDay(target.date)}` : ''}`}
+          </AppText>
+          {hero
+            ? <HeaderChip label={pointsChip} palette={heroPal} />
+            : <Badge label={relativeDay(target.date)} tone="gold" />}
         </View>
-      ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.daySelectorContent}
-        >
-          {days.map(d => {
-            const date = new Date(d + 'T12:00:00')
-            const isToday = d === today
-            const isSelected = d === selectedDay
-            return (
-              <TouchableOpacity
-                key={d}
-                style={[styles.dayChip, isSelected && styles.dayChipSelected]}
-                onPress={() => setSelectedDay(d)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.dayChipDow, isSelected && styles.dayChipTextSelected]}>
-                  {isToday ? 'Dziś' : DAY_SHORT[date.getDay()]}
-                </Text>
-                <Text style={[styles.dayChipNum, isSelected && styles.dayChipTextSelected]}>
-                  {date.getDate()}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
-        </ScrollView>
-      )}
-
-      {/* Liturgy for selected day */}
-      {selectedLiturgy.type !== 'FERIA' && (
-        <View style={styles.dayLiturgyRow}>
-          {(() => {
-            const ac = getLiturgicalAccentColor(selectedLiturgy)
-            return ac ? <View style={[styles.liturgyDot, { backgroundColor: ac }]} /> : null
-          })()}
-          <Text style={styles.dayLiturgyText} numberOfLines={1}>{selectedLiturgy.name}</Text>
-        </View>
-      )}
-
-      {/* Events list */}
-      {eventsForDay.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Ionicons name="calendar-outline" size={24} color={c.iconMuted} />
-          <Text style={styles.emptyText}>Brak wydarzeń w tym dniu</Text>
-        </View>
-      ) : (
-        eventsForDay.map(ev => {
-          const cat = getCatColors(ev.category, isDark)
-          return (
-            <View key={ev.id} style={[styles.eventRow, { borderLeftColor: cat.color }]}>
-              <View style={[styles.eventTimeBadge, { backgroundColor: cat.bg }]}>
-                <Text style={[styles.eventTime, { color: cat.color }]}>{ev.time}</Text>
-              </View>
-              <View style={styles.eventInfo}>
-                <Text style={styles.eventTitle} numberOfLines={1}>{ev.title}</Text>
-                <Text style={[styles.eventCat, { color: cat.color }]}>{cat.label}</Text>
-              </View>
-            </View>
-          )
-        })
-      )}
-    </View>
-  )
-
-  const dutiesSection = (
-    <View style={styles.section}>
-      <Text style={styles.sectionLabel}>Nadchodzące służby</Text>
-      {nextDuties.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Ionicons name="calendar-outline" size={28} color={c.iconMuted} />
-          <Text style={styles.emptyText}>Brak nadchodzących służb</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/schedule')}>
-            <Text style={styles.emptyLink}>Przejdź do zapisów →</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        nextDuties.map((a: any) => {
-          const sc = a.schedule
-          const cat = getCatColors(sc.category as ScheduleCategory, isDark)
-          return (
-            <View key={a.id} style={[styles.dutyCard, { borderLeftColor: cat.color }]}>
-              <View style={styles.dutyTop}>
-                <View style={[styles.timeBadge, { backgroundColor: cat.bg }]}>
-                  <Text style={[styles.timeText, { color: cat.color }]}>{sc.time?.slice(0, 5)}</Text>
-                </View>
-                <View style={styles.dutyInfo}>
-                  <Text style={styles.dutyTitle} numberOfLines={1}>{sc.title}</Text>
-                  <Text style={styles.dutyDate}>
-                    {new Date(sc.date + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })}
-                  </Text>
-                </View>
-                <View style={[styles.catPill, { backgroundColor: cat.bg }]}>
-                  <Text style={[styles.catPillText, { color: cat.color }]}>{cat.label}</Text>
-                </View>
-              </View>
-            </View>
-          )
-        })
-      )}
-    </View>
-  )
-
-  const actionsSection = (
-    <>
-      <Text style={styles.sectionLabel}>Szybkie akcje</Text>
-      <View style={styles.actionsRow}>
-        <QuickAction icon="calendar-outline" color={c.primary} label="Zapisy" onPress={() => router.push('/(tabs)/schedule')} styles={styles} />
-        <QuickAction icon="megaphone-outline" color={c.primary} label="Ogłoszenia" onPress={() => router.push('/(tabs)/announcements')} styles={styles} />
-        <QuickAction icon="trophy-outline" color={c.gold} label="Punkty" onPress={() => router.push('/(tabs)/points')} styles={styles} />
-        <QuickAction icon="book-outline" color={c.primary} label="Wiedza" onPress={() => router.push('/(tabs)/wiedza')} styles={styles} />
-      </View>
-    </>
-  )
-
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Greeting */}
-      <View style={styles.greetingCard}>
-        <Text style={styles.greetingName}>Witaj, {firstName}!</Text>
-        <View style={styles.greetingMeta}>
-          <Text style={styles.greetingRole}>Ministrant</Text>
-          {rankPos > 0 && (
-            <>
-              <View style={styles.metaDot} />
-              <Ionicons name="podium-outline" size={13} color="#fff" />
-              <Text style={styles.greetingRank}>#{rankPos} w rankingu</Text>
-            </>
-          )}
-        </View>
-      </View>
-
-      {/* Liturgy */}
-      {todayLiturgy && (
-        <View style={[styles.liturgyRow, litBg && { backgroundColor: litBg + '18', borderColor: litBg + '40' }]}>
-          {litAccent && <View style={[styles.liturgyDot, { backgroundColor: litAccent }]} />}
-          <Text style={styles.liturgyTypeLabel}>{todayLiturgy.typeLabel}:</Text>
-          <Text style={styles.liturgyName} numberOfLines={2}>{todayLiturgy.name}</Text>
-        </View>
-      )}
-
-      {/* Stats */}
-      {loading ? (
-        <ActivityIndicator color={c.primary} style={{ marginVertical: 8 }} />
-      ) : (
-        <View style={styles.statsRow}>
-          <StatBox icon="trophy" iconColor={c.gold} value={summary?.total_points ?? 0} label="Punkty" styles={styles} />
-          <StatBox icon="checkmark-circle" iconColor={c.success} value={summary?.services_count ?? 0} label="Służby" styles={styles} />
-        </View>
-      )}
-
-      {/* Main content — responsive layout */}
-      {!loading && (
-        isWide ? (
-          <View style={styles.wideRow}>
-            <View style={styles.wideLeft}>{churchSection}</View>
-            <View style={styles.wideRight}>
-              {dutiesSection}
-              <View style={styles.actionsWrap}>{actionsSection}</View>
-            </View>
+        <View style={styles.nextMain}>
+          <View style={[styles.dateTile, hero && styles.dateTileHero, { backgroundColor: c.primary }]}>
+            <AppText style={[styles.dateDow, { color: c.gold }]}>{dayShort(target.date).toUpperCase()}</AppText>
+            <AppText style={[styles.dateNum, hero && { fontSize: 34, lineHeight: 38 }]}>{dayNum(target.date)}</AppText>
+            <AppText style={styles.dateTime}>{target.time}</AppText>
           </View>
-        ) : (
-          <>
-            {churchSection}
-            {dutiesSection}
-            {actionsSection}
-          </>
-        )
-      )}
-    </ScrollView>
+          <View style={styles.flex}>
+            <AppText style={[serif(), { fontSize: hero ? 36 : 22, lineHeight: hero ? 39 : 26, color: fg }]} numberOfLines={2}>
+              {target.title}
+            </AppText>
+            <AppText style={[styles.nextSub, { color: sub }]} numberOfLines={2}>
+              {`Ministrant · ${VESTMENT_NAMES[vest]}${hero ? ` · ${longDate(target.date)}` : ''}`}
+            </AppText>
+          </View>
+          {!hero && <Icon name="chevron-right" size={22} color={c.iconMuted} />}
+        </View>
+        {next && (
+          <View style={styles.nextActions}>
+            {avail?.canCheckIn ? (
+              <Button
+                label="Potwierdź obecność"
+                icon="account-check"
+                variant={hero ? 'gold' : 'primary'}
+                style={styles.flex}
+                onPress={() => actions.checkIn(next)}
+                loading={actions.busyId === next.id}
+              />
+            ) : (
+              <Button
+                label="Szczegóły służby"
+                icon="text-box"
+                variant={hero ? 'gold' : 'primary'}
+                style={styles.flex}
+                onPress={() => goService(next)}
+              />
+            )}
+            {avail?.canReportAbsence && (
+              hero
+                ? <Button label="Nie mogę być" icon="calendar-remove" variant={heroPal.statusBar === 'light' ? 'outlineLight' : 'secondary'} onPress={() => actions.openAbsence(next)} />
+                : <IconButton icon="calendar-remove" color={c.danger} accessibilityLabel="Nie mogę być" onPress={() => actions.openAbsence(next)} />
+            )}
+          </View>
+        )}
+      </Card>
+    )
+  }
+
+  // ── „W kościele” ─────────────────────────────────────────────────────────
+  const church = (
+    <Card large style={styles.church}>
+      <View style={styles.churchHead}>
+        <AppText variant="title">W kościele</AppText>
+        <AppText variant="small" muted>{weekdayShortDate(day)}</AppText>
+      </View>
+      <DayStrip days={days} selected={day} onSelect={setDay} />
+      <View style={[styles.dayList, { borderColor: c.border }]}>
+        {dayServices.length === 0 ? (
+          <AppText muted style={styles.dayEmpty}>Brak Mszy i nabożeństw w tym dniu.</AppText>
+        ) : dayServices.map((s, i) => {
+          const cat = CATEGORY_CONFIG[s.category] ?? CATEGORY_CONFIG.msza
+          return (
+            <Pressable
+              key={s.id}
+              onPress={() => goService(s)}
+              style={({ hovered }: any) => [styles.dayRow, i > 0 && { borderTopWidth: 1, borderTopColor: c.borderLight }, hovered && { backgroundColor: c.highlight }]}
+            >
+              <AppText style={[styles.dayTime, { color: c.text }]}>{s.time}</AppText>
+              <View style={[styles.dayBar, { backgroundColor: cat.color }]} />
+              <View style={styles.flex}>
+                <AppText variant="bodyStrong" numberOfLines={1}>{s.title}</AppText>
+                <AppText variant="small" muted>{cat.label}</AppText>
+              </View>
+              {s.mine && <Badge label="TY" tone="navy" />}
+              <Icon name="chevron-right" size={20} color={c.iconMuted} />
+            </Pressable>
+          )
+        })}
+      </View>
+    </Card>
   )
-}
 
+  // ── Skróty / prawa kolumna ───────────────────────────────────────────────
+  const annCard = (
+    <Card flush>
+      <View style={styles.annHead}>
+        <SectionHeader title="Ogłoszenia" action="Wszystkie →" onAction={() => router.push('/(tabs)/announcements')} style={styles.noMargin} />
+      </View>
+      {anns.length === 0
+        ? <AppText muted style={styles.dayEmpty}>Brak ogłoszeń.</AppText>
+        : anns.map((a, i) => (
+          <Pressable
+            key={a.id}
+            onPress={() => router.push('/(tabs)/announcements')}
+            style={[styles.annRow, { borderTopColor: c.borderLight }, i === 0 && { borderTopWidth: 1 }, i > 0 && { borderTopWidth: 1 }]}
+          >
+            <AppText variant="bodyStrong" numberOfLines={1}>{a.title}</AppText>
+            <AppText variant="small" muted>{`${a.author?.full_name ?? 'Parafia'} · ${relativeDay(a.created_at.slice(0, 10))}`}</AppText>
+          </Pressable>
+        ))}
+    </Card>
+  )
 
-function StatBox({ icon, iconColor, value, label, styles }: { icon: any; iconColor: string; value: number; label: string; styles: any }) {
+  const wiedzaCard = (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push('/(tabs)/wiedza')}
+      style={[styles.wiedza, { backgroundColor: c.primary }]}
+    >
+      <Icon name="book-open-variant" size={28} color={c.gold} />
+      <View style={styles.flex}>
+        <AppText variant="eyebrow" color={c.gold}>Wiedza ministranta</AppText>
+        <AppText style={[serif(), styles.wiedzaTitle]}>Szaty, sprzęty, gesty</AppText>
+        <AppText style={styles.wiedzaSub}>Kategorie haseł i słowniczek</AppText>
+      </View>
+      <Icon name="chevron-right" size={22} color="#AEBBD0" />
+    </Pressable>
+  )
+
+  const pointsCard = (
+    <Card large onPress={() => router.push('/(tabs)/points')}>
+      <AppText variant="eyebrow" color={c.goldInk}>{`Twoje punkty`}</AppText>
+      <View style={styles.pointsRow}>
+        <AppText style={[serif(), styles.pointsBig, { color: c.text }]}>{points?.total ?? '—'}</AppText>
+        <AppText variant="bodyStrong" muted>{`pkt · ${rankName ?? 'Ministrant'}`}</AppText>
+      </View>
+      <AppText variant="small" muted>
+        {points ? `#${points.rank || '—'} w parafii · ${points.services} ${points.services === 1 ? 'służba' : 'służb'}` : ''}
+      </AppText>
+    </Card>
+  )
+
+  const onRefresh = async () => { setRefreshing(true); await Promise.all([refresh(), reload()]); setRefreshing(false) }
+
+  if (isDesktop) {
+    return (
+      <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={styles.desktop}>
+        <View style={styles.desktopLeft}>
+          {nextCard(true)}
+          {church}
+        </View>
+        <View style={styles.desktopRight}>
+          {pointsCard}
+          {annCard}
+          {wiedzaCard}
+        </View>
+        {actions.sheets}
+      </ScrollView>
+    )
+  }
+
   return (
-    <View style={styles.statBox}>
-      <Ionicons name={icon} size={22} color={iconColor} />
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+    <View style={[styles.flex, { backgroundColor: c.bg }]}>
+      <StatusBar style={pal.statusBar} />
+      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        <View style={[styles.header, { backgroundColor: pal.bg, paddingTop: insets.top + 8 }]}>
+          <View style={styles.topRow}>
+            <Image source={require('../../assets/images/icon.png')} style={styles.logo} />
+            <AppText style={[styles.greeting, { color: pal.fg }]} numberOfLines={2}>
+              {`Króluj nam Chryste,\n${firstName}`}
+            </AppText>
+            <Pressable accessibilityRole="button" accessibilityLabel="Profil" onPress={() => router.push('/(tabs)/profile')}>
+              <Avatar name={profile?.full_name} avatarUrl={profile?.avatar_url} size={38} />
+            </Pressable>
+          </View>
+          <AppText variant="eyebrow" color={pal.accent}>{liturgy.entry.typeLabel}</AppText>
+          <AppText style={[serif(), styles.today, { color: pal.fg }]}>
+            Dziś, <AppText style={[serif(true), styles.today, { color: pal.fg }]}>{dayMonth(today)}</AppText>
+          </AppText>
+          <AppText style={[styles.litName, { color: pal.fg }]}>{liturgy.entry.name}</AppText>
+          <View style={styles.chips}>
+            <HeaderChip label={liturgy.vestmentName} palette={pal} dot={VESTMENT_DOT[liturgy.color]} />
+            <HeaderChip label={pointsChip} palette={pal} onPress={() => router.push('/(tabs)/points')} />
+          </View>
+        </View>
+
+        <View style={styles.body}>
+          <View style={styles.overlap}>{nextCard(false)}</View>
+          {church}
+          <View style={styles.shortcuts}>
+            <Card style={styles.shortcut} onPress={() => router.push('/(tabs)/announcements')}>
+              <Icon name="bullhorn" size={24} color={c.goldInk} />
+              <AppText variant="bodyStrong">Ogłoszenia</AppText>
+              <AppText variant="small" muted numberOfLines={2}>{anns[0]?.title ?? 'Brak nowych'}</AppText>
+            </Card>
+            <Card style={styles.shortcut} onPress={() => router.push('/(tabs)/wiedza')}>
+              <Icon name="book-open-variant" size={24} color={c.goldInk} />
+              <AppText variant="bodyStrong">Wiedza</AppText>
+              <AppText variant="small" muted numberOfLines={2}>Szaty, sprzęty, gesty</AppText>
+            </Card>
+          </View>
+        </View>
+      </ScrollView>
+      {actions.sheets}
     </View>
   )
 }
 
-function QuickAction({ icon, color, label, onPress, styles }: { icon: any; color: string; label: string; onPress: () => void; styles: any }) {
-  return (
-    <TouchableOpacity style={styles.quickAction} onPress={onPress} activeOpacity={0.75}>
-      <View style={[styles.quickIcon, { backgroundColor: color + '18' }]}>
-        <Ionicons name={icon} size={24} color={color} />
-      </View>
-      <Text style={styles.quickLabel}>{label}</Text>
-    </TouchableOpacity>
-  )
-}
-
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    content: { padding: 16, gap: 16 },
-
-    greetingCard: {
-      backgroundColor: c.primary, borderRadius: 16, padding: 20, gap: 8,
-      ...shadow.brand,
-    },
-    greetingName: { fontSize: 24, fontWeight: '700', color: '#fff' },
-    greetingMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    greetingRole: { fontSize: 13, color: c.white + 'CC', fontWeight: '500' },
-    metaDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: c.white + '55' },
-    greetingRank: { fontSize: 13, color: c.white + 'CC' },
-
-    liturgyRow: {
-      flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap',
-      paddingHorizontal: 14, paddingVertical: 10, gap: 6,
-      backgroundColor: c.goldSurface, borderRadius: 12,
-      borderWidth: 1, borderColor: c.border,
-    },
-    liturgyDot: { width: 8, height: 8, borderRadius: 4 },
-    liturgyTypeLabel: { fontSize: 12, color: c.gold, fontWeight: '600' },
-    liturgyName: { fontSize: 13, color: c.text, flex: 1 },
-
-    statsRow: { flexDirection: 'row', gap: 12 },
-    statBox: {
-      flex: 1, backgroundColor: c.surface, borderRadius: 12, padding: 16,
-      alignItems: 'center', gap: 4,
-      ...shadow.xs,
-    },
-    statValue: { fontSize: 26, fontWeight: '800', color: c.text, marginTop: 4 },
-    statLabel: { fontSize: 11, color: c.subtext, textAlign: 'center' },
-
-    // Responsive wide layout
-    wideRow: { flexDirection: 'row', gap: 20, alignItems: 'flex-start' },
-    wideLeft: { flex: 1 },
-    wideRight: { flex: 1, gap: 16 },
-
-    section: { gap: 10 },
-    sectionLabel: {
-      fontSize: 12, fontWeight: '700', color: c.textTertiary,
-      textTransform: 'uppercase', letterSpacing: 0.8,
-    },
-
-    daySelectorContent: { gap: 6, paddingBottom: 4 },
-    actionsWrap: { gap: 10, marginTop: 6 },
-
-    // Day scroller
-    dayStripWrap: {
-      flexDirection: 'row', flexWrap: 'wrap', gap: 6,
-    },
-    dayChip: {
-      alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8,
-      borderRadius: 12, backgroundColor: c.surface, minWidth: 48,
-      ...shadow.xs,
-    },
-    dayChipFill: { flex: 1 },
-    dayChipSelected: { backgroundColor: c.primary },
-    dayChipDow: { fontSize: 11, fontWeight: '600', color: c.subtext },
-    dayChipNum: { fontSize: 17, fontWeight: '700', color: c.text, marginTop: 2 },
-    dayChipTextSelected: { color: '#fff' },
-
-    dayLiturgyRow: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      paddingHorizontal: 2,
-    },
-    dayLiturgyText: { fontSize: 12, color: c.gold, fontStyle: 'italic', flex: 1 },
-
-    emptyCard: {
-      backgroundColor: c.surface, borderRadius: 12, padding: 20,
-      alignItems: 'center', gap: 6,
-      ...shadow.xs,
-    },
-    emptyText: { fontSize: 13, color: c.textTertiary },
-    emptyLink: { fontSize: 13, color: c.primary, fontWeight: '600', marginTop: 2 },
-
-    eventRow: {
-      backgroundColor: c.surface, borderRadius: 10, borderLeftWidth: 3,
-      padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10,
-      ...shadow.xs,
-    },
-    eventTimeBadge: {
-      borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5,
-      minWidth: 46, alignItems: 'center',
-    },
-    eventTime: { fontSize: 13, fontWeight: '700' },
-    eventInfo: { flex: 1 },
-    eventTitle: { fontSize: 14, fontWeight: '600', color: c.text },
-    eventCat: { fontSize: 11, fontWeight: '500', marginTop: 1 },
-
-    dutyCard: {
-      backgroundColor: c.surface, borderRadius: 12, padding: 12,
-      borderLeftWidth: 4,
-      ...shadow.xs,
-    },
-    dutyTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    timeBadge: {
-      borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
-      minWidth: 48, alignItems: 'center',
-    },
-    timeText: { fontSize: 13, fontWeight: '700' },
-    dutyInfo: { flex: 1 },
-    dutyTitle: { fontSize: 15, fontWeight: '600', color: c.text },
-    dutyDate: { fontSize: 12, color: c.subtext, marginTop: 2 },
-    catPill: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
-    catPillText: { fontSize: 11, fontWeight: '600' },
-
-    actionsRow: { flexDirection: 'row', gap: 10 },
-    quickAction: {
-      flex: 1, backgroundColor: c.surface, borderRadius: 14, padding: 14,
-      alignItems: 'center', gap: 8,
-      ...shadow.md,
-    },
-    quickIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-    quickLabel: { fontSize: 12, fontWeight: '600', color: c.text, textAlign: 'center' },
-  })
-}
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  noMargin: { marginBottom: 0 },
+  header: { paddingHorizontal: 22, paddingBottom: 72, gap: 8 },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  logo: { width: 34, height: 34, borderRadius: 9 },
+  greeting: { ...sans(700), fontSize: 13, lineHeight: 17, flex: 1 },
+  today: { fontSize: 40, lineHeight: 43 },
+  litName: { ...sans(500), fontSize: 14, opacity: 0.92 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
+  body: { paddingHorizontal: 16, paddingBottom: 28, gap: 16 },
+  overlap: { marginTop: -52 },
+  nextCard: { gap: 14, padding: 18 },
+  nextHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  nextMain: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  dateTile: { width: 62, borderRadius: 14, paddingVertical: 8, alignItems: 'center' },
+  dateTileHero: { width: 84, paddingVertical: 12 },
+  dateDow: { ...sans(800), fontSize: 11, letterSpacing: 0.6 },
+  dateNum: { ...sans(800), fontSize: 26, lineHeight: 30, color: '#FFFFFF' },
+  dateTime: { ...sans(700), fontSize: 12, color: '#C9D3E3' },
+  nextSub: { ...sans(600), fontSize: 13, marginTop: 4 },
+  nextActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  church: { gap: 14, padding: 18 },
+  churchHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  dayList: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
+  dayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 13, cursor: 'pointer' } as any,
+  dayTime: { ...sans(800), fontSize: 15, width: 46, fontVariant: ['tabular-nums'] },
+  dayBar: { width: 3, height: 30, borderRadius: 2 },
+  dayEmpty: { padding: 14 },
+  shortcuts: { flexDirection: 'row', gap: 12 },
+  shortcut: { flex: 1, gap: 4 },
+  annHead: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10 },
+  annRow: { paddingHorizontal: 14, paddingVertical: 12, gap: 2, cursor: 'pointer' } as any,
+  wiedza: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, borderRadius: 20, cursor: 'pointer' } as any,
+  wiedzaTitle: { fontSize: 24, lineHeight: 27, color: '#FFFFFF' },
+  wiedzaSub: { ...sans(500), fontSize: 12, color: '#AEBBD0' },
+  pointsRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, marginTop: 4 },
+  pointsBig: { fontSize: 64, lineHeight: 68 },
+  desktop: { flexDirection: 'row', gap: 20, padding: 28, paddingHorizontal: 32, alignItems: 'flex-start' },
+  desktopLeft: { flex: 1.6, gap: 20 },
+  desktopRight: { flex: 1, gap: 16 },
+})

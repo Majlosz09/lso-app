@@ -18,6 +18,9 @@ export function CustomTabBar({ state, descriptors, navigation, fabRouteName }: P
   const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
   if (isDesktop) return null
+  // ekrany pełnoekranowe (np. Obecność) chowają pasek przez tabBarStyle: { display: 'none' }
+  const focusedOptions = descriptors[state.routes[state.index].key]?.options as any
+  if (focusedOptions?.tabBarStyle?.display === 'none') return null
 
   // Ukryte trasy (href: null) mają tabBarItemStyle display:none / tabBarButton — pomijamy je
   const visibleRoutes = state.routes.filter(route => {

@@ -16,7 +16,7 @@ export type NavItem = {
 export const NAV: Record<NavRole, NavItem[]> = {
   member: [
     { key: 'home', label: 'Pulpit', icon: 'view-dashboard', href: '/(tabs)', paths: ['/'] },
-    { key: 'schedule', label: 'Grafik', icon: 'calendar-month', href: '/(tabs)/schedule', paths: ['/schedule', '/attendance'] },
+    { key: 'schedule', label: 'Grafik', icon: 'calendar-month', href: '/(tabs)/schedule', paths: ['/schedule', '/attendance', '/service'] },
     { key: 'points', label: 'Punkty', icon: 'trophy', href: '/(tabs)/points', paths: ['/points', '/badge-catalog', '/member-profile'] },
     { key: 'chat', label: 'Czat', icon: 'forum', href: '/(tabs)/chat', paths: ['/chat'], badge: 'chat' },
     { key: 'announcements', label: 'Ogłoszenia', icon: 'bullhorn', href: '/(tabs)/announcements', paths: ['/announcements'] },
@@ -95,6 +95,7 @@ const EXTRA_TITLES: Record<string, string> = {
   '/chat-reports': 'Zgłoszenia z czatu',
   '/chat/new-dm': 'Nowa wiadomość',
   '/attendance': 'Obecność',
+  '/service': 'Służba',
 }
 
 const HOME_TITLE: Record<NavRole, string> = {
@@ -114,4 +115,28 @@ export function topbarTitle(role: NavRole, pathname: string): string {
 /** Pozycja główna menu (bez „Wstecz”) vs podstrona. */
 export function isRootPath(role: NavRole, pathname: string): boolean {
   return pathname === '/' || NAV[role].some(i => i.paths[0] === pathname)
+}
+
+// ── Ta sama podstrona w grupie właściwej dla roli ─────────────────────────
+// Adresy bez grup są niejednoznaczne (np. „/schedule” istnieje u ministranta i u rodzica),
+// więc po odświeżeniu strony router może trafić do cudzej grupy. Zamiast wyrzucać na start,
+// przenosimy do odpowiednika w grupie użytkownika.
+const GROUP_ROUTES: Record<NavRole, { base: string; paths: string[] }> = {
+  member: {
+    base: '/(tabs)',
+    paths: ['/schedule', '/points', '/chat', '/announcements', '/profile', '/wiedza', '/badge-catalog', '/member-profile', '/attendance', '/service'],
+  },
+  parent: {
+    base: '/(parent)/(parent-tabs)',
+    paths: ['/schedule', '/points', '/chat', '/announcements', '/profile'],
+  },
+  admin: {
+    base: '/(admin)/(admin-tabs)',
+    paths: ['/schedules', '/members', '/points', '/chat', '/announcements', '/profile'],
+  },
+}
+
+export function equivalentRoute(role: NavRole, pathname: string): string {
+  const g = GROUP_ROUTES[role]
+  return g.paths.includes(pathname) ? `${g.base}${pathname}` : g.base
 }

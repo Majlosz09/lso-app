@@ -40,7 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar role={role} active={active} badges={badges} />
       <View style={styles.main}>
         <Topbar
-          title={topbarTitle(role, pathname)}
+          title={role === 'member' && pathname === '/' ? `Dzień dobry, ${(profile?.full_name ?? '').split(' ')[0]}` : topbarTitle(role, pathname)}
           subtitle={`${profile?.full_name ?? ''} · ${todayLabel()}`}
           onBack={root ? undefined : goBack}
         />

@@ -1,7 +1,157 @@
-import { Redirect } from 'expo-router'
+import { useMemo } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { useRouter } from 'expo-router'
+import { StatusBar } from 'expo-status-bar'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useAuthStore } from '../../stores/authStore'
+import { useTheme } from '../../lib/ThemeContext'
+import { sans, serif } from '../../lib/theme'
+import { addDays, dayNum, dayShort, localDateStr, relativeDay, shortDate } from '../../lib/dates'
+import { serviceAvailability } from '../../lib/serviceRules'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { Service, useServices } from '../../hooks/useServices'
+import { useServiceActions } from '../../components/services/useServiceActions'
+import { AppText, Button, Card, Icon } from '../../components/ui'
 
-// Etap 2: złoty przycisk „Obecność” prowadzi do grafiku, gdzie jest meldowanie.
-// Pełny ekran obecności (QR / GPS / potwierdzenie) powstaje w etapie 4 (ministrant).
-export default function AttendanceScreen() {
-  return <Redirect href="/(tabs)/schedule" />
+const NAVY = '#071C3A'
+const MUTED = '#C9D3E3'
+const GOLD_I = '#E3C98E'
+
+const COPY: Record<string, { title: string; accent: string; icon: string; hint: string }> = {
+  qr: { title: 'Zeskanuj kod', accent: 'w zakrystii', icon: 'qrcode-scan', hint: 'Kod wisi przy drzwiach zakrystii. Obecność liczy się od 30 minut przed rozpoczęciem.' },
+  gps: { title: 'Potwierdź', accent: 'przy kościele', icon: 'map-marker-radius', hint: 'Sprawdzimy lokalizację telefonu — musisz być przy kościele.' },
+  button: { title: 'Jesteś', accent: 'na służbie?', icon: 'hand-back-right', hint: 'Potwierdź obecność jednym przyciskiem, gdy jesteś już w zakrystii.' },
+  admin: { title: 'Obecność', accent: 'zaznacza opiekun', icon: 'shield-check', hint: 'W tej parafii listę obecności odhacza ksiądz lub opiekun po służbie.' },
 }
+
+/** Pierwsza służba z otwartym oknem meldowania (najpierw moje), inaczej najbliższa moja. */
+function pickService(services: Service[], mode: string): { service?: Service; ready: boolean } {
+  const open = services.filter(s => serviceAvailability(s, mode).canCheckIn)
+  const ready = open.find(s => s.mine) ?? open[0]
+  if (ready) return { service: ready, ready: true }
+  const now = Date.now()
+  const upcoming = services.find(s => s.mine && !s.attended && new Date(`${s.date}T${s.time}`).getTime() > now)
+  return { service: upcoming, ready: false }
+}
+
+export default function AttendanceScreen() {
+  const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const isDesktop = useIsDesktop()
+  const { colors: c } = useTheme()
+  const parish = useAuthStore(s => s.parish)
+  const mode = parish?.attendance_mode ?? 'button'
+  const today = localDateStr()
+  const { services, loading, refresh } = useServices(today, addDays(today, 7))
+  const actions = useServiceActions(refresh)
+  const { service, ready } = useMemo(() => pickService(services, mode), [services, mode])
+  const copy = COPY[mode] ?? COPY.button
+  const attendedToday = services.find(s => s.date === today && s.attended)
+
+  const close = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))
+  const opensAt = service ? (() => {
+    const d = new Date(`${service.date}T${service.time}`)
+    d.setMinutes(d.getMinutes() - 30)
+    return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+  })() : ''
+
+  return (
+    <View style={[styles.flex, { backgroundColor: NAVY }]}>
+      <StatusBar style="light" />
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 20 }, isDesktop && styles.desktop]}>
+        <View style={styles.top}>
+          {!isDesktop && (
+            <Pressable accessibilityRole="button" accessibilityLabel="Zamknij" onPress={close} style={styles.close}>
+              <Icon name="close" size={22} color="#FFFFFF" filled />
+            </Pressable>
+          )}
+          <AppText variant="eyebrow" color={c.gold} style={styles.eyebrow}>Potwierdź obecność</AppText>
+        </View>
+
+        <View style={styles.center}>
+          <AppText style={[serif(), styles.title]}>
+            {copy.title}{'\n'}<AppText style={[serif(true), styles.title, { color: GOLD_I }]}>{copy.accent}</AppText>
+          </AppText>
+          <View style={[styles.frame, { borderColor: c.gold }]}>
+            <Icon name={copy.icon} size={64} color={MUTED} />
+            {mode === 'gps' && parish?.gps_radius ? (
+              <AppText style={styles.frameText}>{`promień ${parish.gps_radius} m`}</AppText>
+            ) : null}
+          </View>
+          <AppText style={styles.hint}>{copy.hint}</AppText>
+          {mode !== 'admin' && (
+            <AppText style={styles.hintSmall}>Opiekun może też zaznaczyć obecność po służbie.</AppText>
+          )}
+        </View>
+
+        <View style={styles.bottom}>
+          {loading ? (
+            <ActivityIndicator color={c.gold} />
+          ) : service ? (
+            <Card large style={styles.svcCard}>
+              <View style={[styles.dateTile, { backgroundColor: c.primary }]}>
+                <AppText style={[styles.dow, { color: c.gold }]}>{dayShort(service.date).toUpperCase()}</AppText>
+                <AppText style={styles.num}>{dayNum(service.date)}</AppText>
+              </View>
+              <View style={styles.flex}>
+                <AppText variant="bodyStrong" numberOfLines={1}>{`${service.title} · ${service.time}`}</AppText>
+                <AppText variant="small" muted>
+                  {`${dayShort(service.date)} ${shortDate(service.date)} · ${service.mine ? 'Twój dyżur' : 'bez przydziału'}`}
+                </AppText>
+              </View>
+            </Card>
+          ) : (
+            <Card large style={styles.svcCard}>
+              <Icon name={attendedToday ? 'check-circle' : 'calendar-blank'} size={28} color={attendedToday ? c.success : c.subtext} filled={!!attendedToday} />
+              <AppText variant="body" style={styles.flex}>
+                {attendedToday ? 'Obecność na dzisiejszej służbie już zapisana.' : 'Nie masz teraz służby do potwierdzenia.'}
+              </AppText>
+            </Card>
+          )}
+
+          {mode === 'admin' ? null : ready && service ? (
+            <Button
+              label="Potwierdzam obecność"
+              icon="account-check"
+              variant="gold"
+              onPress={() => actions.checkIn(service)}
+              loading={actions.busyId === service.id}
+            />
+          ) : service ? (
+            <Button
+              label={`Możliwe od ${opensAt} (${relativeDay(service.date)})`}
+              variant="outlineLight"
+              disabled
+            />
+          ) : (
+            <Button label="Przejdź do grafiku" variant="outlineLight" onPress={() => router.replace('/(tabs)/schedule')} />
+          )}
+        </View>
+      </ScrollView>
+      {actions.sheets}
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  scroll: { flexGrow: 1, paddingHorizontal: 24 },
+  desktop: { maxWidth: 520, width: '100%', alignSelf: 'center' },
+  top: { flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 44 },
+  close: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  eyebrow: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20, paddingVertical: 24 },
+  title: { fontSize: 36, lineHeight: 39, color: '#FFFFFF', textAlign: 'center' },
+  frame: {
+    width: 230, height: 230, borderRadius: 30, borderWidth: 3, borderStyle: 'dashed',
+    backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center', gap: 10,
+  },
+  frameText: { ...sans(700), fontSize: 13, color: MUTED },
+  hint: { ...sans(500), fontSize: 14, lineHeight: 21, color: MUTED, textAlign: 'center', maxWidth: 320 },
+  hintSmall: { ...sans(500), fontSize: 12, color: '#8497B5', textAlign: 'center' },
+  bottom: { gap: 12 },
+  svcCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  dateTile: { width: 52, borderRadius: 12, paddingVertical: 6, alignItems: 'center' },
+  dow: { ...sans(800), fontSize: 10 },
+  num: { ...sans(800), fontSize: 22, lineHeight: 26, color: '#FFFFFF' },
+})

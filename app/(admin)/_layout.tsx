@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { View, ActivityIndicator } from 'react-native'
-import { Stack, useRouter } from 'expo-router'
+import { Stack, usePathname, useRouter } from 'expo-router'
+import { equivalentRoute, navRoleFor } from '../../lib/navigation'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { useNavHeaderOptions } from '../../components/layout/navOptions'
@@ -8,6 +9,7 @@ import { useNavHeaderOptions } from '../../components/layout/navOptions'
 export default function AdminLayout() {
   const { profile, parish, isLoading } = useAuthStore()
   const router = useRouter()
+  const pathname = usePathname()
   const { colors } = useTheme()
   const headerOptions = useNavHeaderOptions()
 
@@ -16,7 +18,7 @@ export default function AdminLayout() {
   useEffect(() => {
     // profil wczytuje się chwilę po sesji — bez niego nie oceniamy dostępu (odświeżenie podstrony na webie)
     if (!isLoading && profile && !hasAccess) {
-      router.replace('/(tabs)')
+      router.replace(equivalentRoute(navRoleFor(profile, false), pathname) as any)
     }
     if (!isLoading && hasAccess && parish && parish.setup_done === false) {
       router.replace('/(admin)/onboarding')

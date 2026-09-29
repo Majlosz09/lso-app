@@ -1,0 +1,326 @@
+import { useRef, useState } from 'react'
+import { Modal, Pressable, StyleSheet, View } from 'react-native'
+import Toast from 'react-native-toast-message'
+import { CameraView, useCameraPermissions } from 'expo-camera'
+import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../stores/authStore'
+import { useTheme } from '../../lib/ThemeContext'
+import { sans, serif } from '../../lib/theme'
+import { CheckInResult, validateGps, validateParishQr } from '../../lib/checkin'
+import { dayShort, longDate } from '../../lib/dates'
+import type { Service } from '../../hooks/useServices'
+import { ChoiceCard } from '../auth/formParts'
+import { AppText, Button, Chip, Icon, Sheet, TextField } from '../ui'
+
+export const ABSENCE_REASONS = ['Choroba', 'Szkoła', 'Wyjazd', 'Sprawy rodzinne', 'Inne'] as const
+
+const DAY_ACC = ['niedzielę', 'poniedziałek', 'wtorek', 'środę', 'czwartek', 'piątek', 'sobotę']
+
+/** Treść powodu zapisywana w absence_reason: „Choroba” albo „Choroba — angina”. */
+export function absenceReasonText(reason: string, details: string): string {
+  const d = details.trim()
+  if (reason === 'Inne') return d
+  return d ? `${reason} — ${d}` : reason
+}
+
+/**
+ * Akcje ministranta na służbie (zameldowanie, zapis, wypis, nieobecność) + ich arkusze.
+ * Ekran renderuje `sheets` i woła `checkIn/openSignUp/openUnsign/openAbsence`.
+ */
+export function useServiceActions(onChanged: () => void) {
+  const { profile, parish } = useAuthStore()
+  const { colors: c } = useTheme()
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const [signUpFor, setSignUpFor] = useState<Service | null>(null)
+  const [signUpMode, setSignUpMode] = useState<'once' | 'recurring'>('once')
+  const [unsign, setUnsign] = useState<{ service: Service; commitmentId: string | null } | null>(null)
+  const [absenceFor, setAbsenceFor] = useState<Service | null>(null)
+  const [reason, setReason] = useState<string>('Choroba')
+  const [details, setDetails] = useState('')
+
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions()
+  const [qrFor, setQrFor] = useState<Service | null>(null)
+  const qrScanned = useRef(false)
+
+  const mode = parish?.attendance_mode ?? 'button'
+
+  // ── Zameldowanie ─────────────────────────────────────────────────────────
+  const doCheckIn = async (s: Service) => {
+    setBusyId(s.id)
+    let scheduleId = s.id
+    if (s.isTemplate) {
+      // wolne miejsce z rozkładu Mszy — najpierw zapis (tworzy służbę), potem obecność
+      const { data, error } = await supabase.rpc('sign_up_for_slot', { p_date: s.date, p_time_label: s.time, p_mode: 'once' })
+      if (error && !error.message.includes('Już jesteś zapisany')) {
+        setBusyId(null)
+        Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+        return
+      }
+      if (data) {
+        scheduleId = (data as any).schedule_id
+      } else {
+        const { data: sch } = await supabase
+          .from('schedules').select('id')
+          .eq('parish_id', profile!.parish_id)
+          .eq('date', s.date)
+          .gte('time', s.time + ':00')
+          .lt('time', s.time + ':59')
+          .maybeSingle()
+        if (!sch) { setBusyId(null); Toast.show({ type: 'error', text1: 'Błąd', text2: 'Nie znaleziono służby.' }); return }
+        scheduleId = sch.id
+      }
+    }
+    const { data, error } = await supabase.rpc('check_in_and_award_points', {
+      p_schedule_id: scheduleId,
+      p_profile_id: profile!.id,
+      p_parish_id: profile!.parish_id,
+    })
+    setBusyId(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    const result = data as any
+    if (result.already_checked_in) Toast.show({ type: 'info', text1: 'Obecność już zapisana' })
+    else if (result.points_awarded > 0) Toast.show({ type: 'success', text1: `Obecność potwierdzona · +${result.points_awarded} pkt`, text2: result.reason })
+    else Toast.show({ type: 'success', text1: 'Obecność potwierdzona' })
+    onChanged()
+  }
+
+  const checkIn = async (s: Service) => {
+    if (mode === 'admin') {
+      Toast.show({ type: 'info', text1: 'W tej parafii obecność zaznacza opiekun' })
+      return
+    }
+    if (mode === 'gps') {
+      if (!parish?.lat || !parish?.lng) {
+        Toast.show({ type: 'error', text1: 'Błąd konfiguracji', text2: 'Opiekun nie ustawił lokalizacji kościoła w ustawieniach parafii.' })
+        return
+      }
+      setBusyId(s.id)
+      let gps: CheckInResult = { success: false, message: 'Nie można uzyskać lokalizacji.' }
+      try {
+        gps = await Promise.race([
+          validateGps({ parishLat: parish.lat, parishLng: parish.lng, parishRadius: parish.gps_radius ?? 200 }),
+          new Promise<CheckInResult>(resolve => setTimeout(
+            () => resolve({ success: false, message: 'Przekroczono czas oczekiwania na lokalizację. Sprawdź czy GPS i uprawnienia są aktywne.' }),
+            25_000,
+          )),
+        ])
+      } finally {
+        setBusyId(null)
+      }
+      if (!gps.success) { Toast.show({ type: 'error', text1: 'Nie można zameldować', text2: gps.message }); return }
+      await doCheckIn(s)
+      return
+    }
+    if (mode === 'qr') {
+      if (!cameraPermission?.granted) {
+        const { granted } = await requestCameraPermission()
+        if (!granted) { Toast.show({ type: 'error', text1: 'Brak dostępu', text2: 'Zezwól aplikacji na dostęp do kamery.' }); return }
+      }
+      qrScanned.current = false
+      setQrFor(s)
+      return
+    }
+    await doCheckIn(s)
+  }
+
+  // ── Zapis ────────────────────────────────────────────────────────────────
+  const openSignUp = (s: Service) => { setSignUpMode('once'); setSignUpFor(s) }
+  const confirmSignUp = async () => {
+    const s = signUpFor
+    if (!s) return
+    setSignUpFor(null)
+    setBusyId(s.id)
+    const { data, error } = await supabase.rpc('sign_up_for_slot', { p_date: s.date, p_time_label: s.time, p_mode: signUpMode })
+    setBusyId(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    if (signUpMode === 'recurring') {
+      const count = (data as any)?.count ?? 1
+      Toast.show({
+        type: 'success',
+        text1: `Zapisano cyklicznie: ${dayShort(s.date)} ${s.time} co tydzień`,
+        text2: `Objęto ${count} ${count === 1 ? 'służbę' : 'służb'}.`,
+      })
+    } else {
+      Toast.show({ type: 'success', text1: `Zapisano: ${s.title} · ${dayShort(s.date)} ${s.time}` })
+    }
+    onChanged()
+  }
+
+  // ── Wypis ────────────────────────────────────────────────────────────────
+  const openUnsign = async (s: Service) => {
+    if (!s.mine) return
+    const dow = new Date(s.date + 'T12:00:00').getDay()
+    const { data: commitment } = await supabase
+      .from('recurring_commitments')
+      .select('id')
+      .eq('profile_id', profile!.id)
+      .eq('day_of_week', dow)
+      .eq('time_slot', s.time)
+      .maybeSingle()
+    setUnsign({ service: s, commitmentId: commitment?.id ?? null })
+  }
+  const doUnsign = async (cycle: boolean) => {
+    const u = unsign
+    if (!u?.service.mine) return
+    setUnsign(null)
+    setBusyId(u.service.id)
+    const ops = [supabase.from('schedule_assignments').delete().eq('id', u.service.mine.id)]
+    if (cycle && u.commitmentId) ops.push(supabase.from('recurring_commitments').delete().eq('id', u.commitmentId))
+    const results = await Promise.all(ops)
+    setBusyId(null)
+    const err = results.find(r => r.error)?.error
+    if (err) { Toast.show({ type: 'error', text1: 'Błąd', text2: err.message }); return }
+    Toast.show({ type: 'success', text1: cycle ? 'Wypisano z całego cyklu' : 'Wypisano z tej służby' })
+    onChanged()
+  }
+
+  // ── Nieobecność ──────────────────────────────────────────────────────────
+  const openAbsence = (s: Service) => { setReason('Choroba'); setDetails(''); setAbsenceFor(s) }
+  const sendAbsence = async () => {
+    const s = absenceFor
+    if (!s?.mine) return
+    const text = absenceReasonText(reason, details)
+    if (!text) { Toast.show({ type: 'error', text1: 'Opisz powód nieobecności' }); return }
+    setBusyId(s.id)
+    const { error } = await supabase
+      .from('schedule_assignments')
+      .update({ status: 'excused', absence_reason: text })
+      .eq('id', s.mine.id)
+    setBusyId(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    setAbsenceFor(null)
+    Toast.show({ type: 'success', text1: 'Zgłoszenie wysłane do opiekuna' })
+    onChanged()
+  }
+
+  const sheets = (
+    <>
+      <Sheet
+        visible={!!signUpFor}
+        onClose={() => setSignUpFor(null)}
+        eyebrow={signUpFor ? `${longDate(signUpFor.date)} · ${signUpFor.time}` : undefined}
+        title={signUpFor ? `Zapisz się: ${signUpFor.title}` : ''}
+        footer={
+          <>
+            <Button label="Zapisz się" onPress={confirmSignUp} />
+            <Button label="Anuluj" variant="secondary" onPress={() => setSignUpFor(null)} />
+          </>
+        }
+      >
+        <ChoiceCard
+          icon="calendar-check"
+          title="Jednorazowo"
+          subtitle="Tylko na tę służbę"
+          selected={signUpMode === 'once'}
+          onPress={() => setSignUpMode('once')}
+        />
+        <ChoiceCard
+          icon="calendar-sync"
+          title="Co tydzień"
+          subtitle={signUpFor ? `Stały dyżur: każd${[0, 3, 6].includes(new Date(signUpFor.date + 'T12:00:00').getDay()) ? 'ą' : 'y'} ${DAY_ACC[new Date(signUpFor.date + 'T12:00:00').getDay()]} o ${signUpFor.time}` : ''}
+          selected={signUpMode === 'recurring'}
+          onPress={() => setSignUpMode('recurring')}
+        />
+      </Sheet>
+
+      <Sheet
+        visible={!!unsign}
+        onClose={() => setUnsign(null)}
+        title="Wypisać się?"
+        eyebrow={unsign ? `${unsign.service.title} · ${longDate(unsign.service.date)} ${unsign.service.time}` : undefined}
+        footer={unsign?.commitmentId ? (
+          <>
+            <Button label="Tylko z tej służby" variant="danger" onPress={() => doUnsign(false)} />
+            <Button label="Z całego cyklu" variant="secondary" onPress={() => doUnsign(true)} />
+          </>
+        ) : (
+          <>
+            <Button label="Wypisz się" variant="danger" onPress={() => doUnsign(false)} />
+            <Button label="Anuluj" variant="secondary" onPress={() => setUnsign(null)} />
+          </>
+        )}
+      >
+        <AppText muted>
+          {unsign?.commitmentId
+            ? 'Ta służba jest częścią Twojego stałego dyżuru. Wypisać się tylko z niej czy z całego cyklu?'
+            : 'Miejsce zwolni się dla innych ministrantów.'}
+        </AppText>
+      </Sheet>
+
+      <Sheet
+        visible={!!absenceFor}
+        onClose={() => setAbsenceFor(null)}
+        title="Nie mogę być"
+        eyebrow={absenceFor ? `${absenceFor.title} · ${longDate(absenceFor.date)} ${absenceFor.time}` : undefined}
+        footer={
+          <>
+            <Button label="Wyślij do opiekuna" variant="danger" onPress={sendAbsence} loading={busyId === absenceFor?.id} />
+            <Button label="Anuluj" variant="secondary" onPress={() => setAbsenceFor(null)} />
+          </>
+        }
+      >
+        <AppText variant="label" muted>Powód</AppText>
+        <View style={styles.chips}>
+          {ABSENCE_REASONS.map(r => <Chip key={r} label={r} selected={reason === r} onPress={() => setReason(r)} />)}
+        </View>
+        <TextField
+          label={reason === 'Inne' ? 'Opisz powód' : 'Szczegóły (opcjonalnie)'}
+          placeholder="np. wyjazd na zawody"
+          value={details}
+          onChangeText={setDetails}
+          multiline
+        />
+        <AppText variant="small" muted>
+          Opiekun zobaczy zgłoszenie w usprawiedliwieniach i je przyjmie albo odrzuci.
+        </AppText>
+      </Sheet>
+
+      <Modal visible={!!qrFor} animationType="slide" onRequestClose={() => setQrFor(null)}>
+        <View style={[styles.qr, { backgroundColor: '#071C3A' }]}>
+          <CameraView
+            style={StyleSheet.absoluteFill}
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+            onBarcodeScanned={e => {
+              if (qrScanned.current) return
+              if (!validateParishQr(e.data, profile!.parish_id!)) {
+                Toast.show({ type: 'error', text1: 'Nieprawidłowy kod', text2: 'Ten kod QR nie należy do Twojej parafii.' })
+                return
+              }
+              qrScanned.current = true
+              const pending = qrFor
+              setQrFor(null)
+              if (pending) doCheckIn(pending)
+            }}
+          />
+          <View style={styles.qrOverlay} pointerEvents="none">
+            <AppText style={[serif(), styles.qrTitle]}>
+              Zeskanuj kod{'\n'}<AppText style={[serif(true), styles.qrTitle, { color: '#E3C98E' }]}>w zakrystii</AppText>
+            </AppText>
+            <View style={[styles.qrFrame, { borderColor: c.gold }]} />
+            <AppText style={styles.qrHint}>Kod wisi przy drzwiach zakrystii.</AppText>
+          </View>
+          <Pressable accessibilityLabel="Zamknij" onPress={() => setQrFor(null)} style={styles.qrClose}>
+            <Icon name="close" size={24} color="#FFFFFF" filled />
+          </Pressable>
+        </View>
+      </Modal>
+    </>
+  )
+
+  return { checkIn, openSignUp, openUnsign, openAbsence, busyId, sheets, mode }
+}
+
+const styles = StyleSheet.create({
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  qr: { flex: 1 },
+  qrOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 22, padding: 28 },
+  qrTitle: { fontSize: 34, lineHeight: 37, color: '#FFFFFF', textAlign: 'center' },
+  qrFrame: { width: 250, height: 250, borderRadius: 28, borderWidth: 3 },
+  qrHint: { ...sans(600), fontSize: 14, color: '#C9D3E3', textAlign: 'center' },
+  qrClose: {
+    position: 'absolute', top: 52, left: 20, width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center',
+  },
+})
