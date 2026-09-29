@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="theme-color" content="#071C3A" />
+    <title>LSO App</title>
+    <!-- Szablon SPA (web.output = "single"): apka jest za logowaniem, więc bez prerenderu i hydratacji. -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+        margin: 0;
+        background-color: #F6F4EF;
+        font-family: Manrope_500Medium, Manrope, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #0D1320;
+        }
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      Włącz JavaScript, aby korzystać z LSO App.
+    </noscript>
+    <div id="root"></div>
+  </body>
+</html>

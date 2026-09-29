@@ -3,16 +3,19 @@ import { View, ActivityIndicator } from 'react-native'
 import { Stack, useRouter } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
+import { useNavHeaderOptions } from '../../components/layout/navOptions'
 
 export default function AdminLayout() {
   const { profile, parish, isLoading } = useAuthStore()
   const router = useRouter()
   const { colors } = useTheme()
+  const headerOptions = useNavHeaderOptions()
 
   const hasAccess = profile?.role === 'admin' || (profile?.role === 'member' && profile?.is_admin)
 
   useEffect(() => {
-    if (!isLoading && !hasAccess) {
+    // profil wczytuje się chwilę po sesji — bez niego nie oceniamy dostępu (odświeżenie podstrony na webie)
+    if (!isLoading && profile && !hasAccess) {
       router.replace('/(tabs)')
     }
     if (!isLoading && hasAccess && parish && parish.setup_done === false) {
@@ -20,7 +23,7 @@ export default function AdminLayout() {
     }
   }, [profile, parish, isLoading])
 
-  if (isLoading || !hasAccess) {
+  if (isLoading || !profile || !hasAccess) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -30,11 +33,7 @@ export default function AdminLayout() {
 
   return (
     <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.header },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '600' },
-      }}
+      screenOptions={headerOptions}
     >
       <Stack.Screen name="(admin-tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="schedule-detail" options={{ title: 'Szczegóły służby' }} />

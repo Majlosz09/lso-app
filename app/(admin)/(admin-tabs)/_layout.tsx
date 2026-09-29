@@ -1,53 +1,38 @@
 import { useState } from 'react'
-import { Tabs, useRouter } from 'expo-router'
-import { TouchableOpacity, View } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
-import { useAuthStore } from '../../../stores/authStore'
+import { Tabs } from 'expo-router'
+import { Pressable, View } from 'react-native'
 import { CustomTabBar } from '../../../components/CustomTabBar'
-import { useTheme } from '../../../lib/ThemeContext'
-import { AvatarImage } from '../../../components/AvatarImage'
 import { ExportModal } from '../../../components/ExportModal'
+import { Icon } from '../../../components/ui'
+import { HeaderAvatar, HeaderBack } from '../../../components/layout/HeaderAvatar'
+import { useNavHeaderOptions } from '../../../components/layout/navOptions'
+import { useLiturgyHeader } from '../../../hooks/useLiturgyHeader'
+
+const tabIcon = (name: string) => ({ color, size, focused }: { color: string; size: number; focused: boolean }) =>
+  <Icon name={name} size={size} color={color} filled={focused} />
+
+const PROFILE = '/(admin)/(admin-tabs)/profile'
 
 export default function AdminTabsLayout() {
-  const router = useRouter()
-  const { profile } = useAuthStore()
-  const { colors } = useTheme()
-  const avatarUrl = profile?.avatar_url
+  const headerOptions = useNavHeaderOptions()
+  const { palette } = useLiturgyHeader()
   const [exportVisible, setExportVisible] = useState(false)
 
-  const avatarButton = () => (
-    <TouchableOpacity
-      onPress={() => router.push('/(admin)/(admin-tabs)/profile')}
-      style={{ marginRight: 16 }}
-      hitSlop={8}
-    >
-      {avatarUrl
-        ? <AvatarImage avatarUrl={avatarUrl} size={32} borderColor="rgba(255,255,255,0.6)" borderWidth={2} />
-        : <Ionicons name="person-circle-outline" size={30} color="#fff" />
-      }
-    </TouchableOpacity>
-  )
-
-  const backButton = () => (
-    <TouchableOpacity onPress={() => router.replace('/(admin)/(admin-tabs)')} style={{ marginLeft: 8 }} hitSlop={8}>
-      <Ionicons name="chevron-back" size={28} color="#fff" />
-    </TouchableOpacity>
-  )
+  const headerRight = () => <HeaderAvatar href={PROFILE} />
+  const headerLeft = () => <HeaderBack fallback="/(admin)/(admin-tabs)" />
 
   const pointsHeaderRight = () => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 8 }}>
-      <TouchableOpacity onPress={() => setExportVisible(true)} hitSlop={8} style={{ marginRight: 4 }}>
-        <Ionicons name="download-outline" size={22} color="#fff" />
-      </TouchableOpacity>
-      <TouchableOpacity
-        onPress={() => router.push('/(admin)/(admin-tabs)/profile')}
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Eksport punktów"
+        onPress={() => setExportVisible(true)}
         hitSlop={8}
+        style={{ marginRight: 12 }}
       >
-        {avatarUrl
-          ? <AvatarImage avatarUrl={avatarUrl} size={32} borderColor="rgba(255,255,255,0.6)" borderWidth={2} />
-          : <Ionicons name="person-circle-outline" size={30} color="#fff" />
-        }
-      </TouchableOpacity>
+        <Icon name="download" size={22} color={palette.fg} />
+      </Pressable>
+      <HeaderAvatar href={PROFILE} />
     </View>
   )
 
@@ -55,68 +40,15 @@ export default function AdminTabsLayout() {
     <>
       <Tabs
         tabBar={(props) => <CustomTabBar {...props} />}
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.header },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '600' },
-        }}
+        screenOptions={{ ...headerOptions, headerRight }}
       >
-        <Tabs.Screen
-          name="members"
-          options={{
-            title: 'Ministranci',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="people-outline" size={size} color={color} />
-            ),
-            headerRight: avatarButton,
-          }}
-        />
-        <Tabs.Screen
-          name="schedules"
-          options={{
-            title: 'Grafiki',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="calendar-outline" size={size} color={color} />
-            ),
-            headerRight: avatarButton,
-          }}
-        />
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Panel',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="home" size={size} color={color} />
-            ),
-            headerTitle: 'Panel administratora',
-            headerRight: avatarButton,
-          }}
-        />
-        <Tabs.Screen
-          name="announcements"
-          options={{ href: null, title: 'Ogłoszenia', headerRight: avatarButton, headerLeft: backButton }}
-        />
-        <Tabs.Screen
-          name="points"
-          options={{
-            title: 'Punkty',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="trophy-outline" size={size} color={color} />
-            ),
-            headerRight: pointsHeaderRight,
-          }}
-        />
-        <Tabs.Screen
-          name="chat"
-          options={{
-            title: 'Czat',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="chatbubbles-outline" size={size} color={color} />
-            ),
-            headerRight: avatarButton,
-          }}
-        />
-        <Tabs.Screen name="profile" options={{ href: null, title: 'Profil' }} />
+        <Tabs.Screen name="index" options={{ title: 'Pulpit', headerTitle: 'Pulpit opiekuna', tabBarIcon: tabIcon('view-dashboard') }} />
+        <Tabs.Screen name="schedules" options={{ title: 'Grafik', tabBarIcon: tabIcon('calendar-month') }} />
+        <Tabs.Screen name="members" options={{ title: 'Członkowie', tabBarIcon: tabIcon('account-group') }} />
+        <Tabs.Screen name="points" options={{ title: 'Punkty', headerRight: pointsHeaderRight, tabBarIcon: tabIcon('trophy') }} />
+        <Tabs.Screen name="chat" options={{ title: 'Czat', tabBarIcon: tabIcon('forum') }} />
+        <Tabs.Screen name="announcements" options={{ href: null, title: 'Ogłoszenia', headerLeft }} />
+        <Tabs.Screen name="profile" options={{ href: null, title: 'Profil', headerLeft, headerRight: undefined }} />
       </Tabs>
       <ExportModal visible={exportVisible} onClose={() => setExportVisible(false)} pointsOnly />
     </>

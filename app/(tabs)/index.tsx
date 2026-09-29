@@ -260,6 +260,7 @@ function MemberHomeView() {
         <QuickAction icon="calendar-outline" color={c.primary} label="Zapisy" onPress={() => router.push('/(tabs)/schedule')} styles={styles} />
         <QuickAction icon="megaphone-outline" color={c.primary} label="Ogłoszenia" onPress={() => router.push('/(tabs)/announcements')} styles={styles} />
         <QuickAction icon="trophy-outline" color={c.gold} label="Punkty" onPress={() => router.push('/(tabs)/points')} styles={styles} />
+        <QuickAction icon="book-outline" color={c.primary} label="Wiedza" onPress={() => router.push('/(tabs)/wiedza')} styles={styles} />
       </View>
     </>
   )

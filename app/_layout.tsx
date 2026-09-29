@@ -24,6 +24,7 @@ import { OnboardingModal } from '../components/OnboardingModal'
 import { EnvBanner } from '../components/EnvBanner'
 import { WhatsNewModal } from '../components/WhatsNewModal'
 import { toastConfig } from '../components/ui/toastConfig'
+import { AppShell } from '../components/layout/AppShell'
 import '../lib/webAlert' // Alert.alert na webie (react-native-web go nie wyświetla)
 
 if (Platform.OS !== 'web') {
@@ -152,18 +153,20 @@ function AuthGate() {
 
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)/welcome" />
-        <Stack.Screen name="(auth)/login" />
-        <Stack.Screen name="(auth)/register" />
-        <Stack.Screen name="(auth)/parish-setup" />
-        <Stack.Screen name="(auth)/pending" />
-        <Stack.Screen name="(auth)/reset-password" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(admin)" />
-        <Stack.Screen name="(parent)" />
-        <Stack.Screen name="wiedza" options={{ headerShown: false }} />
-      </Stack>
+      <AppShell>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)/welcome" />
+          <Stack.Screen name="(auth)/login" />
+          <Stack.Screen name="(auth)/register" />
+          <Stack.Screen name="(auth)/parish-setup" />
+          <Stack.Screen name="(auth)/pending" />
+          <Stack.Screen name="(auth)/reset-password" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(admin)" />
+          <Stack.Screen name="(parent)" />
+          <Stack.Screen name="wiedza" options={{ headerShown: false }} />
+        </Stack>
+      </AppShell>
       <Toast config={toastConfig} />
       <EnvBanner />
       <OnboardingModal
