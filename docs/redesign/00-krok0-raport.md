@@ -104,3 +104,29 @@ Rodzic: Punkty, profil dziecka, Ogłoszenia (filtr bez „tylko ministranci”),
 9. **Kolejność funkcji z sekcji 1:** proponuję najpierw cały redesign wizualny (etapy 1–6), potem nowe funkcje osobno w kolejności N4 zamiana → Z1 metody → N14 rodzic → N3 powiadomienia → reszta. Każdą funkcję możesz też odrzucić.
 10. **Web testowy:** mam wdrażać sam przez `wrangler` (potrzebny login do Cloudflare), czy wolisz, żebym budował `dist`, a Ty wrzucasz go ręcznie jak dotąd?
 11. **lso-landing:** paczka nie zawiera projektu strony. Chodzi o (a) podmianę zrzutów w AppTour/AppShowcase na nowy wygląd po zakończeniu redesignu, (b) przestylowanie landingu na nową paletę (granat/złoto/papier, Instrument Serif), czy (c) o coś jeszcze innego?
+
+---
+
+## Decyzje (2026-09-29)
+
+1. Tryb ciemny zostaje: dorabiam ciemną wersję palety v2 (zrobione w etapie 1).
+2. Kolory nagłówków dla fioletu, różu, złota i czerni zaakceptowane.
+3. Fonty przez `@expo-google-fonts`, ikony z MaterialCommunityIcons.
+4. Kara za odrzucone usprawiedliwienie **ustawiana w regułach punktów** (domyślnie −2, można ustawić 0).
+5. „Słowo dnia” z Pisma Świętego: potrzebna baza wersetów, źródło tekstu do ustalenia (prawa autorskie przekładu).
+6. Kilka metod obecności naraz: **tak**. Parafia wybiera metodę **główną**, która otwiera się po „Sprawdź obecność”, a pozostałe są alternatywą.
+7. Nowe tab bary zaakceptowane.
+8. Kolejność: najpierw wizualnie etapy 1–6, potem nowe funkcje.
+9. Web testowy wdrażam sam (`wrangler`, osobny projekt Cloudflare Pages), token podaje użytkownik.
+10. lso-landing (strona promocyjna Astro) na razie bez zmian.
+
+## Odkrycie po raporcie: role w służbie (N17, zmiana modelu danych)
+
+W raporcie tego zabrakło. Dziś służba **nie ma ról liturgicznych ani liczby miejsc**. Każdy przydział ma `role = 'ministrant'`, a ministrant zapisuje się na godzinę Mszy (`sign_up_for_slot`). Prototyp zakłada służbę z listą ról (Ceremoniarz, Lektor, Akolita, Turyferariusz…), z których każda jest obsadzona albo wolna. Na tym opierają się:
+- obsada „2/4”,
+- segment „Wolne”,
+- „Zapisz się” na konkretną rolę,
+- „+ Przydziel” u opiekuna,
+- „Wybierz co najmniej jedną rolę” przy tworzeniu służby.
+
+Decyzja w toku.
