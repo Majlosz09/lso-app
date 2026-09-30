@@ -5,8 +5,8 @@
 | Pole | Wartość |
 |------|---------|
 | Package name | `pl.lsoapp.app` |
-| Version name | `1.0.0` |
-| Version code | `1` |
+| Version name | `1.1.0` |
+| Version code | nadawany przez EAS (autoIncrement) |
 | Target API | 35 (Android 15) |
 | Min SDK | 24 (Android 7.0) |
 
@@ -75,7 +75,7 @@ BEZPIECZEŃSTWO I PRYWATNOŚĆ
 • Aparat tylko do skanowania QR — żadnych zdjęć nie zapisujemy
 • Brak reklam, brak sprzedaży danych
 
-Polityka prywatności: https://lsoapp.pl/privacy
+Polityka prywatności: https://lsoapp.com/privacy
 ```
 
 *(~1 980 znaków — dużo miejsca na rozszerzenie)*
@@ -114,8 +114,8 @@ Pierwsze wydanie aplikacji LSO App!
 | Pole | Wartość |
 |------|---------|
 | Email wsparcia | lsoapp@parafia-borzapilski.pl |
-| Strona internetowa | https://lsoapp.pl |
-| Polityka prywatności | https://lsoapp.pl/privacy |
+| Strona internetowa | https://lsoapp.com |
+| Polityka prywatności | https://lsoapp.com/privacy |
 | Telefon | (opcjonalny — można pominąć) |
 
 ---
@@ -136,7 +136,7 @@ Pierwsze wydanie aplikacji LSO App!
 - [ ] Merchant account skonfigurowany (jeśli aplikacja płatna — tutaj darmowa)
 
 ### Ustawienia aplikacji w Play Console
-- [ ] Polityka prywatności URL wpisana: `https://lsoapp.pl/privacy`
+- [ ] Polityka prywatności URL wpisana: `https://lsoapp.com/privacy`
 - [ ] Deklaracja uprawnień wyjaśniona:
   - CAMERA → skanowanie kodów QR (weryfikacja obecności)
   - ACCESS_FINE_LOCATION → GPS check-in na mszy
