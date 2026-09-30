@@ -2,7 +2,7 @@
 //
 // Użycie:  node scripts/import-daily-word.mjs ścieżka/do/slowo-dnia.csv [wynik.sql]
 //
-// CSV (UTF-8, średnik jako separator, pierwszy wiersz = nagłówek):
+// CSV (UTF-8, separator średnik albo przecinek — wykrywany z nagłówka, pierwszy wiersz = nagłówek):
 //   data;sigla;tekst;zrodlo
 //   2026-10-01;J 15, 12;„To jest moje przykazanie…”;Biblia Tysiąclecia
 // Pola z średnikiem / nowym wierszem / cudzysłowem ujmij w "…" (cudzysłów w środku podwój: "").
@@ -42,7 +42,10 @@ export function parseCsv(src, sep = ';') {
 
 const q = (v) => (v == null || v === '' ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`)
 
-const rows = parseCsv(fs.readFileSync(input, 'utf8'))
+const src = fs.readFileSync(input, 'utf8')
+const firstLine = src.split(/\r?\n/, 1)[0]
+const sep = (firstLine.match(/;/g) ?? []).length >= (firstLine.match(/,/g) ?? []).length ? ';' : ','
+const rows = parseCsv(src, sep)
 const header = rows.shift()?.map(h => h.trim().toLowerCase()) ?? []
 const col = (names) => header.findIndex(h => names.includes(h))
 const iDate = col(['data', 'date']), iSigla = col(['sigla', 'siglum']), iText = col(['tekst', 'text']), iSrc = col(['zrodlo', 'źródło', 'source'])
