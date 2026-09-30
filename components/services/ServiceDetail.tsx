@@ -12,6 +12,8 @@ import { CATEGORY_CONFIG } from '../../types/database'
 import { Service } from '../../hooks/useServices'
 import { AppText, Button, Card, Icon } from '../ui'
 import { staffingLabel } from './ServiceCard'
+import { MemberRolesCard } from './RolesCard'
+import { isPast } from '../../lib/dates'
 
 type Actions = {
   checkIn: (s: Service) => void
@@ -23,6 +25,7 @@ type Actions = {
   cancelSwap?: (s: Service) => void
   busyId: string | null
   mode: string
+  onChanged?: () => void
 }
 
 /** Punkty z reguł parafii za tę służbę (Msza z przydziałem / dodatkowa, nabożeństwo, zbiórka). */
@@ -82,7 +85,7 @@ export function ServiceDetail({ service: s, actions, compactHeader }: {
             </AppText>
           ) : s.people.map((p, i) => (
             <View key={p.profileId} style={[styles.person, i > 0 && { borderTopWidth: 1, borderTopColor: c.borderLight }]}>
-              <AppText variant="small" muted>Ministrant</AppText>
+              <AppText variant="small" muted>{p.role && p.role !== 'ministrant' ? p.role : 'Ministrant'}</AppText>
               <View style={styles.personRow}>
                 <AppText style={[styles.personName, { color: p.isMe ? c.primary : c.text }]}>{p.isMe ? 'Ty' : p.name}</AppText>
                 {p.status !== 'assigned' && (
@@ -92,6 +95,10 @@ export function ServiceDetail({ service: s, actions, compactHeader }: {
             </View>
           ))}
         </Card>
+
+        {!s.isTemplate && s.category === 'msza' && (
+          <MemberRolesCard scheduleId={s.id} canChoose={!isPast(s.date, s.time) && !s.attended} onChanged={actions.onChanged} />
+        )}
 
         {!!s.notes && (
           <View style={[styles.note, { backgroundColor: c.goldSurface }]}>

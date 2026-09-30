@@ -14,6 +14,7 @@ import { getLiturgicalDay } from '../../lib/liturgy'
 import { longDate, longDateCap } from '../../lib/dates'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { AppText, Avatar, Button, Card, HeaderChip, Icon, ListRow, Sheet, TextField } from '../../components/ui'
+import { AdminRolesCard } from '../../components/services/RolesCard'
 
 type Assignment = {
   id: string
@@ -330,6 +331,8 @@ export default function ScheduleDetailScreen() {
             <Button label="Lista obecności na zbiórce" icon="check-all" onPress={openAttendanceList} />
           )}
 
+          {schedule.category === 'msza' && <AdminRolesCard scheduleId={schedule.id} onChanged={fetchSchedule} />}
+
           <Card flush>
             <View style={[styles.sectionHead, { borderBottomColor: c.borderLight }]}>
               <AppText variant="eyebrow" color={c.goldInk} style={styles.flex}>Obsada</AppText>
@@ -348,6 +351,7 @@ export default function ScheduleDetailScreen() {
                   <Avatar name={a.profile.full_name} size={38} color={c.primary} textColor={c.gold} />
                   <View style={styles.flex}>
                     <AppText variant="bodyStrong">{a.profile.full_name}</AppText>
+                    {a.role && a.role !== 'ministrant' && <AppText variant="small" color={c.goldInk}>{a.role}</AppText>}
                     {!!a.profile.phone && <AppText variant="small" muted>{a.profile.phone}</AppText>}
                     {(a.status === 'excused' || a.status === 'confirmed') && !!a.absence_reason && (
                       <AppText variant="small" color={c.dangerStrong}>{`Powód: ${a.absence_reason}`}</AppText>

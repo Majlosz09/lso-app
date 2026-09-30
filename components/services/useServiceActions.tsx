@@ -315,7 +315,7 @@ export function useServiceActions(onChanged: () => void) {
     </>
   )
 
-  return { checkIn, openSignUp, openUnsign, openAbsence, openSwap, pendingSwap, cancelSwap, busyId, sheets, mode, methods, primary }
+  return { checkIn, openSignUp, openUnsign, openAbsence, openSwap, pendingSwap, cancelSwap, busyId, sheets, mode, methods, primary, onChanged }
 }
 
 const styles = StyleSheet.create({

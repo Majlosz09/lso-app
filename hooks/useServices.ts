@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useRealtimeTable } from './useRealtimeTable'
 import type { AssignmentStatus, ScheduleCategory } from '../types/database'
 
-export type ServicePerson = { profileId: string; name: string; status: AssignmentStatus; isMe: boolean }
+export type ServicePerson = { profileId: string; name: string; status: AssignmentStatus; isMe: boolean; role: string }
 
 export type MyAssignment = {
   id: string
@@ -69,7 +69,7 @@ export function useServices(from: string, to: string) {
       const [aRes, attRes] = await Promise.all([
         supabase
           .from('schedule_assignments')
-          .select('id, schedule_id, profile_id, status, absence_reason, admin_note, profile:profiles(full_name)')
+          .select('id, schedule_id, profile_id, role, status, absence_reason, admin_note, profile:profiles(full_name)')
           .in('schedule_id', ids),
         supabase
           .from('attendance')
@@ -104,7 +104,7 @@ export function useServices(from: string, to: string) {
           : null,
         attended: attended.has(s.id) || mine?.status === 'present',
         people: rows
-          .map(r => ({ profileId: r.profile_id, name: r.profile?.full_name ?? '—', status: r.status, isMe: r.profile_id === profile.id }))
+          .map(r => ({ profileId: r.profile_id, name: r.profile?.full_name ?? '—', status: r.status, isMe: r.profile_id === profile.id, role: r.role ?? 'ministrant' }))
           .sort((a, b) => Number(b.isMe) - Number(a.isMe) || a.name.localeCompare(b.name, 'pl')),
       }
     })
