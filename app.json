@@ -31,7 +31,8 @@
         "android.permission.RECEIVE_BOOT_COMPLETED"
       ],
       "package": "pl.lsoapp.app",
-      "versionCode": 2
+      "versionCode": 2,
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",

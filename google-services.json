@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "860274826819",
+    "project_id": "lso-app-5dcd2",
+    "storage_bucket": "lso-app-5dcd2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:860274826819:android:b8c1f4a02406d55e983ef6",
+        "android_client_info": {
+          "package_name": "pl.lsoapp.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAbhichJWg4IQsCN61pqZ_jpr7XgrIZ8Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
