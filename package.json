@@ -12,7 +12,9 @@
     "test:watch": "jest --watch",
     "update:production": "eas update --channel production",
     "export:web:dev": "node scripts/export-web-dev.js",
-    "deploy:web:dev": "node scripts/deploy-web-dev.js"
+    "deploy:web:dev": "node scripts/deploy-web-dev.js",
+    "build:redesign": "eas build --profile redesign --platform android",
+    "update:redesign": "eas update --channel redesign --environment development"
   },
   "dependencies": {
     "@expo-google-fonts/instrument-serif": "^0.4.1",
