@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  ActivityIndicator, TouchableOpacity, Modal, Alert, TextInput
+  ActivityIndicator, TouchableOpacity, Modal, Alert, TextInput,
+  Pressable,
 } from 'react-native'
 import Toast from 'react-native-toast-message'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
@@ -12,7 +13,12 @@ import { STATUS_COLORS, STATUS_LABELS } from '../../lib/status'
 import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { Colors, headerPalette, sans, serif, VestmentColor } from '../../lib/theme'
+import { getLiturgicalDay } from '../../lib/liturgy'
+import { localDateStr } from '../../lib/dates'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { StatusBar } from 'expo-status-bar'
+import { AppText, Avatar, Icon } from '../../components/ui'
 import { AvatarImage } from '../../components/AvatarImage'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 
@@ -72,7 +78,8 @@ export default function MemberDetailScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { profile: adminProfile } = useAuthStore()
-  const { colors: c } = useTheme()
+  const { colors: c, isDark } = useTheme()
+  const isDesktop = useIsDesktop()
   const styles = useMemo(() => createStyles(c), [c])
 
   const [profile, setProfile] = useState<MemberProfile | null>(null)
@@ -312,6 +319,8 @@ export default function MemberDetailScreen() {
     )
   }
 
+  const pal = headerPalette((getLiturgicalDay(localDateStr()).color ?? 'GREEN') as VestmentColor, isDark)
+
   if (loading || !profile) {
     return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
   }
@@ -319,50 +328,48 @@ export default function MemberDetailScreen() {
   const isMember = profile.role === 'member'
   const memberRankObj = ranksList.find(r => r.id === profile.rank_id) ?? null
 
+  const heroChip = (label: string, icon: string, onPress?: () => void, muted?: boolean) => (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={[heroStyles.chip, { backgroundColor: pal.chip }]}
+      accessibilityRole={onPress ? 'button' : undefined}
+    >
+      <Icon name={icon} size={14} color={pal.fg} />
+      <AppText style={[heroStyles.chipText, { color: pal.fg, opacity: muted ? 0.75 : 1 }]}>{label}</AppText>
+    </Pressable>
+  )
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-      {/* Header */}
-      <View style={styles.headerCard}>
-        <AvatarImage avatarUrl={profile.avatar_url} size={72} />
-        <Text style={styles.name}>{profile.full_name}</Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleText}>{ROLE_LABELS[profile.role] ?? profile.role}</Text>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
+      <Stack.Screen options={{ headerShown: false, title: profile.full_name }} />
+      <View style={[heroStyles.hero, { backgroundColor: pal.bg, paddingTop: isDesktop ? 22 : insets.top + 8 }, isDesktop && heroStyles.heroDesktop]}>
+        <StatusBar style={pal.statusBar} />
+        {!isDesktop && (
+          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/(admin)/(admin-tabs)/members'))} style={heroStyles.back} accessibilityRole="button">
+            <Icon name="chevron-left" size={22} color={pal.fg} />
+            <AppText style={[heroStyles.backText, { color: pal.fg }]}>Członkowie</AppText>
+          </Pressable>
+        )}
+        <View style={heroStyles.identity}>
+          {profile.avatar_url
+            ? <AvatarImage avatarUrl={profile.avatar_url} size={68} />
+            : <Avatar name={profile.full_name} size={68} />}
+          <View style={heroStyles.flex}>
+            <AppText style={[serif(), heroStyles.name, { color: pal.fg }]}>{profile.full_name}</AppText>
+            <AppText style={[heroStyles.meta, { color: pal.fg }]}>
+              {[ROLE_LABELS[profile.role] ?? profile.role, isMember && profile.rocznik ? `rocznik ${profile.rocznik}` : null, profile.phone].filter(Boolean).join(' · ')}
+            </AppText>
+          </View>
         </View>
-        {profile.phone && (
-          <View style={styles.infoRow}>
-            <Ionicons name="call-outline" size={14} color={c.subtext} />
-            <Text style={styles.infoText}>{profile.phone}</Text>
-          </View>
-        )}
-        {isMember && profile.rocznik && (
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={14} color={c.subtext} />
-            <Text style={styles.infoText}>Rocznik {profile.rocznik}</Text>
-          </View>
-        )}
         {isMember && (
-          <TouchableOpacity
-            style={memberRankObj ? styles.rankPill : styles.rankPillEmpty}
-            onPress={() => setRankModalVisible(true)}
-          >
-            <Ionicons name="ribbon-outline" size={13} color={memberRankObj ? '#EA580C' : c.textTertiary} />
-            <Text style={memberRankObj ? styles.rankText : styles.rankTextEmpty}>
-              {memberRankObj ? memberRankObj.name : 'Przypisz rangę'}
-            </Text>
-          </TouchableOpacity>
-        )}
-        {isMember && (
-          <TouchableOpacity
-            style={profile.parent_id ? styles.parentPill : styles.rankPillEmpty}
-            onPress={openParentPicker}
-          >
-            <Ionicons name="people-outline" size={13} color={profile.parent_id ? '#0EA5E9' : c.textTertiary} />
-            <Text style={profile.parent_id ? styles.parentText : styles.rankTextEmpty}>
-              {parentName ?? 'Przypisz rodzica'}
-            </Text>
-          </TouchableOpacity>
+          <View style={heroStyles.chips}>
+            {heroChip(memberRankObj ? memberRankObj.name : 'Przypisz rangę', 'shield-star', () => setRankModalVisible(true), !memberRankObj)}
+            {heroChip(parentName ?? 'Przypisz rodzica', 'human-male-female-child', openParentPicker, !profile.parent_id)}
+          </View>
         )}
       </View>
+      <View style={[styles.content, isDesktop && heroStyles.bodyDesktop]}>
 
       <Modal
         visible={parentModalVisible}
@@ -654,6 +661,7 @@ export default function MemberDetailScreen() {
           </View>
         </View>
       </Modal>
+      </View>
     </ScrollView>
   )
 }
@@ -816,3 +824,18 @@ function createStyles(c: Colors) {
     },
   })
 }
+
+const heroStyles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  hero: { paddingHorizontal: 22, paddingBottom: 22, gap: 14 },
+  heroDesktop: { marginHorizontal: 32, marginTop: 24, borderRadius: 22 },
+  bodyDesktop: { paddingHorizontal: 32, maxWidth: 900 },
+  back: { flexDirection: 'row', alignItems: 'center', marginLeft: -6, alignSelf: 'flex-start' },
+  backText: { ...sans(700), fontSize: 13 },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  name: { fontSize: 32, lineHeight: 35 },
+  meta: { ...sans(600), fontSize: 13, opacity: 0.9, marginTop: 4 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, cursor: 'pointer' } as any,
+  chipText: { ...sans(700), fontSize: 13 },
+})
