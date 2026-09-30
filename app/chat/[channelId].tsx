@@ -114,7 +114,12 @@ export default function ChannelScreen() {
     setReplyTo(null)
     if (error) {
       setText(content)
-      Alert.alert('Błąd', 'Nie udało się wysłać wiadomości.')
+      // RLS (migracja 20260930000000_user_blocks): w DM z zablokowaną osobą nie da się pisać
+      if (channel?.type === 'dm' && error.code === '42501') {
+        Alert.alert('Nie można wysłać', 'Ta rozmowa jest zablokowana.')
+      } else {
+        Alert.alert('Błąd', 'Nie udało się wysłać wiadomości.')
+      }
     } else {
       refetch()
     }
@@ -142,6 +147,31 @@ export default function ChannelScreen() {
       ])
     }
   }, [refetch])
+
+  // Blokada autora (App Store 1.2): jego wiadomości znikają dla mnie po stronie bazy (RLS),
+  // a w DM żadna ze stron nie może pisać. Odblokowanie: Profil → Zablokowane osoby.
+  const handleBlock = useCallback((message: ChatMessageWithSender) => {
+    if (!profile?.id || !message.sender_id) return
+    const name = message.sender?.full_name ?? 'tę osobę'
+    const doBlock = async () => {
+      const { error } = await supabase.from('user_blocks')
+        .insert({ blocker_id: profile.id, blocked_id: message.sender_id })
+      if (error && error.code !== '23505') {
+        Alert.alert('Błąd', 'Nie udało się zablokować użytkownika.')
+        return
+      }
+      refetch()
+      Alert.alert('Zablokowano', `Nie zobaczysz już wiadomości od: ${name}. Jeśli ta osoba narusza zasady, zgłoś też wiadomość opiekunowi parafii. Odblokujesz w Profilu → Zablokowane osoby.`)
+    }
+    Alert.alert(
+      'Zablokować użytkownika?',
+      `Nie zobaczysz wiadomości od: ${name}, a w rozmowie prywatnej nie będziecie mogli do siebie pisać.`,
+      [
+        { text: 'Anuluj', style: 'cancel' },
+        { text: 'Zablokuj', style: 'destructive', onPress: doBlock },
+      ],
+    )
+  }, [profile?.id, refetch])
 
   const handleCreatePoll = async (question: string, options: string[], allowMultiple: boolean) => {
     if (!profile?.id) return
@@ -335,6 +365,7 @@ export default function ChannelScreen() {
       }}
       onDelete={() => { if (actionSheetMessage) handleDelete(actionSheetMessage) }}
       onReport={() => setReportMessage(actionSheetMessage)}
+      onBlock={() => { if (actionSheetMessage) handleBlock(actionSheetMessage) }}
     />
     <ReportMessageModal
       message={reportMessage}

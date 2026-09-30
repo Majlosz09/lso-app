@@ -20,6 +20,7 @@ import {
 } from '../../../lib/presetAvatar'
 import { OnboardingModal } from '../../../components/OnboardingModal'
 import { DeleteAccountButton } from '../../../components/DeleteAccountButton'
+import { BlockedUsersButton } from '../../../components/BlockedUsersButton'
 import { ExportMyDataButton } from '../../../components/ExportMyDataButton'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -500,6 +501,7 @@ function ParentProfile() {
 
       <EditProfileModal visible={editing} onClose={() => setEditing(false)} showRocznik={false} />
       <SignOutButton onConfirm={signOut} />
+      <BlockedUsersButton />
       <ExportMyDataButton />
       <DeleteAccountButton />
       <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
