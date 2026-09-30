@@ -16,6 +16,19 @@ import GpsLocationPicker from '../../components/GpsLocationPicker'
 import { ChoiceCard } from '../../components/auth/formParts'
 import { AppText, Button, Card, Chip, ListRow, ScreenHeader, Sheet, TextField } from '../../components/ui'
 
+function ToggleRow({ value, onChange, title, sub }: { value: boolean; onChange: (v: boolean) => void; title: string; sub: string }) {
+  const { colors: c } = useTheme()
+  return (
+    <Pressable accessibilityRole="switch" accessibilityState={{ checked: value }} onPress={() => onChange(!value)} style={styles.toggleRow}>
+      <View style={styles.flex}>
+        <AppText variant="bodyStrong">{title}</AppText>
+        <AppText variant="small" muted>{sub}</AppText>
+      </View>
+      <Switch value={value} onValueChange={onChange} trackColor={{ true: c.primary, false: c.inputBorder }} thumbColor="#FFFFFF" {...({ activeThumbColor: '#FFFFFF' } as any)} />
+    </Pressable>
+  )
+}
+
 export default function ParishSettingsScreen() {
   const { parish, fetchProfile } = useAuthStore()
   const router = useRouter()
@@ -38,6 +51,10 @@ export default function ParishSettingsScreen() {
   const [savingAttendance, setSavingAttendance] = useState(false)
   const [allowMemberDm, setAllowMemberDm] = useState(parish?.allow_member_dm ?? false)
   const [savingDm, setSavingDm] = useState(false)
+  // N13 — przed migracją 20261001030000 kolumn nie ma (undefined) → przełączniki ukryte
+  const [parentsGeneral, setParentsGeneral] = useState(parish?.parents_see_general ?? false)
+  const [memberPolls, setMemberPolls] = useState(parish?.members_can_create_polls ?? true)
+  const chatExtras = parish?.parents_see_general !== undefined
   const [qrModalVisible, setQrModalVisible] = useState(false)
 
   const showToast = (msg: string) => Toast.show({ type: 'success', text1: msg })
@@ -53,6 +70,8 @@ export default function ParishSettingsScreen() {
       setLng(parish.lng?.toString() ?? '')
       setGpsRadius(parish.gps_radius?.toString() ?? '200')
       setAllowMemberDm(parish.allow_member_dm ?? false)
+      setParentsGeneral(parish.parents_see_general ?? false)
+      setMemberPolls(parish.members_can_create_polls ?? true)
     }
   }, [parish])
 
@@ -105,7 +124,9 @@ export default function ParishSettingsScreen() {
     setSavingDm(true)
     const { error } = await supabase
       .from('parishes')
-      .update({ allow_member_dm: allowMemberDm })
+      .update(chatExtras
+        ? { allow_member_dm: allowMemberDm, parents_see_general: parentsGeneral, members_can_create_polls: memberPolls }
+        : { allow_member_dm: allowMemberDm })
       .eq('id', parish?.id)
     setSavingDm(false)
     if (error) { Alert.alert('Błąd', error.message); return }
@@ -216,20 +237,28 @@ https://app.lsoapp.com` })
   const chatCard = (
     <Card large style={styles.card}>
       <AppText variant="eyebrow" color={c.goldInk}>Czat</AppText>
-      <Pressable
-        accessibilityRole="switch"
-        accessibilityState={{ checked: allowMemberDm }}
-        onPress={() => setAllowMemberDm(v => !v)}
-        style={styles.toggleRow}
-      >
-        <View style={styles.flex}>
-          <AppText variant="bodyStrong">Wiadomości prywatne między ministrantami</AppText>
-          <AppText variant="small" muted>
-            {allowMemberDm ? 'Włączone — ministranci i rodzice mogą pisać między sobą' : 'Wyłączone — rozmowę prywatną zaczyna tylko opiekun'}
-          </AppText>
-        </View>
-        <Switch value={allowMemberDm} onValueChange={setAllowMemberDm} trackColor={{ true: c.primary, false: c.inputBorder }} thumbColor="#FFFFFF" {...({ activeThumbColor: "#FFFFFF" } as any)} />
-      </Pressable>
+      <ToggleRow
+        value={allowMemberDm}
+        onChange={setAllowMemberDm}
+        title="Wiadomości prywatne między ministrantami"
+        sub={allowMemberDm ? 'Włączone — ministranci i rodzice mogą pisać między sobą' : 'Wyłączone — rozmowę prywatną zaczyna tylko opiekun'}
+      />
+      {chatExtras && (
+        <>
+          <ToggleRow
+            value={parentsGeneral}
+            onChange={setParentsGeneral}
+            title="Rodzice widzą kanał ogólny"
+            sub={parentsGeneral ? 'Rodzice czytają kanał „Ministranci” (bez pisania)' : 'Kanał „Ministranci” tylko dla ministrantów i opiekunów'}
+          />
+          <ToggleRow
+            value={memberPolls}
+            onChange={setMemberPolls}
+            title="Ministranci mogą tworzyć ankiety"
+            sub={memberPolls ? 'Każdy w kanale może założyć ankietę' : 'Ankiety zakłada tylko opiekun'}
+          />
+        </>
+      )}
       <Button label="Zapisz ustawienia czatu" variant="secondary" onPress={handleSaveDm} loading={savingDm} />
     </Card>
   )

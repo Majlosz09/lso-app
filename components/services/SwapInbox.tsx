@@ -44,7 +44,7 @@ export function SwapInbox({ onChanged }: { onChanged?: () => void }) {
           </View>
           <View style={styles.row}>
             <Button label="Odrzuć" variant="secondary" compact style={styles.flex} loading={busy === o.id + false} onPress={() => respond(o.id, false, o.fromName)} />
-            <Button label="Przejmuję dyżur" icon="check" compact style={styles.flex} loading={busy === o.id + true} onPress={() => respond(o.id, true, o.fromName)} />
+            <Button label="Przejmuję" icon="check" compact style={styles.flex} loading={busy === o.id + true} onPress={() => respond(o.id, true, o.fromName)} />
           </View>
         </View>
       ))}

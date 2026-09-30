@@ -34,7 +34,7 @@ function useHeaderHeightSafe(): number {
 
 export function ChatThread({ channelId, embedded = false }: { channelId: string; embedded?: boolean }) {
   const navigation = useNavigation()
-  const { profile } = useAuthStore()
+  const { profile, parish } = useAuthStore()
   const { colors: c } = useTheme()
   const insets = useSafeAreaInsets()
   const headerHeight = useHeaderHeightSafe()
@@ -57,6 +57,15 @@ export function ChatThread({ channelId, embedded = false }: { channelId: string;
   const { vote, closePoll } = useChatPolls(profile?.id ?? '')
 
   const isAdmin = profile?.role === 'admin' || !!profile?.is_admin
+
+  // N13: rodzic w kanale ogólnym tylko czyta; ankiety wg ustawień parafii
+  const [canPost, setCanPost] = useState(true)
+  useEffect(() => {
+    if (!profile?.id) return
+    supabase.from('chat_members').select('can_post').eq('channel_id', channelId).eq('user_id', profile.id).maybeSingle()
+      .then(({ data, error }) => setCanPost(error || !data ? true : (data as any).can_post !== false))
+  }, [channelId, profile?.id])
+  const canPoll = canPost && (isAdmin || parish?.members_can_create_polls !== false)
 
   const senderMap = (() => {
     const map: Record<string, string> = {}
@@ -260,14 +269,14 @@ export function ChatThread({ channelId, embedded = false }: { channelId: string;
             <AppText style={[styles.embTitle, { color: c.text }]} numberOfLines={1}>{title}</AppText>
             {!!subtitle && <AppText variant="small" muted>{subtitle}</AppText>}
           </View>
-          <Pressable
+          {canPoll && <Pressable
             accessibilityRole="button"
             onPress={() => setShowPollModal(true)}
             style={[styles.pollChip, { borderColor: c.inputBorder, backgroundColor: c.surface }]}
           >
             <Icon name="poll" size={18} color={c.primary} />
             <AppText variant="label" color={c.primary}>Ankieta</AppText>
-          </Pressable>
+          </Pressable>}
         </View>
       )}
       <KeyboardAvoidingView
@@ -303,8 +312,14 @@ export function ChatThread({ channelId, embedded = false }: { channelId: string;
           />
         )}
 
+        {!canPost ? (
+          <View style={[styles.readOnly, { borderTopColor: c.border, backgroundColor: c.surface }]}>
+            <Icon name="eye" size={18} color={c.subtext} />
+            <AppText variant="small" muted>Kanał tylko do odczytu</AppText>
+          </View>
+        ) : (
         <View style={[styles.inputRow, { borderTopColor: c.border, backgroundColor: c.surface }]}>
-          {!embedded && (
+          {!embedded && canPoll && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Ankieta"
@@ -350,6 +365,7 @@ export function ChatThread({ channelId, embedded = false }: { channelId: string;
             </Pressable>
           )}
         </View>
+        )}
       </KeyboardAvoidingView>
       {!embedded && Platform.OS === 'android' && insets.bottom > 0 && (
         <View style={{ height: insets.bottom, backgroundColor: c.surface }} />
@@ -407,6 +423,7 @@ const styles = StyleSheet.create({
   embeddedHead: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1 },
   embTitle: { ...sans(800), fontSize: 17 },
   pollChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, cursor: 'pointer' } as any,
+  readOnly: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderTopWidth: 1 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', paddingVertical: 10, paddingHorizontal: 12, borderTopWidth: 1, gap: 8 },
   roundBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   input: {
