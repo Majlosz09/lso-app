@@ -18,6 +18,9 @@ type Actions = {
   openSignUp: (s: Service) => void
   openUnsign: (s: Service) => void
   openAbsence: (s: Service) => void
+  openSwap?: (s: Service) => void
+  pendingSwap?: (s: Service) => { toName: string } | null
+  cancelSwap?: (s: Service) => void
   busyId: string | null
   mode: string
 }
@@ -53,6 +56,7 @@ export function ServiceDetail({ service: s, actions, compactHeader }: {
   const st = staffingLabel(s)
   const pts = usePointsFor(s)
   const busy = actions.busyId === s.id
+  const swap = actions.pendingSwap?.(s) ?? null
   const cat = CATEGORY_CONFIG[s.category] ?? CATEGORY_CONFIG.msza
 
   return (
@@ -124,6 +128,16 @@ export function ServiceDetail({ service: s, actions, compactHeader }: {
           </Card>
         </View>
 
+        {!!swap && (
+          <View style={[styles.note, { backgroundColor: c.goldSurface }]}>
+            <Icon name="swap-horizontal" size={20} color={c.goldText} />
+            <View style={styles.flex}>
+              <AppText style={[styles.noteText, { color: c.goldText }]}>{`Prośba o zamianę · czeka na odpowiedź: ${swap.toName}`}</AppText>
+              <Button label="Wycofaj prośbę" variant="ghost" compact style={styles.selfStart} onPress={() => actions.cancelSwap?.(s)} loading={busy} />
+            </View>
+          </View>
+        )}
+
         {avail.adminMarks && (
           <View style={[styles.note, { backgroundColor: c.borderLight }]}>
             <Icon name="shield-check" size={20} color={c.subtext} />
@@ -137,6 +151,9 @@ export function ServiceDetail({ service: s, actions, compactHeader }: {
           )}
           {avail.canSignUp && (
             <Button label="Zapisz się" icon="plus" onPress={() => actions.openSignUp(s)} loading={busy} />
+          )}
+          {avail.canSwap && !swap && actions.openSwap && (
+            <Button label="Poproś o zamianę" icon="swap-horizontal" variant="secondary" onPress={() => actions.openSwap!(s)} />
           )}
           <View style={styles.row}>
             {avail.canReportAbsence && (
@@ -173,4 +190,5 @@ const styles = StyleSheet.create({
   actions: { gap: 10 },
   row: { flexDirection: 'row', gap: 10 },
   flex: { flex: 1 },
+  selfStart: { alignSelf: 'flex-start', marginLeft: -12 },
 })

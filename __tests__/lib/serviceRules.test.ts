@@ -10,7 +10,7 @@ const mine = (status: any = 'assigned') => ({ id: 'a1', status, absence_reason: 
 describe('serviceAvailability', () => {
   it('future mass without assignment → sign up only', () => {
     const r = serviceAvailability({ ...base, date: '2026-09-30', time: '18:00' }, 'button', NOW)
-    expect(r).toEqual({ canCheckIn: false, adminMarks: false, canSignUp: true, canUnsign: false, canReportAbsence: false })
+    expect(r).toEqual({ canCheckIn: false, adminMarks: false, canSignUp: true, canUnsign: false, canReportAbsence: false, canSwap: false })
   })
 
   it('future own mass → unsign + report absence', () => {
@@ -18,6 +18,13 @@ describe('serviceAvailability', () => {
     expect(r.canUnsign).toBe(true)
     expect(r.canReportAbsence).toBe(true)
     expect(r.canSignUp).toBe(false)
+  })
+
+  it('swap: own assigned future service, not in window, not after excuse', () => {
+    expect(serviceAvailability({ ...base, mine: mine(), date: '2026-09-30', time: '18:00' }, 'button', NOW).canSwap).toBe(true)
+    expect(serviceAvailability({ ...base, mine: mine('excused'), date: '2026-09-30', time: '18:00' }, 'button', NOW).canSwap).toBe(false)
+    expect(serviceAvailability({ ...base, mine: mine(), date: '2026-09-29', time: '12:25' }, 'button', NOW).canSwap).toBe(false)
+    expect(serviceAvailability({ ...base, date: '2026-09-30', time: '18:00' }, 'button', NOW).canSwap).toBe(false)
   })
 
   it('check-in window opens 30 min before', () => {

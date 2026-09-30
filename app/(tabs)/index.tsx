@@ -19,6 +19,8 @@ import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 import { Service, useServices } from '../../hooks/useServices'
 import { useServiceActions } from '../../components/services/useServiceActions'
 import { DayStrip } from '../../components/services/DayStrip'
+import { SwapInbox } from '../../components/services/SwapInbox'
+import { useSwapStore } from '../../stores/swapStore'
 import { AppText, Avatar, Badge, Button, Card, HeaderChip, Icon, IconButton, SectionHeader } from '../../components/ui'
 
 type Ann = { id: string; title: string; created_at: string; author: { full_name: string } | null }
@@ -167,11 +169,22 @@ export default function HomeScreen() {
                 onPress={() => goService(next)}
               />
             )}
+            {avail?.canSwap && !actions.pendingSwap(next) && (
+              <IconButton icon="swap-horizontal" color={c.primary} accessibilityLabel="Poproś o zamianę" onPress={() => actions.openSwap(next)} />
+            )}
             {avail?.canReportAbsence && (
               hero
                 ? <Button label="Nie mogę być" icon="calendar-remove" variant={heroPal.statusBar === 'light' ? 'outlineLight' : 'secondary'} onPress={() => actions.openAbsence(next)} />
                 : <IconButton icon="calendar-remove" color={c.danger} accessibilityLabel="Nie mogę być" onPress={() => actions.openAbsence(next)} />
             )}
+          </View>
+        )}
+        {next && actions.pendingSwap(next) && (
+          <View style={[styles.swapPending, { backgroundColor: hero ? 'rgba(255,255,255,0.14)' : c.goldSurface }]}>
+            <Icon name="swap-horizontal" size={18} color={hero ? fg : c.goldText} />
+            <AppText variant="small" style={[styles.flex, { color: hero ? fg : c.goldText }]} numberOfLines={1}>
+              {`Czeka na odpowiedź: ${actions.pendingSwap(next)!.toName}`}
+            </AppText>
           </View>
         )}
       </Card>
@@ -262,12 +275,17 @@ export default function HomeScreen() {
     </Card>
   )
 
-  const onRefresh = async () => { setRefreshing(true); await Promise.all([refresh(), reload()]); setRefreshing(false) }
+  const onRefresh = async () => {
+    setRefreshing(true)
+    await Promise.all([refresh(), reload(), profile?.id ? useSwapStore.getState().load(profile.id) : null])
+    setRefreshing(false)
+  }
 
   if (isDesktop) {
     return (
       <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={styles.desktop}>
         <View style={styles.desktopLeft}>
+          <SwapInbox onChanged={refresh} />
           {nextCard(true)}
           {church}
         </View>
@@ -308,6 +326,7 @@ export default function HomeScreen() {
 
         <View style={styles.body}>
           <View style={styles.overlap}>{nextCard(false)}</View>
+          <SwapInbox onChanged={refresh} />
           {church}
           <View style={styles.shortcuts}>
             <Card style={styles.shortcut} onPress={() => router.push('/(tabs)/announcements')}>
@@ -341,6 +360,7 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingBottom: 28, gap: 16 },
   overlap: { marginTop: -52 },
   nextCard: { gap: 14, padding: 18 },
+  swapPending: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
   nextHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   nextMain: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   dateTile: { width: 62, borderRadius: 14, paddingVertical: 8, alignItems: 'center' },

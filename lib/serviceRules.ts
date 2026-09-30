@@ -10,6 +10,8 @@ export type ServiceAvailability = {
   canUnsign: boolean
   /** „Nie mogę być” — zgłoszenie nieobecności */
   canReportAbsence: boolean
+  /** prośba o zamianę z konkretną osobą (N4) */
+  canSwap: boolean
 }
 
 /**
@@ -24,7 +26,7 @@ export function serviceAvailability(
   attendanceMode: string,
   now: Date = new Date(),
 ): ServiceAvailability {
-  const none: ServiceAvailability = { canCheckIn: false, adminMarks: false, canSignUp: false, canUnsign: false, canReportAbsence: false }
+  const none: ServiceAvailability = { canCheckIn: false, adminMarks: false, canSignUp: false, canUnsign: false, canReportAbsence: false, canSwap: false }
   if (s.attended) return none
   const isSunday = new Date(s.date + 'T12:00:00').getDay() === 0
   if (isSunday) return none
@@ -43,6 +45,7 @@ export function serviceAvailability(
     if (!s.mine) result.canSignUp = true
   }
   result.canReportAbsence = !!s.mine && !windowOpen && !past && !['excused', 'absent', 'confirmed', 'present'].includes(status ?? '')
+  result.canSwap = !!s.mine && !windowOpen && !past && (!status || status === 'assigned')
   return result
 }
 

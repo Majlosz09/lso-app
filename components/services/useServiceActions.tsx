@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Modal, Pressable, StyleSheet, View } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { CameraView, useCameraPermissions } from 'expo-camera'
@@ -13,6 +13,8 @@ import type { Service } from '../../hooks/useServices'
 import { ChoiceCard } from '../auth/formParts'
 import { AppText, Button, Icon, Sheet } from '../ui'
 import { AbsenceSheet } from './AbsenceSheet'
+import { SwapSheet } from './SwapSheet'
+import { useSwapStore } from '../../stores/swapStore'
 
 const DAY_ACC = ['niedzielę', 'poniedziałek', 'wtorek', 'środę', 'czwartek', 'piątek', 'sobotę']
 
@@ -31,6 +33,10 @@ export function useServiceActions(onChanged: () => void) {
   const [signUpMode, setSignUpMode] = useState<'once' | 'recurring'>('once')
   const [unsign, setUnsign] = useState<{ service: Service; commitmentId: string | null } | null>(null)
   const [absenceFor, setAbsenceFor] = useState<Service | null>(null)
+  const [swapFor, setSwapFor] = useState<Service | null>(null)
+  const outgoingSwaps = useSwapStore(st => st.outgoing)
+  const loadSwaps = useSwapStore(st => st.load)
+  useEffect(() => { if (profile?.id) loadSwaps(profile.id) }, [profile?.id])
 
   const [cameraPermission, requestCameraPermission] = useCameraPermissions()
   const [qrFor, setQrFor] = useState<Service | null>(null)
@@ -189,8 +195,33 @@ export function useServiceActions(onChanged: () => void) {
     onChanged()
   }
 
+  // ── Zamiana (N4) ─────────────────────────────────────────────────────────
+  const openSwap = (s: Service) => setSwapFor(s)
+  const sendSwap = async (toId: string, toName: string) => {
+    const s = swapFor
+    if (!s) return
+    setBusyId(s.id)
+    const err = await useSwapStore.getState().request(s.id, toId)
+    setBusyId(null)
+    if (err) { Toast.show({ type: 'error', text1: 'Nie udało się wysłać', text2: err }); return }
+    setSwapFor(null)
+    Toast.show({ type: 'success', text1: `Prośba o zamianę wysłana: ${toName}` })
+  }
+  /** Otwarta prośba o zamianę tej służby (do kogo). */
+  const pendingSwap = (s: Service) => outgoingSwaps[s.id] ?? null
+  const cancelSwap = async (s: Service) => {
+    const p = outgoingSwaps[s.id]
+    if (!p) return
+    setBusyId(s.id)
+    const err = await useSwapStore.getState().cancel(p.id)
+    setBusyId(null)
+    if (err) Toast.show({ type: 'error', text1: 'Błąd', text2: err })
+    else Toast.show({ type: 'success', text1: 'Prośba o zamianę wycofana' })
+  }
+
   const sheets = (
     <>
+      <SwapSheet service={swapFor} busy={!!swapFor && busyId === swapFor.id} onClose={() => setSwapFor(null)} onSubmit={sendSwap} />
       <Sheet
         visible={!!signUpFor}
         onClose={() => setSignUpFor(null)}
@@ -284,7 +315,7 @@ export function useServiceActions(onChanged: () => void) {
     </>
   )
 
-  return { checkIn, openSignUp, openUnsign, openAbsence, busyId, sheets, mode, methods, primary }
+  return { checkIn, openSignUp, openUnsign, openAbsence, openSwap, pendingSwap, cancelSwap, busyId, sheets, mode, methods, primary }
 }
 
 const styles = StyleSheet.create({
