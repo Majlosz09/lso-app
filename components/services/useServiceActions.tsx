@@ -277,7 +277,7 @@ export function useServiceActions(onChanged: () => void) {
           multiline
         />
         <AppText variant="small" muted>
-          Opiekun zobaczy zgłoszenie w usprawiedliwieniach i je przyjmie albo odrzuci.
+          {`Opiekun zobaczy zgłoszenie w usprawiedliwieniach i je przyjmie albo odrzuci.${parish?.rejected_excuse_penalty ? ` Odrzucone zgłoszenie to −${parish.rejected_excuse_penalty} pkt.` : ''}`}
         </AppText>
       </Sheet>
 

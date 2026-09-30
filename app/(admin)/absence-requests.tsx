@@ -23,7 +23,9 @@ type AbsenceRequest = {
 type Pending = { kind: 'approve' | 'reject'; request: AbsenceRequest } | { kind: 'all' }
 
 export default function AbsenceRequestsScreen() {
-  const { profile } = useAuthStore()
+  const { profile, parish } = useAuthStore()
+  // Z2: kara z reguł punktów (przed migracją kolumny brak → brak kary)
+  const penalty = parish?.rejected_excuse_penalty ?? 0
   const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
   const [requests, setRequests] = useState<AbsenceRequest[]>([])
@@ -60,15 +62,18 @@ export default function AbsenceRequestsScreen() {
       } else {
         const r = confirm.request
         const approve = confirm.kind === 'approve'
-        const { error } = await supabase
-          .from('schedule_assignments')
-          .update(approve ? { status: 'confirmed', admin_note: null } : { status: 'absent', admin_note: REJECTION_NOTE })
-          .eq('id', r.id)
+        let { error } = approve
+          ? await supabase.from('schedule_assignments').update({ status: 'confirmed', admin_note: null }).eq('id', r.id)
+          : await supabase.rpc('reject_absence_request', { p_assignment_id: r.id })
+        // baza bez migracji 20261001000000 — odrzucenie bez kary
+        if (!approve && error && /reject_absence_request/.test(error.message)) {
+          ({ error } = await supabase.from('schedule_assignments').update({ status: 'absent', admin_note: REJECTION_NOTE }).eq('id', r.id))
+        }
         if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
         setRequests(prev => prev.filter(x => x.id !== r.id))
         Toast.show(approve
           ? { type: 'success', text1: `Usprawiedliwienie przyjęte: ${r.profile.full_name}` }
-          : { type: 'info', text1: `Odrzucono: ${r.profile.full_name}` })
+          : { type: 'info', text1: `Odrzucono: ${r.profile.full_name}`, text2: penalty > 0 ? `−${penalty} pkt` : undefined })
       }
       setConfirm(null)
     } finally {
@@ -143,7 +148,7 @@ export default function AbsenceRequestsScreen() {
             ? `Wszystkie ${requests.length} zgłoszenia zostaną uznane za usprawiedliwione.`
             : confirm?.kind === 'approve'
               ? `${c1?.profile.full_name} — nieobecność zostanie usprawiedliwiona.`
-              : `${c1?.profile.full_name} zobaczy przy służbie informację, że usprawiedliwienie nie zostało przyjęte, i nieobecność będzie liczona jako nieusprawiedliwiona.`}
+              : `${c1?.profile.full_name} zobaczy przy służbie informację, że usprawiedliwienie nie zostało przyjęte, i nieobecność będzie liczona jako nieusprawiedliwiona.${penalty > 0 ? ` Zostanie odjęte ${penalty} pkt (zmienisz to w regułach punktów).` : ''}`}
         </AppText>
       </Sheet>
     </>

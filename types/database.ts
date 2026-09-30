@@ -46,6 +46,7 @@ export interface Parish {
   /** Z1 (migracja 20260930000000) — przed migracją brak, wtedy liczymy z attendance_mode */
   attendance_methods?: AttendanceMode[] | null
   attendance_primary?: AttendanceMode | null
+  rejected_excuse_penalty?: number | null
   allow_member_dm: boolean
 }
 

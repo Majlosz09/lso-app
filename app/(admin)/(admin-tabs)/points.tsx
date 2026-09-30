@@ -24,7 +24,7 @@ export function quickReason(amount: number): string {
 export default function PointsTab() {
   const router = useRouter()
   const isDesktop = useIsDesktop()
-  const { profile: adminProfile } = useAuthStore()
+  const { profile: adminProfile, parish } = useAuthStore()
   const { colors: c } = useTheme()
   const [ranking, setRanking] = useState<RankedMember[]>([])
   const [loading, setLoading] = useState(true)
@@ -143,6 +143,14 @@ export default function PointsTab() {
           <AppText style={[styles.rulePts, { color: r.points >= 0 ? c.success : c.dangerStrong }]}>{r.points > 0 ? `+${r.points}` : r.points}</AppText>
         </View>
       ))}
+      {parish?.rejected_excuse_penalty != null && (
+        <View style={[styles.ruleRow, { borderTopWidth: 1, borderTopColor: c.borderLight }]}>
+          <AppText variant="body" style={styles.flex}>Odrzucone usprawiedliwienie</AppText>
+          <AppText style={[styles.rulePts, { color: parish.rejected_excuse_penalty ? c.dangerStrong : c.subtext }]}>
+            {parish.rejected_excuse_penalty ? `−${parish.rejected_excuse_penalty}` : '0'}
+          </AppText>
+        </View>
+      )}
       <View style={styles.pad}>
         <Button label="Edytuj reguły" icon="pencil" variant="secondary" onPress={() => router.push('/(admin)/point-rules')} />
       </View>
