@@ -23,6 +23,8 @@ import { CreatePollModal } from './CreatePollModal'
 import { ReportMessageModal } from './ReportMessageModal'
 import { channelTitle } from './ChannelRow'
 import { AppText, Icon } from '../ui'
+import { ConfirmDialog } from '../ConfirmDialog'
+import Toast from 'react-native-toast-message'
 
 function useHeaderHeightSafe(): number {
   try {
@@ -48,6 +50,8 @@ export function ChatThread({ channelId, embedded = false }: { channelId: string;
   const [actionSheetMessage, setActionSheetMessage] = useState<ChatMessageWithSender | null>(null)
   const [actionSheetY, setActionSheetY] = useState(0)
   const [reportMessage, setReportMessage] = useState<ChatMessageWithSender | null>(null)
+  // blokada autora (wymóg App Store): jego wiadomości znikają po stronie bazy (RLS user_blocks), w DM nikt nie pisze
+  const [blockTarget, setBlockTarget] = useState<ChatMessageWithSender | null>(null)
   const [replyTo, setReplyTo] = useState<ChatMessageWithSender | null>(null)
   const [editingMessage, setEditingMessage] = useState<ChatMessageWithSender | null>(null)
   const [showPollModal, setShowPollModal] = useState(false)
@@ -146,7 +150,9 @@ export function ChatThread({ channelId, embedded = false }: { channelId: string;
     setReplyTo(null)
     if (error) {
       setText(content)
-      Alert.alert('Błąd', 'Nie udało się wysłać wiadomości.')
+      // RLS (migracja 20260930000000_user_blocks): w DM z zablokowaną osobą nie da się pisać
+      if (channel?.type === 'dm' && error.code === '42501') Alert.alert('Nie można wysłać', 'Ta rozmowa jest zablokowana.')
+      else Alert.alert('Błąd', 'Nie udało się wysłać wiadomości.')
     } else {
       refetch()
     }
@@ -395,6 +401,24 @@ export function ChatThread({ channelId, embedded = false }: { channelId: string;
         }}
         onDelete={() => { if (actionSheetMessage) handleDelete(actionSheetMessage) }}
         onReport={() => setReportMessage(actionSheetMessage)}
+        onBlock={() => setBlockTarget(actionSheetMessage)}
+      />
+      <ConfirmDialog
+        visible={!!blockTarget}
+        title="Zablokować użytkownika?"
+        message={`Nie zobaczysz wiadomości od: ${blockTarget?.sender?.full_name ?? 'tej osoby'}, a w rozmowie prywatnej nie będziecie mogli do siebie pisać. Odblokujesz w Profilu → Zablokowane osoby.`}
+        confirmText="Zablokuj"
+        destructive
+        onCancel={() => setBlockTarget(null)}
+        onConfirm={async () => {
+          const m = blockTarget
+          setBlockTarget(null)
+          if (!m?.sender_id || !profile?.id) return
+          const { error } = await supabase.from('user_blocks').insert({ blocker_id: profile.id, blocked_id: m.sender_id })
+          if (error && error.code !== '23505') { Toast.show({ type: 'error', text1: 'Nie udało się zablokować' }); return }
+          refetch()
+          Toast.show({ type: 'success', text1: 'Zablokowano', text2: 'Jeśli ta osoba narusza zasady, zgłoś też wiadomość opiekunowi.' })
+        }}
       />
       <ReportMessageModal
         message={reportMessage}

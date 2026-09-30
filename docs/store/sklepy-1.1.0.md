@@ -68,7 +68,7 @@ Each parish is a closed group. New members join with an invitation code from the
 
 Location and camera are used only in the foreground when a member confirms attendance (GPS near the church or scanning the QR code shown by the admin).
 
-Chat moderation: members can report messages; the parish admin reviews reports, deletes messages and can remove members. Minors under 16 register only with a parent's consent (Terms: https://lsoapp.com/regulamin).
+Chat safety: long-press any message → "Zgłoś administratorowi" (report) or "Zablokuj autora" (block user). Blocking hides all messages from that user immediately (enforced server-side) and disables private messages between the two users; the block list with "Odblokuj" is in Profile → "Zablokowane osoby". The parish admin reviews reports, deletes messages and can remove members. Minors under 16 register only with a parent's consent (Terms: https://lsoapp.com/regulamin).
 
 Account deletion: Profile tab → "Usuń konto" at the bottom → type USUŃ → confirm. Deletion is immediate.
 

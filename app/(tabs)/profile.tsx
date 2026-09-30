@@ -27,6 +27,7 @@ import { useTour } from '../../stores/tourStore'
 import { tourRoleFor } from '../../lib/tour'
 import { DeleteAccountButton } from '../../components/DeleteAccountButton'
 import { ExportMyDataButton } from '../../components/ExportMyDataButton'
+import { BlockedUsersButton } from '../../components/BlockedUsersButton'
 import { ForgotPasswordModal } from '../../components/ForgotPasswordModal'
 import { attendanceRate } from '../../lib/serviceRules'
 import { ChildSummary, useChildren } from '../../hooks/useChildren'
@@ -487,6 +488,7 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
     <Card style={styles.account}>
       <Button label="Wyloguj się" icon="logout" variant="secondary" onPress={() => setConfirmLogout(true)} />
       <View style={styles.accountLinks}>
+        <BlockedUsersButton />
         <ExportMyDataButton />
         <DeleteAccountButton />
       </View>
