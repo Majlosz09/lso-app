@@ -20,6 +20,7 @@ import { Service, useServices } from '../../hooks/useServices'
 import { useServiceActions } from '../../components/services/useServiceActions'
 import { DayStrip } from '../../components/services/DayStrip'
 import { SwapInbox } from '../../components/services/SwapInbox'
+import { DailyWordCard } from '../../components/services/DailyWordCard'
 import { NotificationBell } from '../../components/layout/NotificationBell'
 import { useSwapStore } from '../../stores/swapStore'
 import { useUnreadAnnouncements } from '../../hooks/useUnreadAnnouncements'
@@ -255,22 +256,6 @@ export default function HomeScreen() {
     </Card>
   )
 
-  const wiedzaCard = (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => router.push('/(tabs)/wiedza')}
-      style={[styles.wiedza, { backgroundColor: c.primary }]}
-    >
-      <Icon name="book-open-variant" size={28} color={c.gold} />
-      <View style={styles.flex}>
-        <AppText variant="eyebrow" color={c.gold}>Wiedza ministranta</AppText>
-        <AppText style={[serif(), styles.wiedzaTitle]}>Szaty, sprzęty, gesty</AppText>
-        <AppText style={styles.wiedzaSub}>Kategorie haseł i słowniczek</AppText>
-      </View>
-      <Icon name="chevron-right" size={22} color="#AEBBD0" />
-    </Pressable>
-  )
-
   const pointsCard = (
     <Card large onPress={() => router.push('/(tabs)/points')}>
       <AppText variant="eyebrow" color={c.goldInk}>{`Twoje punkty`}</AppText>
@@ -301,7 +286,7 @@ export default function HomeScreen() {
         <View style={styles.desktopRight}>
           {pointsCard}
           {annCard}
-          {wiedzaCard}
+          <DailyWordCard />
         </View>
         {actions.sheets}
       </ScrollView>
@@ -355,6 +340,7 @@ export default function HomeScreen() {
               </AppText>
             </Card>
           </View>
+          <DailyWordCard />
         </View>
       </ScrollView>
       {actions.sheets}
@@ -397,9 +383,6 @@ const styles = StyleSheet.create({
   shortcutHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
   annHead: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10 },
   annRow: { paddingHorizontal: 14, paddingVertical: 12, gap: 2, cursor: 'pointer' } as any,
-  wiedza: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, borderRadius: 20, cursor: 'pointer' } as any,
-  wiedzaTitle: { fontSize: 24, lineHeight: 27, color: '#FFFFFF' },
-  wiedzaSub: { ...sans(500), fontSize: 12, color: '#AEBBD0' },
   pointsRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10, marginTop: 4 },
   pointsBig: { fontSize: 64, lineHeight: 68 },
   desktop: { flexDirection: 'row', gap: 20, padding: 28, paddingHorizontal: 32, alignItems: 'flex-start' },

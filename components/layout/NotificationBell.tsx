@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans } from '../../lib/theme'
+import { pl } from '../../lib/dates'
 import { announcementWhen } from '../announcements/AnnouncementsFeed'
 import { AppNotification, NOTIFICATION_ICON, notificationHref, useNotificationsStore } from '../../stores/notificationsStore'
 import { AppText, Button, Icon, Sheet } from '../ui'
@@ -36,7 +37,7 @@ export function NotificationBell({ tone = 'bar', fg }: { tone?: 'bar' | 'header'
     <>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={unread ? `Powiadomienia, ${unread} nowych` : 'Powiadomienia'}
+        accessibilityLabel={unread ? `Powiadomienia, ${unread} ${pl(unread, ['nowe', 'nowe', 'nowych'])}` : 'Powiadomienia'}
         onPress={() => { setOpen(true); load(profile.id) }}
         style={({ hovered }: any) => [
           styles.bell,
@@ -57,7 +58,7 @@ export function NotificationBell({ tone = 'bar', fg }: { tone?: 'bar' | 'header'
         visible={open}
         onClose={() => setOpen(false)}
         title="Powiadomienia"
-        eyebrow={unread ? `${unread} nowych` : 'Wszystko przeczytane'}
+        eyebrow={unread ? `${unread} ${pl(unread, ['nowe', 'nowe', 'nowych'])}` : 'Wszystko przeczytane'}
         footer={unread > 0 ? <Button label="Oznacz wszystkie jako przeczytane" icon="check-all" variant="secondary" onPress={markAllRead} /> : undefined}
       >
         {items.length === 0 ? (
