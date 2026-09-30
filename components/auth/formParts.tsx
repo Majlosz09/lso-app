@@ -72,7 +72,7 @@ export function LegalLink({ url, label }: { url: string; label: string }) {
 }
 
 /** Duża karta wyboru (rola, rodzaj rejestracji). */
-export function ChoiceCard({ icon, title, subtitle, selected, onPress, tone = 'light' }: {
+export function ChoiceCard({ icon, title, subtitle, selected, onPress, tone = 'light', multi }: {
   icon: string
   title: string
   subtitle?: string
@@ -80,13 +80,15 @@ export function ChoiceCard({ icon, title, subtitle, selected, onPress, tone = 'l
   onPress: () => void
   /** 'light' — na papierze; 'navy' — ciemna karta na granatowym tle */
   tone?: 'light' | 'navy'
+  /** wielokrotny wybór — checkbox zamiast radia */
+  multi?: boolean
 }) {
   const { colors: c } = useTheme()
   const navy = tone === 'navy'
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: !!selected }}
+      accessibilityRole={multi ? 'checkbox' : 'button'}
+      accessibilityState={multi ? { checked: !!selected } : { selected: !!selected }}
       onPress={onPress}
       style={({ hovered }: any) => [
         styles.choice,
@@ -104,8 +106,9 @@ export function ChoiceCard({ icon, title, subtitle, selected, onPress, tone = 'l
         {!!subtitle && <AppText style={[styles.choiceSub, { color: navy ? '#C9D3E3' : c.subtext }]}>{subtitle}</AppText>}
       </View>
       <Icon
-        name={selected !== undefined ? (selected ? 'radiobox-marked' : 'radiobox-blank') : 'chevron-right'}
+        name={selected !== undefined ? (multi ? (selected ? 'checkbox-marked' : 'checkbox-blank') : (selected ? 'radiobox-marked' : 'radiobox-blank')) : 'chevron-right'}
         size={22}
+        filled={!!(multi && selected)}
         color={selected ? c.primary : navy ? '#8497B5' : c.iconMuted}
       />
     </Pressable>

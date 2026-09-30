@@ -43,6 +43,9 @@ export interface Parish {
   lng: number | null
   gps_radius: number
   attendance_mode: AttendanceMode
+  /** Z1 (migracja 20260930000000) — przed migracją brak, wtedy liczymy z attendance_mode */
+  attendance_methods?: AttendanceMode[] | null
+  attendance_primary?: AttendanceMode | null
   allow_member_dm: boolean
 }
 

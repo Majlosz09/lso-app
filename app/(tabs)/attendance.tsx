@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
@@ -8,10 +8,11 @@ import { useTheme } from '../../lib/ThemeContext'
 import { sans, serif } from '../../lib/theme'
 import { addDays, dayNum, dayShort, localDateStr, relativeDay, shortDate } from '../../lib/dates'
 import { serviceAvailability } from '../../lib/serviceRules'
+import { AttendanceMethod, METHOD_INFO, parishMethods } from '../../lib/attendance'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { Service, useServices } from '../../hooks/useServices'
 import { useServiceActions } from '../../components/services/useServiceActions'
-import { AppText, Button, Card, Icon } from '../../components/ui'
+import { AppText, Button, Card, Chip, Icon } from '../../components/ui'
 
 const NAVY = '#071C3A'
 const MUTED = '#C9D3E3'
@@ -40,11 +41,14 @@ export default function AttendanceScreen() {
   const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
   const parish = useAuthStore(s => s.parish)
-  const mode = parish?.attendance_mode ?? 'button'
   const today = localDateStr()
   const { services, loading, refresh } = useServices(today, addDays(today, 7))
   const actions = useServiceActions(refresh)
-  const { service, ready } = useMemo(() => pickService(services, mode), [services, mode])
+  // metoda główna parafii; pozostałe włączone metody jako „Inna metoda”
+  const [method, setMethod] = useState<AttendanceMethod | null>(actions.primary)
+  useEffect(() => { setMethod(actions.primary) }, [actions.primary])
+  const mode = actions.mode === 'admin' ? 'admin' : (method ?? 'button')
+  const { service, ready } = useMemo(() => pickService(services, actions.mode), [services, actions.mode])
   const copy = COPY[mode] ?? COPY.button
   const attendedToday = services.find(s => s.date === today && s.attended)
 
@@ -79,7 +83,15 @@ export default function AttendanceScreen() {
             ) : null}
           </View>
           <AppText style={styles.hint}>{copy.hint}</AppText>
-          {mode !== 'admin' && (
+          {actions.methods.length > 1 && (
+            <View style={styles.methods}>
+              <AppText style={styles.hintSmall}>Metoda:</AppText>
+              {actions.methods.map(m => (
+                <Chip key={m} label={METHOD_INFO[m].short} icon={METHOD_INFO[m].icon} selected={method === m} onPress={() => setMethod(m)} />
+              ))}
+            </View>
+          )}
+          {mode !== 'admin' && parishMethods(parish).includes('admin') && (
             <AppText style={styles.hintSmall}>Opiekun może też zaznaczyć obecność po służbie.</AppText>
           )}
         </View>
@@ -114,7 +126,7 @@ export default function AttendanceScreen() {
               label="Potwierdzam obecność"
               icon="account-check"
               variant="gold"
-              onPress={() => actions.checkIn(service)}
+              onPress={() => actions.checkIn(service, method ?? undefined)}
               loading={actions.busyId === service.id}
             />
           ) : service ? (
@@ -148,6 +160,7 @@ const styles = StyleSheet.create({
   },
   frameText: { ...sans(700), fontSize: 13, color: MUTED },
   hint: { ...sans(500), fontSize: 14, lineHeight: 21, color: MUTED, textAlign: 'center', maxWidth: 320 },
+  methods: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 8 },
   hintSmall: { ...sans(500), fontSize: 12, color: '#8497B5', textAlign: 'center' },
   bottom: { gap: 12 },
   svcCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },

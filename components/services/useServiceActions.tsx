@@ -8,6 +8,7 @@ import { useTheme } from '../../lib/ThemeContext'
 import { sans, serif } from '../../lib/theme'
 import { CheckInResult, validateGps, validateParishQr } from '../../lib/checkin'
 import { dayShort, longDate } from '../../lib/dates'
+import { AttendanceMethod, effectiveMode, selfMethods, selfPrimary } from '../../lib/attendance'
 import type { Service } from '../../hooks/useServices'
 import { ChoiceCard } from '../auth/formParts'
 import { AppText, Button, Chip, Icon, Sheet, TextField } from '../ui'
@@ -43,7 +44,10 @@ export function useServiceActions(onChanged: () => void) {
   const [qrFor, setQrFor] = useState<Service | null>(null)
   const qrScanned = useRef(false)
 
-  const mode = parish?.attendance_mode ?? 'button'
+  // 'admin' = ministrant nie melduje się sam (reguły dostępności); metody własne i główna z ustawień parafii
+  const mode = effectiveMode(parish)
+  const methods = selfMethods(parish)
+  const primary = selfPrimary(parish)
 
   // ── Zameldowanie ─────────────────────────────────────────────────────────
   const doCheckIn = async (s: Service) => {
@@ -85,12 +89,13 @@ export function useServiceActions(onChanged: () => void) {
     onChanged()
   }
 
-  const checkIn = async (s: Service) => {
-    if (mode === 'admin') {
+  const checkIn = async (s: Service, method?: AttendanceMethod) => {
+    const m = method ?? primary
+    if (!m || m === 'admin') {
       Toast.show({ type: 'info', text1: 'W tej parafii obecność zaznacza opiekun' })
       return
     }
-    if (mode === 'gps') {
+    if (m === 'gps') {
       if (!parish?.lat || !parish?.lng) {
         Toast.show({ type: 'error', text1: 'Błąd konfiguracji', text2: 'Opiekun nie ustawił lokalizacji kościoła w ustawieniach parafii.' })
         return
@@ -112,7 +117,7 @@ export function useServiceActions(onChanged: () => void) {
       await doCheckIn(s)
       return
     }
-    if (mode === 'qr') {
+    if (m === 'qr') {
       if (!cameraPermission?.granted) {
         const { granted } = await requestCameraPermission()
         if (!granted) { Toast.show({ type: 'error', text1: 'Brak dostępu', text2: 'Zezwól aplikacji na dostęp do kamery.' }); return }
@@ -309,7 +314,7 @@ export function useServiceActions(onChanged: () => void) {
     </>
   )
 
-  return { checkIn, openSignUp, openUnsign, openAbsence, busyId, sheets, mode }
+  return { checkIn, openSignUp, openUnsign, openAbsence, busyId, sheets, mode, methods, primary }
 }
 
 const styles = StyleSheet.create({

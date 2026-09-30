@@ -8,13 +8,13 @@ import { useAuthStore } from '../../stores/authStore'
 import { buildParishQrValue } from '../../lib/checkin'
 import * as Clipboard from 'expo-clipboard'
 import Toast from 'react-native-toast-message'
-import type { AttendanceMode } from '../../types/database'
+import { ALL_METHODS, AttendanceMethod, legacyMode, METHOD_INFO, parishMethods, parishPrimary, toggleMethod } from '../../lib/attendance'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans } from '../../lib/theme'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import GpsLocationPicker from '../../components/GpsLocationPicker'
 import { ChoiceCard } from '../../components/auth/formParts'
-import { AppText, Button, Card, ListRow, ScreenHeader, Sheet, TextField } from '../../components/ui'
+import { AppText, Button, Card, Chip, ListRow, ScreenHeader, Sheet, TextField } from '../../components/ui'
 
 export default function ParishSettingsScreen() {
   const { parish, fetchProfile } = useAuthStore()
@@ -24,20 +24,14 @@ export default function ParishSettingsScreen() {
   const isDesktop = useIsDesktop()
   const [confirmRegen, setConfirmRegen] = useState(false)
 
-  const ATTENDANCE_OPTIONS: { mode: AttendanceMode; label: string; sub: string; icon: string }[] = useMemo(() => [
-    { mode: 'qr',     label: 'Kod QR w zakrystii',        sub: 'Ministrant skanuje wydrukowany kod', icon: 'qrcode-scan' },
-    { mode: 'gps',    label: 'Lokalizacja GPS',           sub: 'Obecność, gdy telefon jest przy kościele', icon: 'map-marker' },
-    { mode: 'button', label: 'Samodzielne potwierdzenie', sub: 'Ministrant sam oznacza obecność przyciskiem', icon: 'gesture-tap' },
-    { mode: 'admin',  label: 'Zaznacza ksiądz / opiekun', sub: 'Opiekun odhacza listę obecności po służbie', icon: 'shield-check' },
-  ], [])
-
   const [name, setName] = useState(parish?.name ?? '')
   const [city, setCity] = useState(parish?.city ?? '')
   const [saving, setSaving] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [inviteCode, setInviteCode] = useState(parish?.invite_code ?? '')
 
-  const [attendanceMode, setAttendanceMode] = useState<AttendanceMode>(parish?.attendance_mode ?? 'button')
+  const [methods, setMethods] = useState<AttendanceMethod[]>(parishMethods(parish))
+  const [primary, setPrimary] = useState<AttendanceMethod>(parishPrimary(parish))
   const [lat, setLat] = useState(parish?.lat?.toString() ?? '')
   const [lng, setLng] = useState(parish?.lng?.toString() ?? '')
   const [gpsRadius, setGpsRadius] = useState(parish?.gps_radius?.toString() ?? '200')
@@ -53,7 +47,8 @@ export default function ParishSettingsScreen() {
       setName(parish.name)
       setCity(parish.city ?? '')
       setInviteCode(parish.invite_code)
-      setAttendanceMode(parish.attendance_mode ?? 'button')
+      setMethods(parishMethods(parish))
+      setPrimary(parishPrimary(parish))
       setLat(parish.lat?.toString() ?? '')
       setLng(parish.lng?.toString() ?? '')
       setGpsRadius(parish.gps_radius?.toString() ?? '200')
@@ -79,7 +74,7 @@ export default function ParishSettingsScreen() {
     const lngNum = lng.trim() ? parseFloat(lng.trim()) : null
     const radiusNum = parseInt(gpsRadius.trim()) || 200
 
-    if (attendanceMode === 'gps') {
+    if (methods.includes('gps')) {
       if (latNum === null || lngNum === null || isNaN(latNum) || isNaN(lngNum)) {
         Alert.alert('Błąd', 'Wpisz poprawne współrzędne kościoła (szerokość i długość geograficzną).')
         return
@@ -91,15 +86,15 @@ export default function ParishSettingsScreen() {
     }
 
     setSavingAttendance(true)
-    const { error } = await supabase
+    const base = { attendance_mode: legacyMode(methods, primary), lat: latNum, lng: lngNum, gps_radius: radiusNum }
+    let { error } = await supabase
       .from('parishes')
-      .update({
-        attendance_mode: attendanceMode,
-        lat: latNum,
-        lng: lngNum,
-        gps_radius: radiusNum,
-      })
+      .update({ ...base, attendance_methods: methods, attendance_primary: primary })
       .eq('id', parish?.id)
+    // baza bez migracji 20260930000000 — zapisz przynajmniej pojedynczy tryb
+    if (error && /attendance_(methods|primary)/.test(error.message)) {
+      ({ error } = await supabase.from('parishes').update(base).eq('id', parish?.id))
+    }
     setSavingAttendance(false)
     if (error) { Alert.alert('Błąd', error.message); return }
     try { await fetchProfile() } catch (e) { console.error('[save] fetchProfile error:', e) }
@@ -179,24 +174,39 @@ https://app.lsoapp.com` })
   const attendanceCard = (
     <Card large style={styles.card}>
       <AppText variant="eyebrow" color={c.goldInk}>Potwierdzanie obecności</AppText>
-      <AppText variant="small" muted>Jak ministranci potwierdzają obecność na służbie.</AppText>
-      {ATTENDANCE_OPTIONS.map(opt => (
+      <AppText variant="small" muted>Zaznacz jedną lub kilka metod. Metoda główna otwiera się po „Potwierdź obecność”, pozostałe ministrant wybierze na ekranie obecności.</AppText>
+      {ALL_METHODS.map(m => (
         <ChoiceCard
-          key={opt.mode}
-          icon={opt.icon}
-          title={opt.label}
-          subtitle={opt.sub}
-          selected={attendanceMode === opt.mode}
-          onPress={() => setAttendanceMode(opt.mode)}
+          key={m}
+          icon={METHOD_INFO[m].icon}
+          title={methods.length > 1 && primary === m ? `${METHOD_INFO[m].label} · główna` : METHOD_INFO[m].label}
+          subtitle={METHOD_INFO[m].sub}
+          multi
+          selected={methods.includes(m)}
+          onPress={() => {
+            const r = toggleMethod(methods, primary, m)
+            if (r.error) { Toast.show({ type: 'error', text1: r.error }); return }
+            setMethods(r.methods); setPrimary(r.primary)
+          }}
         />
       ))}
-      {attendanceMode === 'gps' && (
+      {methods.length > 1 && (
+        <View style={styles.primaryBox}>
+          <AppText variant="label">Metoda główna</AppText>
+          <View style={styles.primaryChips}>
+            {methods.map(m => (
+              <Chip key={m} label={METHOD_INFO[m].label} icon={METHOD_INFO[m].icon} selected={primary === m} onPress={() => setPrimary(m)} />
+            ))}
+          </View>
+        </View>
+      )}
+      {methods.includes('gps') && (
         <View style={[styles.gpsBox, { backgroundColor: c.goldSurface }]}>
           <AppText variant="label" color={c.goldText}>Lokalizacja kościoła</AppText>
           <GpsLocationPicker lat={lat} lng={lng} gpsRadius={gpsRadius} onLatChange={setLat} onLngChange={setLng} onGpsRadiusChange={setGpsRadius} />
         </View>
       )}
-      {attendanceMode === 'qr' && (
+      {methods.includes('qr') && (
         <Button label="Pokaż kod QR do wydruku" icon="qrcode" variant="secondary" onPress={() => setQrModalVisible(true)} />
       )}
       <Button label="Zapisz ustawienia obecności" onPress={handleSaveAttendance} loading={savingAttendance} />
@@ -279,6 +289,8 @@ https://app.lsoapp.com` })
 }
 
 const styles = StyleSheet.create({
+  primaryBox: { gap: 8 },
+  primaryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   flex: { flex: 1, minWidth: 0 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   centerText: { textAlign: 'center' },

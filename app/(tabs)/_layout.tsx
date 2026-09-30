@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Tabs, usePathname, useRouter } from 'expo-router'
 import { equivalentRoute } from '../../lib/navigation'
+import { effectiveMode } from '../../lib/attendance'
 import { useAuthStore } from '../../stores/authStore'
 import { CustomTabBar } from '../../components/CustomTabBar'
 import { Icon } from '../../components/ui'
@@ -28,7 +29,7 @@ export default function TabsLayout() {
   const headerRight = () => <HeaderAvatar href="/(tabs)/profile" />
   const headerLeft = () => <HeaderBack fallback="/(tabs)" />
   // Złoty przycisk „Obecność” tylko gdy ministrant sam może potwierdzić obecność
-  const selfCheckIn = (parish?.attendance_mode ?? 'button') !== 'admin'
+  const selfCheckIn = effectiveMode(parish) === 'self'
 
   return (
     <Tabs

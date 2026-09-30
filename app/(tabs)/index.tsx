@@ -11,6 +11,7 @@ import { shadow } from '../../lib/shadows'
 import { getLiturgicalDay } from '../../lib/liturgy'
 import { addDays, dayMonth, dayNum, dayShort, localDateStr, longDate, relativeDay, weekdayShortDate } from '../../lib/dates'
 import { serviceAvailability } from '../../lib/serviceRules'
+import { effectiveMode } from '../../lib/attendance'
 import { CATEGORY_CONFIG } from '../../types/database'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
@@ -91,7 +92,7 @@ export default function HomeScreen() {
 
   const firstName = (profile?.full_name ?? '').split(' ')[0]
   const dayServices = services.filter(s => s.date === day)
-  const mode = parish?.attendance_mode ?? 'button'
+  const mode = effectiveMode(parish)
   const goService = (s: { id: string; date: string; time: string }) =>
     router.push({ pathname: isDesktop ? '/(tabs)/schedule' : '/(tabs)/service', params: { id: s.id, date: s.date, time: s.time } } as any)
 

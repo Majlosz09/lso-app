@@ -7,6 +7,7 @@ import { sans, VESTMENT_DOT, VestmentColor } from '../../lib/theme'
 import { getLiturgicalDay } from '../../lib/liturgy'
 import { dayShort, localDateStr, monthName, shortDate, weekDays } from '../../lib/dates'
 import { serviceAvailability } from '../../lib/serviceRules'
+import { effectiveMode } from '../../lib/attendance'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
 import { Service, useServices } from '../../hooks/useServices'
@@ -31,7 +32,7 @@ export default function ScheduleScreen() {
   const { services, loading, refresh } = useServices(days[0], days[6])
   const actions = useServiceActions(refresh)
   const [refreshing, setRefreshing] = useState(false)
-  const mode = parish?.attendance_mode ?? 'button'
+  const mode = effectiveMode(parish)
 
   const filtered = useMemo(() => services.filter(s => {
     if (seg === 'mine') return !!s.mine
