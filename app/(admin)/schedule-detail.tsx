@@ -534,7 +534,7 @@ const styles = StyleSheet.create({
   back: { flexDirection: 'row', alignItems: 'center', marginLeft: -6 },
   backText: { ...sans(700), fontSize: 13 },
   headIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 34, lineHeight: 37, fontFamily: 'Manrope_500Medium' },
+  title: { fontSize: 34, lineHeight: 37 },
   when: { ...sans(700), fontSize: 14 },
   lit: { ...sans(500), fontSize: 13, opacity: 0.9 },
   body: { padding: 16, gap: 14 },

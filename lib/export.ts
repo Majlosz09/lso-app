@@ -1,5 +1,6 @@
 import * as Sharing from 'expo-sharing'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { buildXlsx, Sheet } from './xlsx'
 
 export type MemberExportRow = {
   fullName: string
@@ -193,82 +194,45 @@ ${attendanceSection}
 </body></html>`
 }
 
-export function generateXLS(data: ExportData, opts?: { pointsOnly?: boolean }): string {
+/** Z7: prawdziwy plik Excel (.xlsx) — arkusz „Ranking” i (opcjonalnie) „Frekwencja”. */
+export function generateXLSX(data: ExportData, opts?: { pointsOnly?: boolean }): Uint8Array {
   const pointsOnly = opts?.pointsOnly ?? false
   const generatedDate = new Date(data.generatedAt).toLocaleDateString('pl-PL')
-
-  const C = 'border:1px solid #C5CAE9;padding:6px 10px;font-family:Calibri,Arial,sans-serif;font-size:10pt'
-  const TH = `${C};background:#1A237E;color:#fff;font-weight:700`
-  const E = 'border:none;padding:0'
-  const SEC = 'background:#E8EAF6;color:#1A237E;font-weight:700;font-size:11pt;padding:8px 12px;font-family:Calibri,Arial,sans-serif;border-bottom:2px solid #1A237E'
-  const META = 'color:#666;padding:3px 12px;font-family:Calibri,Arial,sans-serif;font-size:10pt;border:none'
-
-  const rankingRows = data.members.length === 0
-    ? `<tr><td colspan="3" style="${C};text-align:center;color:#888">Brak danych w wybranym okresie</td><td colspan="2" style="${E}"></td></tr>`
-    : data.members.map((m, i) => {
-        const bold = i < 3 ? ';font-weight:700' : ''
-        const evenBg = i % 2 === 1 ? ';background:#F5F7FF' : ''
-        return `<tr>
-          <td style="${C};text-align:center${evenBg}">${i + 1}</td>
-          <td style="${C}${bold}${evenBg}">${m.fullName}</td>
-          <td style="${C};text-align:right${bold}${evenBg}">${m.points}</td>
-          <td colspan="2" style="${E}"></td>
-        </tr>`
-      }).join('')
-
-  const attendanceSection = pointsOnly ? '' : (() => {
-    const attendanceRows = data.members.length === 0
-      ? `<tr><td colspan="5" style="${C};text-align:center;color:#888">Brak danych w wybranym okresie</td></tr>`
-      : data.members.map((m, i) => {
-          const rateColor = m.attendanceRate >= 80 ? '#16a34a' : m.attendanceRate >= 50 ? '#d97706' : '#dc2626'
-          const evenBg = i % 2 === 1 ? ';background:#F5F7FF' : ''
-          return `<tr>
-            <td style="${C};text-align:center${evenBg}">${i + 1}</td>
-            <td style="${C}${evenBg}">${m.fullName}</td>
-            <td style="${C};text-align:right${evenBg}">${m.scheduled}</td>
-            <td style="${C};text-align:right${evenBg}">${m.present}</td>
-            <td style="${C};text-align:right;font-weight:600;color:${rateColor}${evenBg}">${m.attendanceRate.toFixed(1)}%</td>
-          </tr>`
-        }).join('')
-    return `<tr><td colspan="5" style="padding:6px;border:none"></td></tr>
-<tr><td colspan="5" style="${SEC}">Statystyki obecności</td></tr>
-<tr>
-  <th style="${TH};text-align:center;width:50px">Lp.</th>
-  <th style="${TH}">Imię i nazwisko</th>
-  <th style="${TH};text-align:right">Liczba służb</th>
-  <th style="${TH};text-align:right">Obecny</th>
-  <th style="${TH};text-align:right">Frekwencja</th>
-</tr>
-${attendanceRows}`
-  })()
-
-  return `<html xmlns:o="urn:schemas-microsoft-com:office:office"
-  xmlns:x="urn:schemas-microsoft-com:office:excel"
-  xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<!--[if gte mso 9]><xml>
-<x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>
-<x:Name>Raport LSO</x:Name>
-<x:WorksheetOptions><x:Selected/></x:WorksheetOptions>
-</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
-</head><body>
-<table cellspacing="0">
-<tr><td colspan="5" style="background:#1A237E;color:#fff;font-weight:700;font-size:14pt;padding:14px 12px;font-family:Calibri,Arial,sans-serif">${data.parishName}</td></tr>
-<tr><td colspan="5" style="${META}">Raport LSO &nbsp;&nbsp; ${data.from} — ${data.to}</td></tr>
-<tr><td colspan="5" style="${META};padding-bottom:10px">Wygenerowano: ${generatedDate}</td></tr>
-<tr><td colspan="5" style="padding:4px;border:none"></td></tr>
-<tr><td colspan="3" style="${SEC}">Ranking punktowy</td><td colspan="2" style="border:none"></td></tr>
-<tr>
-  <th style="${TH};text-align:center;width:50px">Lp.</th>
-  <th style="${TH}">Imię i nazwisko</th>
-  <th style="${TH};text-align:right">Punkty</th>
-  <td colspan="2" style="${E}"></td>
-</tr>
-${rankingRows}
-${attendanceSection}
-</table>
-</body></html>`
+  const meta = [
+    [`Raport LSO — ${data.parishName}`],
+    [`Okres: ${data.from} — ${data.to}`],
+    [`Wygenerowano: ${generatedDate}`],
+    [],
+  ]
+  const empty = data.members.length === 0 ? [['', 'Brak danych w wybranym okresie']] : []
+  const sheets: Sheet[] = [{
+    name: 'Ranking',
+    titleRows: [0],
+    headerRow: meta.length,
+    widths: [6, 32, 10],
+    rows: [
+      ...meta,
+      ['Lp.', 'Imię i nazwisko', 'Punkty'],
+      ...data.members.map((m, i) => [i + 1, m.fullName, m.points]),
+      ...empty,
+    ],
+  }]
+  if (!pointsOnly) {
+    sheets.push({
+      name: 'Frekwencja',
+      titleRows: [0],
+      headerRow: meta.length,
+      widths: [6, 32, 14, 10, 12],
+      percentCols: [4],
+      rows: [
+        ...meta,
+        ['Lp.', 'Imię i nazwisko', 'Liczba służb', 'Obecny', 'Frekwencja'],
+        ...data.members.map((m, i) => [i + 1, m.fullName, m.scheduled, m.present, m.attendanceRate / 100]),
+        ...empty,
+      ],
+    })
+  }
+  return buildXlsx(sheets)
 }
 
 export async function shareFile(uri: string): Promise<void> {
