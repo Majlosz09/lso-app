@@ -45,3 +45,10 @@ export function serviceAvailability(
   result.canReportAbsence = !!s.mine && !windowOpen && !past && !['excused', 'absent', 'confirmed', 'present'].includes(status ?? '')
   return result
 }
+
+/** Frekwencja w %: obecny / (obecny + nieobecny + usprawiedliwiony) na minionych służbach. */
+export function attendanceRate(statuses: string[]): number | null {
+  const counted = statuses.filter(s => ['present', 'absent', 'excused', 'confirmed'].includes(s))
+  if (counted.length === 0) return null
+  return Math.round((counted.filter(s => s === 'present').length / counted.length) * 100)
+}

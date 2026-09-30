@@ -24,12 +24,8 @@ type MemberData = {
 
 type Stats = { points: number; services: number; position: number; attendance: number | null }
 
-/** Frekwencja: obecny / (obecny + nieobecny + usprawiedliwiony) na minionych służbach. */
-export function attendanceRate(statuses: string[]): number | null {
-  const counted = statuses.filter(s => ['present', 'absent', 'excused', 'confirmed'].includes(s))
-  if (counted.length === 0) return null
-  return Math.round((counted.filter(s => s === 'present').length / counted.length) * 100)
-}
+export { attendanceRate } from '../../lib/serviceRules'
+import { attendanceRate } from '../../lib/serviceRules'
 
 export default function MemberProfileScreen() {
   const router = useRouter()

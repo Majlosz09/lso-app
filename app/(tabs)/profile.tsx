@@ -24,7 +24,7 @@ import { OnboardingModal } from '../../components/OnboardingModal'
 import { DeleteAccountButton } from '../../components/DeleteAccountButton'
 import { ExportMyDataButton } from '../../components/ExportMyDataButton'
 import { ForgotPasswordModal } from '../../components/ForgotPasswordModal'
-import { attendanceRate } from './member-profile'
+import { attendanceRate } from '../../lib/serviceRules'
 import {
   AppText, Avatar, Button, Card, HeaderChip, Icon, ListRow, Segmented, Sheet, TextField,
 } from '../../components/ui'

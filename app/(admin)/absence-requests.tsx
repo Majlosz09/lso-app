@@ -1,16 +1,14 @@
-import { useEffect, useState, useMemo } from 'react'
-import {
-  View, Text, FlatList, StyleSheet,
-  TouchableOpacity, ActivityIndicator, Alert,
-} from 'react-native'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { Stack } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
-import { shadow } from '../../lib/shadows'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { sans } from '../../lib/theme'
+import { dayShort, longDate, pl, shortDate } from '../../lib/dates'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { AppText, Avatar, Badge, Button, Card, Icon, Sheet } from '../../components/ui'
 
 const REJECTION_NOTE =
   'Usprawiedliwienie nie zostało zatwierdzone. Skontaktuj się z księdzem, aby wyjaśnić sytuację.'
@@ -22,14 +20,16 @@ type AbsenceRequest = {
   schedule: { title: string; date: string; time: string | null }
 }
 
+type Pending = { kind: 'approve' | 'reject'; request: AbsenceRequest } | { kind: 'all' }
+
 export default function AbsenceRequestsScreen() {
   const { profile } = useAuthStore()
+  const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
   const [requests, setRequests] = useState<AbsenceRequest[]>([])
   const [loading, setLoading] = useState(true)
-  const [processingId, setProcessingId] = useState<string | null>(null)
-  const [processingAll, setProcessingAll] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [confirm, setConfirm] = useState<Pending | null>(null)
 
   const fetchRequests = async () => {
     try {
@@ -38,11 +38,8 @@ export default function AbsenceRequestsScreen() {
         .select('id, absence_reason, profile:profiles(full_name), schedule:schedules!inner(title, date, time, parish_id)')
         .eq('status', 'excused')
         .eq('schedule.parish_id', profile?.parish_id)
-      if (error) { Alert.alert('Błąd', error.message); return }
-      const sorted = ((data ?? []) as unknown as AbsenceRequest[]).sort((a, b) =>
-        a.schedule.date.localeCompare(b.schedule.date)
-      )
-      setRequests(sorted)
+      if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+      setRequests(((data ?? []) as unknown as AbsenceRequest[]).sort((a, b) => a.schedule.date.localeCompare(b.schedule.date)))
     } finally {
       setLoading(false)
     }
@@ -50,224 +47,122 @@ export default function AbsenceRequestsScreen() {
 
   useEffect(() => { fetchRequests() }, [])
 
-  const handleApprove = (request: AbsenceRequest) => {
-    const dateStr = new Date(request.schedule.date + 'T12:00:00').toLocaleDateString('pl-PL', {
-      weekday: 'short', day: 'numeric', month: 'long',
-    })
-    Alert.alert(
-      'Zatwierdź nieobecność',
-      `Zatwierdzić nieobecność ${request.profile.full_name} na służbie ${dateStr}?`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Zatwierdź',
-          onPress: async () => {
-            setProcessingId(request.id)
-            try {
-              const { error } = await supabase
-                .from('schedule_assignments')
-                .update({ status: 'confirmed', admin_note: null })
-                .eq('id', request.id)
-              if (error) { Alert.alert('Błąd', error.message); return }
-              setRequests(prev => prev.filter(r => r.id !== request.id))
-              Toast.show({ type: 'success', text1: 'Nieobecność zatwierdzona', text2: request.profile.full_name })
-            } finally {
-              setProcessingId(null)
-            }
-          },
-        },
-      ]
-    )
+  const run = async () => {
+    if (!confirm) return
+    setBusy(true)
+    try {
+      if (confirm.kind === 'all') {
+        const ids = requests.map(r => r.id)
+        const { error } = await supabase.from('schedule_assignments').update({ status: 'confirmed', admin_note: null }).in('id', ids)
+        if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+        Toast.show({ type: 'success', text1: `Przyjęto ${ids.length} ${pl(ids.length, ['usprawiedliwienie', 'usprawiedliwienia', 'usprawiedliwień'])}` })
+        setRequests([])
+      } else {
+        const r = confirm.request
+        const approve = confirm.kind === 'approve'
+        const { error } = await supabase
+          .from('schedule_assignments')
+          .update(approve ? { status: 'confirmed', admin_note: null } : { status: 'absent', admin_note: REJECTION_NOTE })
+          .eq('id', r.id)
+        if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+        setRequests(prev => prev.filter(x => x.id !== r.id))
+        Toast.show(approve
+          ? { type: 'success', text1: `Usprawiedliwienie przyjęte: ${r.profile.full_name}` }
+          : { type: 'info', text1: `Odrzucono: ${r.profile.full_name}` })
+      }
+      setConfirm(null)
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const handleReject = (request: AbsenceRequest) => {
-    Alert.alert(
-      'Odrzuć nieobecność',
-      `Odrzucić zgłoszenie nieobecności ${request.profile.full_name}?`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Odrzuć',
-          style: 'destructive',
-          onPress: async () => {
-            setProcessingId(request.id)
-            try {
-              const { error } = await supabase
-                .from('schedule_assignments')
-                .update({ status: 'absent', admin_note: REJECTION_NOTE })
-                .eq('id', request.id)
-              if (error) { Alert.alert('Błąd', error.message); return }
-              setRequests(prev => prev.filter(r => r.id !== request.id))
-              Toast.show({ type: 'info', text1: 'Nieobecność odrzucona', text2: request.profile.full_name })
-            } finally {
-              setProcessingId(null)
-            }
-          },
-        },
-      ]
-    )
-  }
+  const when = (r: AbsenceRequest) => `${dayShort(r.schedule.date)} ${shortDate(r.schedule.date)} · ${r.schedule.time?.slice(0, 5) ?? ''}`
 
-  const handleApproveAll = () => {
-    Alert.alert(
-      'Zatwierdź wszystkie',
-      `Zatwierdzić ${requests.length} oczekujące zgłoszenia?`,
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Zatwierdź wszystkie',
-          onPress: async () => {
-            setProcessingAll(true)
-            try {
-              const ids = requests.map(r => r.id)
-              const { error } = await supabase
-                .from('schedule_assignments')
-                .update({ status: 'confirmed', admin_note: null })
-                .in('id', ids)
-              if (error) { Alert.alert('Błąd', error.message); return }
-              Toast.show({ type: 'success', text1: 'Wszystkie zatwierdzone', text2: `Zatwierdzono ${ids.length} zgłoszeń.` })
-              setRequests([])
-            } finally {
-              setProcessingAll(false)
-            }
-          },
-        },
-      ]
-    )
-  }
+  const body = loading ? <ActivityIndicator color={c.primary} style={styles.loader} /> : requests.length === 0 ? (
+    <View style={[styles.empty, { borderColor: c.iconMuted }]}>
+      <Icon name="check-circle" size={40} color={c.success} filled />
+      <AppText variant="bodyStrong">Brak oczekujących zgłoszeń</AppText>
+      <AppText muted>Wszystkie nieobecności zostały rozpatrzone.</AppText>
+    </View>
+  ) : (
+    <View style={[styles.grid, isDesktop && styles.gridDesktop]}>
+      {requests.map(r => (
+        <Card key={r.id} large style={[styles.card, isDesktop && styles.cardDesktop]}>
+          <View style={styles.head}>
+            <Avatar name={r.profile.full_name} size={42} color={c.primary} textColor={c.gold} />
+            <View style={styles.flex}>
+              <AppText variant="bodyStrong">{r.profile.full_name}</AppText>
+              <AppText variant="small" muted>{`${r.schedule.title} · ${when(r)}`}</AppText>
+            </View>
+          </View>
+          <View style={[styles.reason, { backgroundColor: c.goldSurface }]}>
+            <AppText style={[styles.reasonText, { color: c.goldText }]}>{r.absence_reason || 'Bez podanego powodu'}</AppText>
+          </View>
+          <View style={styles.actions}>
+            <Button label="Odrzuć" variant="secondary" style={styles.flex} onPress={() => setConfirm({ kind: 'reject', request: r })} />
+            <Button label="Przyjmij" style={styles.flex} onPress={() => setConfirm({ kind: 'approve', request: r })} />
+          </View>
+        </Card>
+      ))}
+    </View>
+  )
 
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
-  }
+  const c1 = confirm && confirm.kind !== 'all' ? confirm.request : null
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Usprawiedliwienia nieobecności' }} />
-      <FlatList
-        data={requests}
-        keyExtractor={item => item.id}
-        contentContainerStyle={{ padding: 16, gap: 10 }}
-        ListHeaderComponent={requests.length >= 2 ? (
-          <TouchableOpacity
-            style={[styles.bulkBtn, processingAll && { opacity: 0.6 }]}
-            onPress={handleApproveAll}
-            disabled={processingAll}
-          >
-            {processingAll
-              ? <ActivityIndicator size="small" color={c.primary} />
-              : (
-                <>
-                  <Ionicons name="checkmark-done-outline" size={18} color={c.primary} />
-                  <Text style={styles.bulkBtnText}>Zatwierdź wszystkie ({requests.length})</Text>
-                </>
-              )
-            }
-          </TouchableOpacity>
-        ) : null}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="checkmark-circle-outline" size={56} color={c.iconMuted} />
-            <Text style={styles.emptyTitle}>Brak oczekujących zgłoszeń</Text>
-            <Text style={styles.emptyText}>Wszystkie nieobecności zostały rozpatrzone</Text>
-          </View>
+      <Stack.Screen options={{ title: 'Usprawiedliwienia' }} />
+      <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]}>
+        <View style={styles.top}>
+          <Badge label={`${requests.length} do rozpatrzenia`} tone={requests.length ? 'gold' : 'muted'} />
+          {requests.length >= 2 && (
+            <Button label={`Przyjmij wszystkie (${requests.length})`} icon="check-all" variant="secondary" compact onPress={() => setConfirm({ kind: 'all' })} />
+          )}
+        </View>
+        {body}
+      </ScrollView>
+      <Sheet
+        visible={!!confirm}
+        onClose={() => setConfirm(null)}
+        eyebrow={c1 ? `${c1.schedule.title} · ${longDate(c1.schedule.date)}` : undefined}
+        title={confirm?.kind === 'all' ? 'Przyjąć wszystkie?' : confirm?.kind === 'approve' ? 'Przyjąć usprawiedliwienie?' : 'Odrzucić usprawiedliwienie?'}
+        footer={
+          <>
+            <Button
+              label={confirm?.kind === 'reject' ? 'Odrzuć' : 'Przyjmij'}
+              variant={confirm?.kind === 'reject' ? 'danger' : 'primary'}
+              onPress={run}
+              loading={busy}
+            />
+            <Button label="Anuluj" variant="secondary" onPress={() => setConfirm(null)} />
+          </>
         }
-        renderItem={({ item }) => (
-          <AbsenceCard
-            request={item}
-            processing={processingId === item.id}
-            onApprove={() => handleApprove(item)}
-            onReject={() => handleReject(item)}
-            styles={styles}
-            colors={c}
-          />
-        )}
-      />
+      >
+        <AppText muted>
+          {confirm?.kind === 'all'
+            ? `Wszystkie ${requests.length} zgłoszenia zostaną uznane za usprawiedliwione.`
+            : confirm?.kind === 'approve'
+              ? `${c1?.profile.full_name} — nieobecność zostanie usprawiedliwiona.`
+              : `${c1?.profile.full_name} zobaczy przy służbie informację, że usprawiedliwienie nie zostało przyjęte, i nieobecność będzie liczona jako nieusprawiedliwiona.`}
+        </AppText>
+      </Sheet>
     </>
   )
 }
 
-function AbsenceCard({ request, processing, onApprove, onReject, styles, colors: c }: {
-  request: AbsenceRequest
-  processing: boolean
-  onApprove: () => void
-  onReject: () => void
-  styles: any
-  colors: Colors
-}) {
-  const dateStr = new Date(request.schedule.date + 'T12:00:00').toLocaleDateString('pl-PL', {
-    weekday: 'short', day: 'numeric', month: 'long',
-  })
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardBody}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.name}>{request.profile.full_name}</Text>
-          <View style={styles.pendingBadge}>
-            <Text style={styles.pendingText}>OCZEKUJE</Text>
-          </View>
-        </View>
-        <Text style={styles.scheduleInfo}>
-          {request.schedule.title} · {request.schedule.time?.slice(0, 5)} · {dateStr}
-        </Text>
-        <View style={styles.reasonBox}>
-          <Text style={styles.reasonText}>"{request.absence_reason}"</Text>
-        </View>
-      </View>
-      <View style={styles.actions}>
-        {processing ? (
-          <View style={styles.processingRow}>
-            <ActivityIndicator size="small" color={c.primary} />
-          </View>
-        ) : (
-          <>
-            <TouchableOpacity style={styles.rejectBtn} onPress={onReject}>
-              <Text style={styles.rejectText}>Odrzuć</Text>
-            </TouchableOpacity>
-            <View style={styles.divider} />
-            <TouchableOpacity style={styles.approveBtn} onPress={onApprove}>
-              <Text style={styles.approveText}>Zatwierdź</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-    </View>
-  )
-}
-
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-    bulkBtn: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-      backgroundColor: c.primaryAlpha08, borderRadius: 12, padding: 14,
-      borderWidth: 1, borderColor: c.primaryAlpha20, marginBottom: 4,
-    },
-    bulkBtnText: { fontSize: 15, fontWeight: '700', color: c.primary },
-
-    card: {
-      backgroundColor: c.surface, borderRadius: 14, overflow: 'hidden',
-      ...shadow.md,
-    },
-    cardBody: { padding: 14, gap: 5 },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    name: { fontSize: 15, fontWeight: '700', color: c.text },
-    pendingBadge: { backgroundColor: '#EA580C22', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-    pendingText: { fontSize: 10, fontWeight: '700', color: '#EA580C', letterSpacing: 0.3 },
-    scheduleInfo: { fontSize: 12, color: c.subtext },
-    reasonBox: { backgroundColor: c.danger + '08', borderRadius: 8, padding: 8, marginTop: 2 },
-    reasonText: { fontSize: 13, color: c.danger, fontStyle: 'italic' },
-
-    actions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: c.primarySurface },
-    processingRow: { flex: 1, padding: 14, alignItems: 'center' },
-    rejectBtn: { flex: 1, padding: 14, alignItems: 'center', backgroundColor: c.danger + '08' },
-    rejectText: { fontSize: 13, fontWeight: '600', color: c.danger },
-    divider: { width: 1, backgroundColor: c.primarySurface },
-    approveBtn: { flex: 1, padding: 14, alignItems: 'center', backgroundColor: c.success + '10' },
-    approveText: { fontSize: 13, fontWeight: '600', color: c.success },
-
-    empty: { alignItems: 'center', marginTop: 80, gap: 10 },
-    emptyTitle: { fontSize: 17, fontWeight: '700', color: c.textTertiary },
-    emptyText: { fontSize: 14, color: c.iconMuted, textAlign: 'center' },
-  })
-}
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  loader: { marginTop: 40 },
+  body: { padding: 16, gap: 14, paddingBottom: 32 },
+  desktop: { padding: 28, paddingHorizontal: 32 },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  empty: { alignItems: 'center', gap: 8, padding: 30, borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 18 },
+  grid: { gap: 12 },
+  gridDesktop: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
+  card: { gap: 12, padding: 16 },
+  cardDesktop: { width: '48.8%' },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  reason: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
+  reasonText: { ...sans(600), fontSize: 13 },
+  actions: { flexDirection: 'row', gap: 10 },
+})
