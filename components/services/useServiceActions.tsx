@@ -11,18 +11,12 @@ import { dayShort, longDate } from '../../lib/dates'
 import { AttendanceMethod, effectiveMode, selfMethods, selfPrimary } from '../../lib/attendance'
 import type { Service } from '../../hooks/useServices'
 import { ChoiceCard } from '../auth/formParts'
-import { AppText, Button, Chip, Icon, Sheet, TextField } from '../ui'
-
-export const ABSENCE_REASONS = ['Choroba', 'Szkoła', 'Wyjazd', 'Sprawy rodzinne', 'Inne'] as const
+import { AppText, Button, Icon, Sheet } from '../ui'
+import { AbsenceSheet } from './AbsenceSheet'
 
 const DAY_ACC = ['niedzielę', 'poniedziałek', 'wtorek', 'środę', 'czwartek', 'piątek', 'sobotę']
 
-/** Treść powodu zapisywana w absence_reason: „Choroba” albo „Choroba — angina”. */
-export function absenceReasonText(reason: string, details: string): string {
-  const d = details.trim()
-  if (reason === 'Inne') return d
-  return d ? `${reason} — ${d}` : reason
-}
+export { ABSENCE_REASONS, absenceReasonText } from './AbsenceSheet'
 
 /**
  * Akcje ministranta na służbie (zameldowanie, zapis, wypis, nieobecność) + ich arkusze.
@@ -37,8 +31,6 @@ export function useServiceActions(onChanged: () => void) {
   const [signUpMode, setSignUpMode] = useState<'once' | 'recurring'>('once')
   const [unsign, setUnsign] = useState<{ service: Service; commitmentId: string | null } | null>(null)
   const [absenceFor, setAbsenceFor] = useState<Service | null>(null)
-  const [reason, setReason] = useState<string>('Choroba')
-  const [details, setDetails] = useState('')
 
   const [cameraPermission, requestCameraPermission] = useCameraPermissions()
   const [qrFor, setQrFor] = useState<Service | null>(null)
@@ -181,12 +173,10 @@ export function useServiceActions(onChanged: () => void) {
   }
 
   // ── Nieobecność ──────────────────────────────────────────────────────────
-  const openAbsence = (s: Service) => { setReason('Choroba'); setDetails(''); setAbsenceFor(s) }
-  const sendAbsence = async () => {
+  const openAbsence = (s: Service) => setAbsenceFor(s)
+  const sendAbsence = async (text: string) => {
     const s = absenceFor
     if (!s?.mine) return
-    const text = absenceReasonText(reason, details)
-    if (!text) { Toast.show({ type: 'error', text1: 'Opisz powód nieobecności' }); return }
     setBusyId(s.id)
     const { error } = await supabase
       .from('schedule_assignments')
@@ -253,33 +243,13 @@ export function useServiceActions(onChanged: () => void) {
         </AppText>
       </Sheet>
 
-      <Sheet
+      <AbsenceSheet
         visible={!!absenceFor}
         onClose={() => setAbsenceFor(null)}
-        title="Nie mogę być"
         eyebrow={absenceFor ? `${absenceFor.title} · ${longDate(absenceFor.date)} ${absenceFor.time}` : undefined}
-        footer={
-          <>
-            <Button label="Wyślij do opiekuna" variant="danger" onPress={sendAbsence} loading={busyId === absenceFor?.id} />
-            <Button label="Anuluj" variant="secondary" onPress={() => setAbsenceFor(null)} />
-          </>
-        }
-      >
-        <AppText variant="label" muted>Powód</AppText>
-        <View style={styles.chips}>
-          {ABSENCE_REASONS.map(r => <Chip key={r} label={r} selected={reason === r} onPress={() => setReason(r)} />)}
-        </View>
-        <TextField
-          label={reason === 'Inne' ? 'Opisz powód' : 'Szczegóły (opcjonalnie)'}
-          placeholder="np. wyjazd na zawody"
-          value={details}
-          onChangeText={setDetails}
-          multiline
-        />
-        <AppText variant="small" muted>
-          {`Opiekun zobaczy zgłoszenie w usprawiedliwieniach i je przyjmie albo odrzuci.${parish?.rejected_excuse_penalty ? ` Odrzucone zgłoszenie to −${parish.rejected_excuse_penalty} pkt.` : ''}`}
-        </AppText>
-      </Sheet>
+        busy={busyId === absenceFor?.id}
+        onSubmit={sendAbsence}
+      />
 
       <Modal visible={!!qrFor} animationType="slide" onRequestClose={() => setQrFor(null)}>
         <View style={[styles.qr, { backgroundColor: '#071C3A' }]}>
@@ -318,7 +288,6 @@ export function useServiceActions(onChanged: () => void) {
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   qr: { flex: 1 },
   qrOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 22, padding: 28 },
   qrTitle: { fontSize: 34, lineHeight: 37, color: '#FFFFFF', textAlign: 'center' },
