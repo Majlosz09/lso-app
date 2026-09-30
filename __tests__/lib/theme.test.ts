@@ -56,6 +56,7 @@ describe('helpers', () => {
     expect(resolveIconName('home', false)).toBe('home-outline')
     expect(resolveIconName('home', true)).toBe('home')
     expect(resolveIconName('chevron-left', false)).toBe('chevron-left')
+    expect(resolveIconName('plus', false)).toBe('plus')
   })
 
   it('initials skips the "ks." prefix', () => {

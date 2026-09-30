@@ -13,6 +13,13 @@ import { Topbar, todayLabel } from './Topbar'
  * Rama aplikacji. Na telefonie i wąskim oknie przezroczysta (dolne paski robią nawigację).
  * Na webie ≥ 1024 px po zalogowaniu: sidebar 236 px + topbar 76 px + treść.
  */
+// Ekrany drugiego planu (formularze, listy ustawień) — na desktopie w węższej kolumnie
+const NARROW_PATHS = [
+  '/schedule-series', '/schedule-day', '/recurring-assignments', '/rank-management', '/rank-assignment',
+  '/point-rules', '/mass-schedule', '/award-points', '/badge-management', '/wiedza-admin', '/chat-reports',
+  '/chat/new-dm', '/wiedza/', '/onboarding',
+]
+
 export function AppShell({ children }: { children: ReactNode }) {
   const isDesktop = useIsDesktop()
   const segments = useSegments()
@@ -44,7 +51,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           subtitle={`${profile?.full_name ?? ''} · ${todayLabel()}`}
           onBack={root ? undefined : goBack}
         />
-        <View style={styles.content}>{children}</View>
+        <View style={styles.content}>
+          {NARROW_PATHS.some(p => (p.endsWith('/') ? pathname.startsWith(p) : pathname === p))
+            ? <View style={styles.narrow}>{children}</View>
+            : children}
+        </View>
       </View>
     </View>
   )
@@ -54,4 +65,5 @@ const styles = StyleSheet.create({
   frame: { flex: 1, flexDirection: 'row' },
   main: { flex: 1, minWidth: 0 },
   content: { flex: 1, minHeight: 0 },
+  narrow: { flex: 1, width: '100%', maxWidth: 880, paddingHorizontal: 16, paddingTop: 8 },
 })

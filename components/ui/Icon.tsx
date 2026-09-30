@@ -14,8 +14,11 @@ type Props = {
 
 const glyphs = MaterialCommunityIcons.glyphMap as Record<string, number>
 
+// Ikony, których wariant „-outline” to inny symbol (np. plus w kwadracie) — zawsze bez sufiksu
+const NO_OUTLINE = new Set(['plus', 'minus', 'close', 'check', 'check-all', 'arrow-right', 'arrow-left', 'pencil', 'magnify'])
+
 export function resolveIconName(name: string, filled: boolean): string {
-  if (filled) return name
+  if (filled || NO_OUTLINE.has(name)) return name
   const outline = `${name}-outline`
   return outline in glyphs ? outline : name
 }
