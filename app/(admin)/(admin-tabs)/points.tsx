@@ -1,400 +1,201 @@
-import { useEffect, useState, useMemo } from 'react'
-import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput,
-  FlatList, ScrollView, ActivityIndicator,
-  KeyboardAvoidingView, Platform, Keyboard
-} from 'react-native'
+import { useCallback, useEffect, useState } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import Toast from 'react-native-toast-message'
-import { useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { useFocusEffect, useRouter } from 'expo-router'
 import { supabase } from '../../../lib/supabase'
 import { useAuthStore } from '../../../stores/authStore'
-import { Profile, PointRule, ServiceType, SERVICE_TYPE_LABELS } from '../../../types/database'
+import { PointRule, SERVICE_TYPE_LABELS, ServiceType } from '../../../types/database'
 import { useRealtimeTable } from '../../../hooks/useRealtimeTable'
-import { shadow } from '../../../lib/shadows'
+import { useIsDesktop } from '../../../hooks/useIsDesktop'
 import { useTheme } from '../../../lib/ThemeContext'
-import { Colors } from '../../../lib/theme'
-import { ConfirmDialog } from '../../../components/ConfirmDialog'
+import { sans } from '../../../lib/theme'
+import { ExportModal } from '../../../components/ExportModal'
+import { AppText, Button, Card, ListRow, ScreenHeader } from '../../../components/ui'
 
-type RankedMember = { id: string; full_name: string; total_points: number; rank: number }
+type RankedMember = { id: string; full_name: string; total_points: number; rankName: string | null }
 
-type Tab = 'ranking' | 'award'
+export const QUICK_AMOUNTS = [1, 2, 5, -2] as const
+
+/** Powód zapisywany przy szybkim przyznaniu punktów z rankingu. */
+export function quickReason(amount: number): string {
+  return amount > 0 ? 'Punkty od opiekuna' : 'Kara od opiekuna'
+}
 
 export default function PointsTab() {
-  const { profile: adminProfile } = useAuthStore()
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>('ranking')
-
-  const [ranking, setRanking] = useState<RankedMember[]>([])
-  const [rankingLoading, setRankingLoading] = useState(true)
-
-  const [members, setMembers] = useState<Profile[]>([])
-  const [membersLoading, setMembersLoading] = useState(true)
-  const [pointRules, setPointRules] = useState<PointRule[]>([])
-  const [search, setSearch] = useState('')
-  const [selected, setSelected] = useState<Profile | null>(null)
-  const [amount, setAmount] = useState('')
-  const [reason, setReason] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [confirmDialog, setConfirmDialog] = useState(false)
-
+  const isDesktop = useIsDesktop()
+  const { profile: adminProfile } = useAuthStore()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
+  const [ranking, setRanking] = useState<RankedMember[]>([])
+  const [loading, setLoading] = useState(true)
+  const [rules, setRules] = useState<PointRule[]>([])
+  const [busy, setBusy] = useState<string | null>(null)
+  const [exportVisible, setExportVisible] = useState(false)
 
-  const loadRanking = () => {
-    setRankingLoading(true)
+  const loadRanking = useCallback(() => {
+    if (!adminProfile?.parish_id) return
     Promise.all([
-      supabase.from('points_summary').select('profile_id, total_points').eq('parish_id', adminProfile?.parish_id).order('total_points', { ascending: false }),
-      supabase.from('profiles').select('id, full_name').eq('parish_id', adminProfile?.parish_id).eq('role', 'member').eq('is_active', true),
-    ]).then(([summaryRes, profilesRes]) => {
-      const nameMap: Record<string, string> = {}
-      for (const p of (profilesRes.data ?? [])) nameMap[p.id] = p.full_name
-
-      setRanking(
-        (summaryRes.data ?? [])
-          .filter(s => nameMap[s.profile_id])
-          .map((s, i) => ({
-            id: s.profile_id,
-            full_name: nameMap[s.profile_id],
-            total_points: s.total_points,
-            rank: i + 1,
-          }))
-      )
-      setRankingLoading(false)
+      supabase.from('points_summary').select('profile_id, total_points').eq('parish_id', adminProfile.parish_id).order('total_points', { ascending: false }),
+      supabase.from('profiles').select('id, full_name, rank_id').eq('parish_id', adminProfile.parish_id).eq('role', 'member').eq('is_active', true),
+      supabase.from('ranks').select('id, name').or(`parish_id.is.null,parish_id.eq.${adminProfile.parish_id}`),
+    ]).then(([summaryRes, profilesRes, ranksRes]) => {
+      const rankName = new Map(((ranksRes.data ?? []) as any[]).map(r => [r.id, r.name]))
+      const people = new Map(((profilesRes.data ?? []) as any[]).map(p => [p.id, p]))
+      const seen = new Set<string>()
+      const list: RankedMember[] = []
+      for (const s of (summaryRes.data ?? []) as any[]) {
+        const p = people.get(s.profile_id)
+        if (!p) continue
+        seen.add(p.id)
+        list.push({ id: p.id, full_name: p.full_name, total_points: s.total_points, rankName: rankName.get(p.rank_id) ?? null })
+      }
+      // ministranci bez żadnych punktów też na liście
+      for (const p of people.values()) {
+        if (!seen.has(p.id)) list.push({ id: p.id, full_name: p.full_name, total_points: 0, rankName: rankName.get(p.rank_id) ?? null })
+      }
+      setRanking(list)
+      setLoading(false)
     })
-  }
+  }, [adminProfile?.parish_id])
 
-  useEffect(() => { loadRanking() }, [])
-  useRealtimeTable('points', loadRanking, adminProfile?.parish_id ? `parish_id=eq.${adminProfile.parish_id}` : undefined)
-  useRealtimeTable('attendance', loadRanking, adminProfile?.parish_id ? `parish_id=eq.${adminProfile.parish_id}` : undefined)
+  const loadRules = useCallback(() => {
+    if (!adminProfile?.parish_id) return
+    supabase.from('point_rules').select('*').eq('parish_id', adminProfile.parish_id).order('points', { ascending: false })
+      .then(({ data }) => setRules((data ?? []) as PointRule[]))
+  }, [adminProfile?.parish_id])
 
-  useEffect(() => {
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('parish_id', adminProfile?.parish_id)
-      .eq('is_active', true)
-      .eq('role', 'member')
-      .order('full_name')
-      .then(({ data }) => {
-        if (data) setMembers(data)
-        setMembersLoading(false)
-      })
-    supabase
-      .from('point_rules')
-      .select('*')
-      .eq('parish_id', adminProfile?.parish_id)
-      .order('points', { ascending: false })
-      .then(({ data }) => { if (data) setPointRules(data as PointRule[]) })
-  }, [])
+  useEffect(() => { loadRanking() }, [loadRanking])
+  useFocusEffect(useCallback(() => { loadRules() }, [loadRules]))
+  useRealtimeTable('points', () => loadRanking(), adminProfile?.parish_id ? `parish_id=eq.${adminProfile.parish_id}` : undefined)
+  useRealtimeTable('attendance', () => loadRanking(), adminProfile?.parish_id ? `parish_id=eq.${adminProfile.parish_id}` : undefined)
 
-  const filtered = members.filter(m =>
-    m.full_name.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const handleSubmit = () => {
-    if (!selected) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Wybierz ministranta.' }); return }
-    const amt = parseInt(amount)
-    if (isNaN(amt) || amt === 0) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Wpisz prawidłową liczbę punktów (np. 1 lub -1).' }); return }
-    if (!reason.trim()) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Wpisz powód.' }); return }
-    Keyboard.dismiss()
-    setConfirmDialog(true)
-  }
-
-  const doSubmit = async () => {
-    setConfirmDialog(false)
-    const amt = parseInt(amount)
-    const sign = amt > 0 ? '+' : ''
-    setSubmitting(true)
+  const quickAward = async (m: RankedMember, amount: number) => {
+    const key = `${m.id}:${amount}`
+    setBusy(key)
     const { error } = await supabase.from('points').insert({
-      profile_id: selected!.id,
-      amount: amt,
-      reason: reason.trim(),
+      profile_id: m.id,
+      amount,
+      reason: quickReason(amount),
       awarded_by: adminProfile?.id,
       parish_id: adminProfile?.parish_id,
     })
-    setSubmitting(false)
-    if (error) {
-      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
-    } else {
-      Toast.show({ type: 'success', text1: `Przyznano ${sign}${amt} pkt`, text2: `dla ${selected!.full_name}` })
-      setSelected(null); setAmount(''); setReason(''); setSearch('')
-      loadRanking()
-    }
+    setBusy(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    Toast.show({ type: 'success', text1: `${m.full_name}: ${amount > 0 ? '+' : ''}${amount} pkt` })
+    loadRanking()
   }
 
-  const medalColor = (rank: number) =>
-    rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : c.primary
+  const medal = (i: number) => ['#C9A55A', '#D9D6CF', '#C98E5A'][i]
+
+  const rankingCard = (
+    <Card flush>
+      <View style={[styles.cardHead, { borderBottomColor: c.borderLight }]}>
+        <AppText variant="eyebrow" color={c.goldInk} style={styles.flex}>Ranking · szybkie przyznawanie</AppText>
+        <Button label="Z powodem…" icon="star-circle" compact onPress={() => router.push('/(admin)/award-points')} />
+      </View>
+      {loading ? <ActivityIndicator color={c.primary} style={styles.pad} /> : ranking.length === 0 ? (
+        <AppText muted style={styles.pad}>Brak ministrantów w parafii.</AppText>
+      ) : ranking.map((m, i) => (
+        <View key={m.id} style={[styles.row, i > 0 && { borderTopWidth: 1, borderTopColor: c.borderLight }]}>
+          <View style={[styles.pos, medal(i) ? { backgroundColor: medal(i) } : { borderWidth: 1, borderColor: c.inputBorder }]}>
+            <AppText style={[styles.posText, { color: medal(i) ? '#14213A' : c.subtext }]}>{i + 1}</AppText>
+          </View>
+          <Pressable style={styles.flex} onPress={() => router.push(`/(admin)/member-detail?id=${m.id}`)}>
+            <AppText variant="bodyStrong" numberOfLines={1}>{m.full_name}</AppText>
+            <AppText variant="small" muted numberOfLines={1}>{m.rankName ?? 'Ministrant'}</AppText>
+          </Pressable>
+          <AppText style={[styles.pts, { color: c.text }]}>{m.total_points}</AppText>
+          <View style={styles.quick}>
+            {QUICK_AMOUNTS.map(a => {
+              const k = `${m.id}:${a}`
+              return (
+                <Pressable
+                  key={a}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${a > 0 ? '+' : ''}${a} pkt dla ${m.full_name}`}
+                  onPress={() => quickAward(m, a)}
+                  disabled={!!busy}
+                  style={({ hovered }: any) => [
+                    styles.qBtn,
+                    { borderColor: c.inputBorder, backgroundColor: hovered ? c.highlight : c.surface, opacity: busy && busy !== k ? 0.6 : 1 },
+                  ]}
+                >
+                  {busy === k
+                    ? <ActivityIndicator size="small" color={c.primary} />
+                    : <AppText style={[styles.qText, { color: a > 0 ? c.success : c.dangerStrong }]}>{a > 0 ? `+${a}` : a}</AppText>}
+                </Pressable>
+              )
+            })}
+          </View>
+        </View>
+      ))}
+    </Card>
+  )
+
+  const rulesCard = (
+    <Card flush>
+      <View style={[styles.cardHead, { borderBottomColor: c.borderLight }]}>
+        <AppText variant="eyebrow" color={c.goldInk} style={styles.flex}>Reguły punktowania</AppText>
+      </View>
+      {rules.length === 0 ? <AppText muted style={styles.pad}>Brak reguł — ustaw je w edytorze.</AppText> : rules.map((r, i) => (
+        <View key={r.id} style={[styles.ruleRow, i > 0 && { borderTopWidth: 1, borderTopColor: c.borderLight }]}>
+          <AppText variant="body" style={styles.flex}>{SERVICE_TYPE_LABELS[r.service_type as ServiceType] ?? r.service_type}</AppText>
+          <AppText style={[styles.rulePts, { color: r.points >= 0 ? c.success : c.dangerStrong }]}>{r.points > 0 ? `+${r.points}` : r.points}</AppText>
+        </View>
+      ))}
+      <View style={styles.pad}>
+        <Button label="Edytuj reguły" icon="pencil" variant="secondary" onPress={() => router.push('/(admin)/point-rules')} />
+      </View>
+    </Card>
+  )
+
+  const tools = (
+    <Card flush>
+      <ListRow first icon="download" title="Eksport punktów" subtitle="PDF lub CSV" onPress={() => setExportVisible(true)} />
+      <ListRow icon="medal" title="Odznaki" subtitle="Tworzenie i przyznawanie" onPress={() => router.push('/(admin)/badge-management')} />
+    </Card>
+  )
+
+  if (isDesktop) {
+    return (
+      <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={styles.desktop}>
+        <View style={styles.colMain}>{rankingCard}</View>
+        <View style={styles.colSide}>{rulesCard}{tools}</View>
+        <ExportModal visible={exportVisible} onClose={() => setExportVisible(false)} pointsOnly />
+      </ScrollView>
+    )
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.segmentRow}>
-        {(['ranking', 'award'] as Tab[]).map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[styles.segment, tab === t && styles.segmentActive]}
-            onPress={() => setTab(t)}
-          >
-            <Ionicons
-              name={t === 'ranking' ? 'trophy-outline' : 'add-circle-outline'}
-              size={16}
-              color={tab === t ? c.primary : c.textTertiary}
-            />
-            <Text style={[styles.segmentText, tab === t && styles.segmentTextActive]}>
-              {t === 'ranking' ? 'Ranking' : 'Przyznaj punkty'}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {tab === 'ranking' ? (
-        rankingLoading ? (
-          <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
-        ) : (
-          <FlatList
-            data={ranking}
-            keyExtractor={item => item.id}
-            ListEmptyComponent={
-              <View style={styles.empty}>
-                <Ionicons name="trophy-outline" size={48} color={c.iconMuted} />
-                <Text style={styles.emptyText}>Brak danych punktowych</Text>
-              </View>
-            }
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.rankRow}
-                onPress={() => router.push(`/(admin)/member-detail?id=${item.id}`)}
-                activeOpacity={0.75}
-              >
-                <View style={[styles.rankBadge, { backgroundColor: medalColor(item.rank) + '22' }]}>
-                  <Text style={[styles.rankNum, { color: medalColor(item.rank) }]}>
-                    {item.rank <= 3 ? ['🥇', '🥈', '🥉'][item.rank - 1] : item.rank}
-                  </Text>
-                </View>
-                <Text style={styles.rankName} numberOfLines={1}>{item.full_name}</Text>
-                <View style={styles.pointsBadge}>
-                  <Text style={styles.pointsValue}>{item.total_points}</Text>
-                  <Text style={styles.pointsLabel}>pkt</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={{ padding: 16, gap: 8 }}
-          />
-        )
-      ) : (
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView
-            style={styles.awardScroll}
-            contentContainerStyle={styles.awardContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            {selected ? (
-              <View style={styles.selectedCard}>
-                <View style={styles.selectedInfo}>
-                  <Ionicons name="person-circle-outline" size={36} color={c.primary} />
-                  <View>
-                    <Text style={styles.selectedName}>{selected.full_name}</Text>
-                    <Text style={styles.selectedRole}>ministrant</Text>
-                  </View>
-                </View>
-                <TouchableOpacity onPress={() => setSelected(null)}>
-                  <Ionicons name="close-circle" size={24} color={c.iconMuted} />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View>
-                <Text style={styles.label}>Wybierz ministranta *</Text>
-                <View style={styles.searchBox}>
-                  <Ionicons name="search-outline" size={18} color={c.textTertiary} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Szukaj po imieniu..."
-                    placeholderTextColor={c.textTertiary}
-                    value={search}
-                    onChangeText={setSearch}
-                  />
-                </View>
-                {membersLoading ? (
-                  <ActivityIndicator color={c.primary} style={{ marginTop: 20 }} />
-                ) : (
-                  <View style={styles.memberList}>
-                    {filtered.map(m => (
-                      <TouchableOpacity
-                        key={m.id}
-                        style={styles.memberRow}
-                        onPress={() => setSelected(m)}
-                      >
-                        <Ionicons name="person-outline" size={18} color={c.subtext} />
-                        <Text style={styles.memberName}>{m.full_name}</Text>
-                        <Ionicons name="chevron-forward" size={16} color={c.border} />
-                      </TouchableOpacity>
-                    ))}
-                    {filtered.length === 0 && (
-                      <View style={{ padding: 20, alignItems: 'center' }}>
-                        <Text style={{ color: c.textTertiary }}>Brak wyników</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-
-            {selected && (
-              <>
-                {pointRules.length > 0 && (
-                  <>
-                    <Text style={styles.label}>Typ służby</Text>
-                    <View style={styles.rulesRow}>
-                      {pointRules.map(r => (
-                        <TouchableOpacity
-                          key={r.id}
-                          style={[styles.ruleChip, amount === String(r.points) && reason === SERVICE_TYPE_LABELS[r.service_type as ServiceType] && styles.ruleChipActive]}
-                          onPress={() => { setAmount(String(r.points)); setReason(SERVICE_TYPE_LABELS[r.service_type as ServiceType]) }}
-                        >
-                          <Text style={[styles.ruleChipLabel, amount === String(r.points) && reason === SERVICE_TYPE_LABELS[r.service_type as ServiceType] && styles.ruleChipLabelActive]}>
-                            {SERVICE_TYPE_LABELS[r.service_type as ServiceType]}
-                          </Text>
-                          <Text style={[styles.ruleChipPts, amount === String(r.points) && reason === SERVICE_TYPE_LABELS[r.service_type as ServiceType] && styles.ruleChipLabelActive]}>
-                            {r.points} pkt
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </>
-                )}
-                <Text style={styles.label}>Liczba punktów * (ujemna = odjęcie)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="np. 1 lub -1"
-                  placeholderTextColor={c.textTertiary}
-                  value={amount}
-                  onChangeText={setAmount}
-                  keyboardType="numbers-and-punctuation"
-                />
-                <Text style={styles.label}>Powód *</Text>
-                <TextInput
-                  style={[styles.input, styles.inputMultiline]}
-                  placeholder="np. Służba podczas Mszy Świętej"
-                  placeholderTextColor={c.textTertiary}
-                  value={reason}
-                  onChangeText={setReason}
-                  multiline
-                  numberOfLines={3}
-                />
-                <TouchableOpacity
-                  style={[styles.submitButton, submitting && { opacity: 0.6 }]}
-                  onPress={handleSubmit}
-                  disabled={submitting}
-                >
-                  {submitting
-                    ? <ActivityIndicator color="#fff" />
-                    : <Text style={styles.submitText}>Zatwierdź</Text>
-                  }
-                </TouchableOpacity>
-              </>
-            )}
-          </ScrollView>
-        </KeyboardAvoidingView>
-      )}
-      <ConfirmDialog
-        visible={confirmDialog}
-        title="Przyznaj punkty"
-        message={`Przyznać ${parseInt(amount) > 0 ? '+' : ''}${parseInt(amount) || 0} pkt dla ${selected?.full_name ?? ''}?`}
-        confirmText="Przyznaj"
-        onConfirm={doSubmit}
-        onCancel={() => setConfirmDialog(false)}
-      />
+    <View style={[styles.flex, { backgroundColor: c.bg }]}>
+      <ScrollView>
+        <ScreenHeader eyebrow="Parafia" title="Punkty" />
+        <View style={styles.body}>
+          {rankingCard}
+          {rulesCard}
+          {tools}
+        </View>
+      </ScrollView>
+      <ExportModal visible={exportVisible} onClose={() => setExportVisible(false)} pointsOnly />
     </View>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-    segmentRow: {
-      flexDirection: 'row', backgroundColor: c.surface,
-      borderBottomWidth: 1, borderBottomColor: c.primarySurface,
-    },
-    segment: {
-      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      gap: 6, paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent',
-    },
-    segmentActive: { borderBottomColor: c.primary },
-    segmentText: { fontSize: 14, fontWeight: '600', color: c.textTertiary },
-    segmentTextActive: { color: c.primary },
-
-    rankRow: {
-      flexDirection: 'row', alignItems: 'center', gap: 12,
-      backgroundColor: c.surface, borderRadius: 12, padding: 12,
-      ...shadow.xs,
-    },
-    rankBadge: {
-      width: 38, height: 38, borderRadius: 19,
-      justifyContent: 'center', alignItems: 'center',
-    },
-    rankNum: { fontSize: 15, fontWeight: '700' },
-    rankName: { flex: 1, fontSize: 15, fontWeight: '600', color: c.text },
-    pointsBadge: { alignItems: 'flex-end' },
-    pointsValue: { fontSize: 18, fontWeight: '700', color: c.primary },
-    pointsLabel: { fontSize: 11, color: c.textTertiary, marginTop: -2 },
-
-    empty: { alignItems: 'center', marginTop: 60, gap: 12 },
-    emptyText: { color: c.textTertiary, fontSize: 15 },
-
-    awardScroll: { flex: 1 },
-    awardContent: { padding: 16, gap: 8 },
-
-    selectedCard: {
-      backgroundColor: c.primaryAlpha08, borderRadius: 12, padding: 14,
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      borderWidth: 1, borderColor: c.primaryAlpha20, marginBottom: 4,
-    },
-    selectedInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    selectedName: { fontSize: 16, fontWeight: '600', color: c.text },
-    selectedRole: { fontSize: 13, color: c.subtext, marginTop: 1 },
-
-    label: { fontSize: 13, fontWeight: '600', color: c.subtext, marginTop: 8 },
-
-    searchBox: {
-      flexDirection: 'row', alignItems: 'center', gap: 8,
-      backgroundColor: c.surface, borderRadius: 10, padding: 11,
-      borderWidth: 1, borderColor: c.border, marginTop: 4,
-    },
-    searchInput: { flex: 1, fontSize: 15, color: c.text },
-
-    memberList: {
-      backgroundColor: c.surface, borderRadius: 10, marginTop: 8,
-      borderWidth: 1, borderColor: c.border, overflow: 'hidden',
-    },
-    memberRow: {
-      flexDirection: 'row', alignItems: 'center', gap: 10,
-      padding: 14, borderBottomWidth: 1, borderBottomColor: c.primarySurface,
-    },
-    memberName: { flex: 1, fontSize: 15, color: c.text },
-
-    input: {
-      backgroundColor: c.surface, borderRadius: 10, padding: 13,
-      fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
-    },
-    inputMultiline: { minHeight: 80, textAlignVertical: 'top' },
-
-    submitButton: {
-      backgroundColor: c.primary, borderRadius: 12, padding: 16,
-      alignItems: 'center', marginTop: 8,
-    },
-    submitText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-
-    rulesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-    ruleChip: {
-      borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
-      backgroundColor: c.surface, borderWidth: 1, borderColor: c.border,
-      alignItems: 'center',
-    },
-    ruleChipActive: { backgroundColor: c.primary, borderColor: c.primary },
-    ruleChipLabel: { fontSize: 13, fontWeight: '600', color: c.subtext },
-    ruleChipPts: { fontSize: 11, color: c.textTertiary, marginTop: 1 },
-    ruleChipLabelActive: { color: '#fff' },
-  })
-}
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  pad: { padding: 14 },
+  body: { padding: 16, gap: 14, paddingBottom: 32 },
+  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10 },
+  pos: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  posText: { ...sans(800), fontSize: 12 },
+  pts: { ...sans(800), fontSize: 16, minWidth: 36, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  quick: { flexDirection: 'row', gap: 4 },
+  qBtn: { width: 36, height: 32, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center', cursor: 'pointer' } as any,
+  qText: { ...sans(800), fontSize: 12 },
+  ruleRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12 },
+  rulePts: { ...sans(800), fontSize: 15, fontVariant: ['tabular-nums'] },
+  desktop: { flexDirection: 'row', gap: 20, padding: 28, paddingHorizontal: 32, alignItems: 'flex-start' },
+  colMain: { flex: 1.5 },
+  colSide: { flex: 1, gap: 16 },
+})
