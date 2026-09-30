@@ -17,6 +17,7 @@ import { ChildDuty, ChildSummary, useChildren } from '../../../hooks/useChildren
 import { announcementWhen } from '../../../components/announcements/AnnouncementsFeed'
 import { AppText, Avatar, Badge, Card, Icon, SectionHeader } from '../../../components/ui'
 import { useUnreadAnnouncements } from '../../../hooks/useUnreadAnnouncements'
+import { NotificationBell } from '../../../components/layout/NotificationBell'
 
 type Ann = { id: string; title: string; created_at: string; author: { full_name: string } | null }
 type DutyRow = ChildDuty & { child: string }
@@ -207,6 +208,7 @@ export default function ParentHome() {
           <View style={styles.topRow}>
             <Image source={require('../../../assets/images/icon.png')} style={styles.logo} />
             <AppText style={[styles.greeting, { color: pal.fg }]}>{`Króluj nam Chryste,\n${firstName(profile?.full_name ?? '')}`}</AppText>
+            <NotificationBell tone="header" fg={pal.fg} />
             <Pressable onPress={() => router.push('/(parent)/(parent-tabs)/profile')} accessibilityRole="button" accessibilityLabel="Profil">
               <Avatar name={profile?.full_name} avatarUrl={profile?.avatar_url} size={38} />
             </Pressable>

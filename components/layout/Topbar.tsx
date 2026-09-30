@@ -3,6 +3,7 @@ import { useTheme } from '../../lib/ThemeContext'
 import { sans, serif } from '../../lib/theme'
 import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
 import { AppText, Icon } from '../ui'
+import { NotificationBell } from './NotificationBell'
 
 type Props = {
   title: string
@@ -39,6 +40,7 @@ export function Topbar({ title, subtitle, onBack }: Props) {
         </AppText>
         {!!subtitle && <AppText style={[styles.subtitle, { color: c.subtext }]} numberOfLines={1}>{subtitle}</AppText>}
       </View>
+      <NotificationBell />
       <View style={[styles.pill, { backgroundColor: palette.bg }]}>
         <Icon name="church" size={16} color={palette.accent} />
         <AppText style={[styles.pillText, { color: palette.fg }]}>Dziś · {vestmentName}</AppText>

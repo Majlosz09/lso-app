@@ -20,6 +20,7 @@ import { Service, useServices } from '../../hooks/useServices'
 import { useServiceActions } from '../../components/services/useServiceActions'
 import { DayStrip } from '../../components/services/DayStrip'
 import { SwapInbox } from '../../components/services/SwapInbox'
+import { NotificationBell } from '../../components/layout/NotificationBell'
 import { useSwapStore } from '../../stores/swapStore'
 import { useUnreadAnnouncements } from '../../hooks/useUnreadAnnouncements'
 import { useWiedzaReads } from '../../hooks/useWiedzaReads'
@@ -317,6 +318,7 @@ export default function HomeScreen() {
             <AppText style={[styles.greeting, { color: pal.fg }]} numberOfLines={2}>
               {`Króluj nam Chryste,\n${firstName}`}
             </AppText>
+            <NotificationBell tone="header" fg={pal.fg} />
             <Pressable accessibilityRole="button" accessibilityLabel="Profil" onPress={() => router.push('/(tabs)/profile')}>
               <Avatar name={profile?.full_name} avatarUrl={profile?.avatar_url} size={38} />
             </Pressable>

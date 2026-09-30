@@ -13,6 +13,7 @@ import { useAdminDashboard } from '../../../hooks/useAdminDashboard'
 import { WeekChart } from '../../../components/admin/WeekChart'
 import { MonthCalendar } from '../../../components/admin/MonthCalendar'
 import { AppText, Avatar, Card, Icon, ListRow, SectionHeader } from '../../../components/ui'
+import { NotificationBell } from '../../../components/layout/NotificationBell'
 
 export default function AdminHome() {
   const router = useRouter()
@@ -193,9 +194,12 @@ export default function AdminHome() {
       <View style={[styles.header, { backgroundColor: pal.bg, paddingTop: insets.top + 10 }]}>
         <View style={styles.rowBetween}>
           <AppText variant="eyebrow" color={pal.accent}>Panel opiekuna</AppText>
-          <Pressable onPress={() => go('/(admin)/(admin-tabs)/profile')} accessibilityRole="button" accessibilityLabel="Profil">
-            <Avatar name={profile?.full_name} avatarUrl={profile?.avatar_url} size={38} />
-          </Pressable>
+          <View style={styles.headActions}>
+            <NotificationBell tone="header" fg={pal.fg} />
+            <Pressable onPress={() => go('/(admin)/(admin-tabs)/profile')} accessibilityRole="button" accessibilityLabel="Profil">
+              <Avatar name={profile?.full_name} avatarUrl={profile?.avatar_url} size={38} />
+            </Pressable>
+          </View>
         </View>
         <AppText style={[serif(), styles.headerTitle, { color: pal.fg }]}>Króluj nam Chryste!</AppText>
         <AppText style={[styles.headerSub, { color: pal.fg }]}>{`${profile?.full_name ?? ''} · Dziś, ${dayMonth(localDateStr())}`}</AppText>
@@ -215,6 +219,7 @@ export default function AdminHome() {
 }
 
 const styles = StyleSheet.create({
+  headActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   flex: { flex: 1, minWidth: 0 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   pad18: { padding: 18, gap: 14 },
