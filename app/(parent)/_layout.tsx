@@ -35,7 +35,7 @@ export default function ParentLayout() {
       screenOptions={headerOptions}
     >
       <Stack.Screen name="(parent-tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="member-profile" options={{ title: 'Profil ministranta' }} />
+      <Stack.Screen name="member-profile" options={{ title: 'Profil dziecka', headerShown: false }} />
     </Stack>
   )
 }

@@ -17,12 +17,12 @@ export default function ParentTabsLayout() {
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ ...headerOptions, headerRight }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Dom', tabBarIcon: tabIcon('home') }} />
-      <Tabs.Screen name="schedule" options={{ title: 'Dyżury', headerTitle: 'Dyżury dzieci', tabBarIcon: tabIcon('calendar-month') }} />
-      <Tabs.Screen name="points" options={{ title: 'Punkty', tabBarIcon: tabIcon('trophy') }} />
+      <Tabs.Screen name="index" options={{ title: 'Dom', headerShown: false, tabBarIcon: tabIcon('home') }} />
+      <Tabs.Screen name="schedule" options={{ title: 'Dyżury', headerShown: false, tabBarIcon: tabIcon('calendar-month') }} />
+      <Tabs.Screen name="points" options={{ title: 'Punkty', headerShown: false, tabBarIcon: tabIcon('trophy') }} />
       <Tabs.Screen name="announcements" options={{ title: 'Ogłoszenia', headerShown: false, tabBarIcon: tabIcon('bullhorn') }} />
       <Tabs.Screen name="chat" options={{ title: 'Czat', headerShown: false, tabBarIcon: tabIcon('forum') }} />
-      <Tabs.Screen name="profile" options={{ href: null, title: 'Profil', headerLeft, headerRight: undefined }} />
+      <Tabs.Screen name="profile" options={{ href: null, title: 'Profil', headerShown: false }} />
     </Tabs>
   )
 }

@@ -1,184 +1,126 @@
-import { useEffect, useState, useMemo } from 'react'
-import {
-  View, Text, FlatList, StyleSheet,
-  RefreshControl, ActivityIndicator, TouchableOpacity
-} from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { useRouter } from 'expo-router'
 import { supabase } from '../../../lib/supabase'
-import { shadow } from '../../../lib/shadows'
 import { useAuthStore } from '../../../stores/authStore'
 import { useTheme } from '../../../lib/ThemeContext'
-import { Colors } from '../../../lib/theme'
+import { sans, serif } from '../../../lib/theme'
+import { pl } from '../../../lib/dates'
+import { useIsDesktop } from '../../../hooks/useIsDesktop'
+import { useChildren } from '../../../hooks/useChildren'
+import { AppText, Avatar, Card, ScreenHeader, Segmented, SectionHeader } from '../../../components/ui'
 
-type RankingEntry = {
-  profile_id: string
-  full_name: string
-  total_points: number
-  services_count: number
-}
+type RankRow = { profile_id: string; full_name: string; total_points: number }
 
-type ChildPoints = { id: string; full_name: string; total_points: number; services_count: number }
-
-export default function PointsScreen() {
-  const { profile } = useAuthStore()
-  const [children, setChildren] = useState<ChildPoints[]>([])
-  const [ranking, setRanking] = useState<RankingEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [activeTab, setActiveTab] = useState<'children' | 'ranking'>('children')
-
+export default function ParentPoints() {
+  const router = useRouter()
+  const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
+  const profile = useAuthStore(s => s.profile)
+  const { children, loading } = useChildren(0)
+  const [ranking, setRanking] = useState<RankRow[]>([])
+  const [seg, setSeg] = useState<'children' | 'ranking'>('children')
 
-  const fetchData = async () => {
-    if (!profile?.id || !profile?.parish_id) return
-
-    const [kidsRes, rankingRes, parishProfilesRes] = await Promise.all([
-      supabase.from('profiles').select('id, full_name').eq('parent_id', profile.id),
-      supabase.from('points_summary').select('profile_id, full_name, total_points, services_count').eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
+  useEffect(() => {
+    if (!profile?.parish_id) return
+    Promise.all([
+      supabase.from('points_summary').select('profile_id, full_name, total_points').eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
       supabase.from('profiles').select('id').eq('parish_id', profile.parish_id).eq('is_active', true),
-    ])
+    ]).then(([r, p]) => {
+      const ids = new Set(((p.data ?? []) as any[]).map(x => x.id))
+      setRanking(((r.data ?? []) as RankRow[]).filter(x => ids.has(x.profile_id)))
+    })
+  }, [profile?.parish_id])
 
-    const parishIds = new Set((parishProfilesRes.data ?? []).map((p: any) => p.id))
-    setRanking((rankingRes.data ?? []).filter(r => parishIds.has(r.profile_id)))
+  const childIds = new Set(children.map(ch => ch.id))
+  const openChild = (id: string) => router.push(`/(parent)/member-profile?id=${id}` as any)
 
-    const kids = kidsRes.data ?? []
-    if (kids.length > 0) {
-      const summaries = await Promise.all(
-        kids.map((k: any) =>
-          supabase.from('points_summary').select('total_points, services_count').eq('profile_id', k.id).maybeSingle()
+  const kids = loading ? <ActivityIndicator color={c.primary} /> : children.length === 0 ? (
+    <Card><AppText muted>Brak powiązanych dzieci.</AppText></Card>
+  ) : children.map(ch => (
+    <Card key={ch.id} large style={styles.kid} onPress={() => openChild(ch.id)}>
+      <View style={styles.kidHead}>
+        <Avatar name={ch.full_name} avatarUrl={ch.avatar_url} size={48} color={c.primary} textColor={c.gold} />
+        <View style={styles.flex}>
+          <AppText variant="bodyStrong">{ch.full_name}</AppText>
+          <AppText variant="small" muted>{ch.rankName ?? 'Ministrant'}</AppText>
+        </View>
+        <View style={styles.right}>
+          <AppText style={[serif(), styles.big, { color: c.text }]}>{ch.points}</AppText>
+          <AppText variant="small" muted>pkt</AppText>
+        </View>
+      </View>
+      <View style={styles.stats}>
+        {[
+          [ch.position ? `#${ch.position}` : '—', 'miejsce w parafii'],
+          [ch.attendance != null ? `${ch.attendance}%` : '—', 'frekwencja'],
+          [String(ch.services), pl(ch.services, ['służba', 'służby', 'służb'])],
+        ].map(([v, l]) => (
+          <View key={l} style={[styles.stat, { backgroundColor: c.bg }]}>
+            <AppText style={[styles.statV, { color: c.text }]}>{v}</AppText>
+            <AppText variant="small" muted>{l}</AppText>
+          </View>
+        ))}
+      </View>
+      {ch.badges.length > 0 && <AppText style={styles.badges}>{ch.badges.join('  ')}</AppText>}
+    </Card>
+  ))
+
+  const rankingList = (
+    <Card flush>
+      {ranking.map((r, i) => {
+        const mine = childIds.has(r.profile_id)
+        return (
+          <Pressable
+            key={r.profile_id}
+            disabled={!mine}
+            onPress={() => openChild(r.profile_id)}
+            style={[styles.rankRow, i > 0 && { borderTopWidth: 1, borderTopColor: c.borderLight }, mine && { backgroundColor: c.goldSurface }]}
+          >
+            <AppText style={[styles.pos, { color: c.subtext }]}>{i + 1}</AppText>
+            <AppText style={[styles.rankName, { color: c.text }, mine && sans(800)]} numberOfLines={1}>{r.full_name}</AppText>
+            <AppText style={[styles.rankPts, { color: c.text }]}>{r.total_points}</AppText>
+          </Pressable>
         )
-      )
-      setChildren(kids.map((k: any, i: number) => ({
-        id: k.id,
-        full_name: k.full_name,
-        total_points: (summaries[i].data as any)?.total_points ?? 0,
-        services_count: (summaries[i].data as any)?.services_count ?? 0,
-      })))
-    } else {
-      setChildren([])
-    }
+      })}
+    </Card>
+  )
 
-    setLoading(false)
-    setRefreshing(false)
+  if (isDesktop) {
+    return (
+      <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={styles.desktop}>
+        <View style={styles.col}><SectionHeader title="Moje dzieci" />{kids}</View>
+        <View style={styles.col}><SectionHeader title="Ranking parafii" />{rankingList}</View>
+      </ScrollView>
+    )
   }
 
-  useEffect(() => { fetchData() }, [profile?.id])
-
-  const onRefresh = () => { setRefreshing(true); fetchData() }
-
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
-
   return (
-    <View style={styles.container}>
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'children' && styles.tabActive]}
-          onPress={() => setActiveTab('children')}
-        >
-          <Text style={[styles.tabText, activeTab === 'children' && styles.tabTextActive]}>Moje dzieci</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'ranking' && styles.tabActive]}
-          onPress={() => setActiveTab('ranking')}
-        >
-          <Text style={[styles.tabText, activeTab === 'ranking' && styles.tabTextActive]}>Ranking</Text>
-        </TouchableOpacity>
+    <ScrollView style={{ backgroundColor: c.bg }}>
+      <ScreenHeader eyebrow="Punkty dzieci" title="Punkty" />
+      <View style={styles.body}>
+        <Segmented value={seg} onChange={setSeg} options={[{ value: 'children', label: 'Moje dzieci' }, { value: 'ranking', label: 'Ranking' }]} />
+        {seg === 'children' ? kids : rankingList}
       </View>
-
-      {activeTab === 'children' ? (
-        <FlatList
-          data={children}
-          keyExtractor={item => item.id}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="people-outline" size={48} color={c.iconMuted} />
-              <Text style={styles.emptyText}>Brak powiązanych kont dzieci</Text>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <View style={[styles.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="person" size={20} color={c.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: c.text }}>{item.full_name}</Text>
-                <Text style={{ fontSize: 12, color: c.subtext, marginTop: 2 }}>{item.services_count} służb</Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={{ fontSize: 20, fontWeight: '700', color: c.primary }}>{item.total_points}</Text>
-                <Text style={{ fontSize: 11, color: c.textTertiary }}>pkt</Text>
-              </View>
-            </View>
-          )}
-          contentContainerStyle={{ padding: 16, gap: 10 }}
-        />
-      ) : (
-        <FlatList
-          data={ranking}
-          keyExtractor={item => item.profile_id}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="podium-outline" size={48} color={c.iconMuted} />
-              <Text style={styles.emptyText}>Brak danych rankingowych</Text>
-            </View>
-          }
-          renderItem={({ item, index }) => (
-            <RankingRow entry={item} position={index + 1} styles={styles} colors={c} />
-          )}
-          contentContainerStyle={{ padding: 16, gap: 8 }}
-        />
-      )}
-    </View>
+    </ScrollView>
   )
 }
 
-const MEDALS = ['🥇', '🥈', '🥉']
-
-function RankingRow({ entry, position, styles, colors: c }: {
-  entry: RankingEntry; position: number; styles: any; colors: Colors
-}) {
-  return (
-    <View style={styles.rankRow}>
-      <Text style={styles.rankPosition}>
-        {position <= 3 ? MEDALS[position - 1] : `#${position}`}
-      </Text>
-      <View style={styles.rankInfo}>
-        <Text style={styles.rankName}>{entry.full_name ?? '—'}</Text>
-        <Text style={styles.rankMeta}>{entry.services_count} służb</Text>
-      </View>
-      <Text style={styles.rankPoints}>{entry.total_points} pkt</Text>
-    </View>
-  )
-}
-
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    tabs: {
-      flexDirection: 'row', margin: 16, marginBottom: 0,
-      backgroundColor: c.border, borderRadius: 10, padding: 3,
-    },
-    tab: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-    tabActive: { backgroundColor: c.surface, ...shadow.md },
-    tabText: { fontSize: 14, fontWeight: '500', color: c.subtext },
-    tabTextActive: { color: c.text },
-    card: {
-      backgroundColor: c.surface, borderRadius: 12, padding: 14, gap: 5, ...shadow.xs,
-    },
-    rankRow: {
-      backgroundColor: c.surface, borderRadius: 12, padding: 14,
-      flexDirection: 'row', alignItems: 'center', gap: 12, ...shadow.xs,
-    },
-    rankPosition: { fontSize: 18, width: 36, textAlign: 'center' },
-    rankInfo: { flex: 1 },
-    rankName: { fontSize: 14, fontWeight: '500', color: c.text },
-    rankMeta: { fontSize: 12, color: c.textTertiary, marginTop: 1 },
-    rankPoints: { fontSize: 15, fontWeight: '700', color: c.text },
-    empty: { alignItems: 'center', marginTop: 60, gap: 12 },
-    emptyText: { color: c.textTertiary, fontSize: 15 },
-  })
-}
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  body: { padding: 16, gap: 14, paddingBottom: 32 },
+  desktop: { flexDirection: 'row', gap: 20, padding: 28, paddingHorizontal: 32, alignItems: 'flex-start' },
+  col: { flex: 1, gap: 12 },
+  kid: { gap: 14, padding: 18 },
+  kidHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  right: { alignItems: 'flex-end' },
+  big: { fontSize: 40, lineHeight: 42 },
+  stats: { flexDirection: 'row', gap: 8 },
+  stat: { flex: 1, borderRadius: 12, padding: 10, gap: 2 },
+  statV: { ...sans(800), fontSize: 18, fontVariant: ['tabular-nums'] },
+  badges: { fontSize: 18 },
+  rankRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 11 },
+  pos: { ...sans(800), fontSize: 13, width: 24 },
+  rankName: { ...sans(600), fontSize: 15, flex: 1 },
+  rankPts: { ...sans(800), fontSize: 15, fontVariant: ['tabular-nums'] },
+})

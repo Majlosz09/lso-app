@@ -25,6 +25,7 @@ import { DeleteAccountButton } from '../../components/DeleteAccountButton'
 import { ExportMyDataButton } from '../../components/ExportMyDataButton'
 import { ForgotPasswordModal } from '../../components/ForgotPasswordModal'
 import { attendanceRate } from '../../lib/serviceRules'
+import { ChildSummary, useChildren } from '../../hooks/useChildren'
 import {
   AppText, Avatar, Button, Card, HeaderChip, Icon, ListRow, Segmented, Sheet, TextField,
 } from '../../components/ui'
@@ -37,7 +38,7 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function ProfileScreen() {
   const { profile } = useAuthStore()
-  return <ProfileView admin={profile?.role === 'admin'} />
+  return <ProfileView mode={profile?.role === 'admin' ? 'admin' : profile?.role === 'parent' ? 'parent' : 'member'} />
 }
 
 // ─── Awatar: zdjęcie / ikonka z kolorem / usunięcie ──────────────────────────
@@ -244,7 +245,8 @@ function useAvatarEditor() {
 
 type RankItem = { id: string; name: string; order: number }
 
-function useProfileData(admin: boolean) {
+function useProfileData(mode: ProfileMode) {
+  const admin = mode === 'admin'
   const { profile } = useAuthStore()
   const [stats, setStats] = useState<{ a: string; al: string; b: string; bl: string; c: string; cl: string } | null>(null)
   const [allRanks, setAllRanks] = useState<RankItem[]>([])
@@ -273,6 +275,7 @@ function useProfileData(admin: boolean) {
 
   useEffect(() => {
     if (!profile?.id || !profile.parish_id) return
+    if (mode === 'parent') return
     if (admin) {
       const today = new Date().toISOString().split('T')[0]
       const in30 = new Date(Date.now() + 30 * 86_400_000).toISOString().split('T')[0]
@@ -309,7 +312,7 @@ function useProfileData(admin: boolean) {
     })
     fetchBadges()
     computeAndSyncBadges(supabase, profile.id, profile.parish_id).catch(console.error)
-  }, [profile?.id, profile?.parish_id, profile?.parent_id, admin, fetchBadges])
+  }, [profile?.id, profile?.parish_id, profile?.parent_id, admin, mode, fetchBadges])
 
   useRealtimeTable('member_badges', fetchBadges, profile?.id ? `profile_id=eq.${profile.id}` : undefined)
   return { stats, allRanks, badges, parentName }
@@ -317,14 +320,29 @@ function useProfileData(admin: boolean) {
 
 // ─── Widok profilu ────────────────────────────────────────────────────────────
 
-function ProfileView({ admin }: { admin: boolean }) {
+export type ProfileMode = 'member' | 'admin' | 'parent'
+
+export function ProfileView({ mode }: { mode: ProfileMode }) {
+  const admin = mode === 'admin'
+  const parent = mode === 'parent'
   const router = useRouter()
   const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
   const { palette } = useLiturgyHeader()
   const { themeOverride, setThemeOverride } = useThemeStore()
   const { profile, session, signOut, parish, pushEnabled } = useAuthStore()
-  const { stats, allRanks, badges, parentName } = useProfileData(admin)
+  const { stats, allRanks, badges, parentName } = useProfileData(mode)
+  const kids = useChildren(0)
+  const [unlinkChild, setUnlinkChild] = useState<ChildSummary | null>(null)
+  const doUnlink = async () => {
+    const child = unlinkChild
+    if (!child) return
+    setUnlinkChild(null)
+    const { error } = await supabase.from('profiles').update({ parent_id: null }).eq('id', child.id)
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    kids.setChildren(prev => prev.filter(k => k.id !== child.id))
+    Toast.show({ type: 'success', text1: `Odłączono ${child.full_name}` })
+  }
   const { avatar, sheets } = useAvatarEditor()
   const [editing, setEditing] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -333,7 +351,7 @@ function ProfileView({ admin }: { admin: boolean }) {
 
   const insets = useSafeAreaInsets()
   const rankName = allRanks.find(r => r.id === profile?.rank_id)?.name ?? null
-  const homeHref = admin ? '/(admin)/(admin-tabs)' : '/(tabs)'
+  const homeHref = admin ? '/(admin)/(admin-tabs)' : parent ? '/(parent)/(parent-tabs)' : '/(tabs)'
   const back = () => (router.canGoBack() ? router.back() : router.replace(homeHref as any))
 
   const hero = (
@@ -385,7 +403,32 @@ function ProfileView({ admin }: { admin: boolean }) {
     </View>
   )
 
-  const formation = !admin && (
+  const childrenCard = parent && (
+    <Card flush>
+      <View style={[styles.cardHead, { borderBottomColor: c.borderLight }]}>
+        <AppText variant="eyebrow" color={c.goldInk} style={styles.flex}>Moje dzieci</AppText>
+      </View>
+      {kids.children.length === 0 ? (
+        <ListRow first icon="account-child" title="Brak powiązanych dzieci" subtitle="Opiekun parafii może połączyć konto dziecka z Twoim" />
+      ) : kids.children.map((ch, i) => (
+        <ListRow
+          key={ch.id}
+          first={i === 0}
+          left={<Avatar name={ch.full_name} avatarUrl={ch.avatar_url} size={38} />}
+          title={ch.full_name}
+          subtitle={`${ch.rankName ?? 'Ministrant'} · ${ch.points} pkt${ch.badges.length ? '  ' + ch.badges.slice(0, 4).join(' ') : ''}`}
+          onPress={() => router.push(`/(parent)/member-profile?id=${ch.id}` as any)}
+          right={
+            <Pressable onPress={() => setUnlinkChild(ch)} hitSlop={8} accessibilityLabel={`Odłącz ${ch.full_name}`}>
+              <Icon name="link-variant-off" size={20} color={c.dangerStrong} />
+            </Pressable>
+          }
+        />
+      ))}
+    </Card>
+  )
+
+  const formation = mode === 'member' && (
     <Card style={styles.formation}>
       {allRanks.length > 0 && <FormationSection ranks={allRanks} currentRankId={profile?.rank_id ?? null} c={c} />}
       <AppText variant="eyebrow" color={c.goldInk}>Wyróżnienia</AppText>
@@ -407,8 +450,8 @@ function ProfileView({ admin }: { admin: boolean }) {
       <ListRow first icon="account" title={profile?.full_name ?? '—'} subtitle="Imię i nazwisko" />
       <ListRow icon="email" title={session?.user.email ?? '—'} subtitle="E-mail" />
       <ListRow icon="phone" title={profile?.phone ?? 'Nie podano'} subtitle="Telefon" />
-      {!admin && <ListRow icon="calendar" title={profile?.rocznik ? String(profile.rocznik) : 'Nie podano'} subtitle="Rocznik" />}
-      {!admin && (
+      {mode === 'member' && <ListRow icon="calendar" title={profile?.rocznik ? String(profile.rocznik) : 'Nie podano'} subtitle="Rocznik" />}
+      {mode === 'member' && (
         <ListRow icon="human-male-female-child" title={parentName ?? 'Brak połączonego rodzica'} subtitle="Połączony rodzic — widzi Twój grafik i punkty" />
       )}
     </Card>
@@ -442,9 +485,17 @@ function ProfileView({ admin }: { admin: boolean }) {
   const modals = (
     <>
       {sheets}
-      <EditProfileSheet visible={editing} onClose={() => setEditing(false)} showRocznik={!admin} />
+      <EditProfileSheet visible={editing} onClose={() => setEditing(false)} showRocznik={mode === 'member'} />
       <ForgotPasswordModal visible={passwordOpen} initialEmail={session?.user.email ?? ''} onClose={() => setPasswordOpen(false)} />
       <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
+      <Sheet
+        visible={!!unlinkChild}
+        onClose={() => setUnlinkChild(null)}
+        title="Odłączyć dziecko?"
+        footer={<><Button label="Odłącz" variant="danger" onPress={doUnlink} /><Button label="Anuluj" variant="secondary" onPress={() => setUnlinkChild(null)} /></>}
+      >
+        <AppText muted>{`${unlinkChild?.full_name ?? ''} zostanie w parafii, ale zniknie z Twojego konta (grafik, punkty).`}</AppText>
+      </Sheet>
       <Sheet
         visible={confirmLogout}
         onClose={() => setConfirmLogout(false)}
@@ -472,6 +523,7 @@ function ProfileView({ admin }: { admin: boolean }) {
         </View>
         <View style={styles.desktopRight}>
           {pushCard}
+          {childrenCard}
           {formation}
           {info}
           {settings}
@@ -487,6 +539,7 @@ function ProfileView({ admin }: { admin: boolean }) {
       <View style={styles.body}>
         {pushCard}
         {statTiles}
+        {childrenCard}
         {formation}
         {info}
         {settings}
