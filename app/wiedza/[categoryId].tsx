@@ -124,20 +124,21 @@ function createStyles(c: Colors) {
       flexDirection: 'row', alignItems: 'center', gap: 8,
     },
     sectionTitle: {
-      fontSize: 12, fontWeight: '700', color: c.primary,
+      fontSize: 12, color: c.primary,
       textTransform: 'uppercase', letterSpacing: 0.5,
+      fontFamily: 'Manrope_700Bold',
     },
     parishBadge: {
       backgroundColor: c.primary + '18', borderRadius: 6,
       paddingHorizontal: 6, paddingVertical: 2,
     },
-    parishBadgeText: { fontSize: 10, fontWeight: '700', color: c.primary },
+    parishBadgeText: { fontSize: 10, color: c.primary, fontFamily: 'Manrope_700Bold' },
     itemRow: {
       backgroundColor: c.surface, borderRadius: 10, padding: 14,
       flexDirection: 'row', alignItems: 'center', ...shadow.xs,
     },
-    itemTitle: { fontSize: 15, fontWeight: '600', color: c.text },
-    itemSubtitle: { fontSize: 12, color: c.textTertiary, marginTop: 2 },
+    itemTitle: { fontSize: 15, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    itemSubtitle: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontFamily: 'Manrope_500Medium' },
     separator: { height: 6 },
   })
 }

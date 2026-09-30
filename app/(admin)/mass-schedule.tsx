@@ -118,7 +118,7 @@ export default function MassScheduleScreen() {
                     {item.label ?? 'Msza Święta'}
                   </Text>
                   <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={8}>
-                    <Ionicons name="trash-outline" size={20} color="#DC2626" />
+                    <Ionicons name="trash-outline" size={20} color="#B3261E" />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -183,8 +183,8 @@ function createStyles(c: Colors) {
     content: { padding: 16, paddingBottom: 8, gap: 12 },
 
     empty: { alignItems: 'center', paddingVertical: 48, gap: 8 },
-    emptyText: { fontSize: 16, fontWeight: '600', color: c.textTertiary },
-    emptySubText: { fontSize: 13, color: c.textTertiary, textAlign: 'center' },
+    emptyText: { fontSize: 16, color: c.textTertiary, fontFamily: 'Manrope_600SemiBold' },
+    emptySubText: { fontSize: 13, color: c.textTertiary, textAlign: 'center', fontFamily: 'Manrope_500Medium' },
 
     daySection: {
       backgroundColor: c.surface, borderRadius: 14,
@@ -192,10 +192,11 @@ function createStyles(c: Colors) {
       ...shadow.md,
     },
     dayHeader: {
-      fontSize: 12, fontWeight: '700', color: c.primary,
+      fontSize: 12, color: c.primary,
       textTransform: 'uppercase', letterSpacing: 0.8,
       paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6,
       backgroundColor: c.primaryAlpha08,
+      fontFamily: 'Manrope_700Bold',
     },
     row: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -207,21 +208,21 @@ function createStyles(c: Colors) {
       paddingHorizontal: 10, paddingVertical: 4,
       minWidth: 58, alignItems: 'center',
     },
-    timeBadgeText: { fontSize: 15, fontWeight: '700', color: c.primary },
-    rowLabel: { flex: 1, fontSize: 14, color: c.subtext },
+    timeBadgeText: { fontSize: 15, color: c.primary, fontFamily: 'Manrope_700Bold' },
+    rowLabel: { flex: 1, fontSize: 14, color: c.subtext, fontFamily: 'Manrope_500Medium' },
 
     addBar: {
       backgroundColor: c.surface, padding: 16, gap: 10,
       borderTopWidth: 1, borderTopColor: c.primarySurface,
     },
-    addBarTitle: { fontSize: 13, fontWeight: '700', color: c.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5 },
+    addBarTitle: { fontSize: 13, color: c.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Manrope_700Bold' },
     dayChips: { flexDirection: 'row', gap: 6 },
     dayChip: {
       flex: 1, paddingVertical: 7, borderRadius: 8,
       backgroundColor: c.primarySurface, alignItems: 'center',
     },
     dayChipActive: { backgroundColor: c.primary },
-    dayChipText: { fontSize: 12, fontWeight: '600', color: c.subtext },
+    dayChipText: { fontSize: 12, color: c.subtext, fontFamily: 'Manrope_600SemiBold' },
     dayChipTextActive: { color: '#fff' },
 
     addInputRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
@@ -229,6 +230,7 @@ function createStyles(c: Colors) {
       backgroundColor: c.bg, borderRadius: 10,
       paddingHorizontal: 12, paddingVertical: 11,
       fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
+      fontFamily: 'Manrope_500Medium',
     },
     inputTime: { width: 72 },
     addBtn: {

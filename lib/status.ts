@@ -1,9 +1,9 @@
 export const STATUS_COLORS: Record<string, string> = {
-  assigned:  '#FFC107',   // amber — waiting/scheduled
-  present:   '#16A34A',   // green — attended
-  excused:   '#EA580C',   // orange — absence reported
-  confirmed: '#2563EB',   // blue — absence approved
-  absent:    '#DC2626',   // red — missed without excuse
+  assigned:  '#8A6A1F',   // ciemne złoto — zapisany
+  present:   '#2F7D4F',   // green — attended
+  excused:   '#B8741A',   // orange — absence reported
+  confirmed: '#0E7490',   // blue — absence approved
+  absent:    '#B3261E',   // red — missed without excuse
   swapped:   '#6B7280',   // gray — swapped out
 }
 

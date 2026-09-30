@@ -51,5 +51,5 @@ export function ExportMyDataButton() {
 
 const styles = StyleSheet.create({
   link: { alignItems: 'center', paddingVertical: 8 },
-  linkText: { fontSize: 13, textDecorationLine: 'underline' },
+  linkText: { fontSize: 13, textDecorationLine: 'underline', fontFamily: 'Manrope_500Medium' },
 })

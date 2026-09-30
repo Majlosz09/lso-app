@@ -247,8 +247,8 @@ function MessageBubbleComponent({
                 style={styles.menuItem}
                 onPress={() => { onDelete?.(); setShowMenu(false) }}
               >
-                <Ionicons name="trash-outline" size={14} color="#ef4444" />
-                <Text style={[styles.menuItemText, { color: '#ef4444' }]}>Usuń</Text>
+                <Ionicons name="trash-outline" size={14} color="#B3261E" />
+                <Text style={[styles.menuItemText, { color: '#B3261E' }]}>Usuń</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -315,7 +315,7 @@ function createStyles(c: Colors) {
     messageContentWrapperOwn: { flexDirection: 'column', alignItems: 'flex-end', maxWidth: '92%' },
     quoteAccent: { borderLeftColor: c.primary, backgroundColor: c.primaryAlpha08 },
     quoteName: { fontSize: 11, ...sans(700) },
-    quoteText: { fontSize: 11 },
+    quoteText: { fontSize: 11, fontFamily: 'Manrope_500Medium' },
     bubble: { borderRadius: 18, paddingVertical: 10, paddingHorizontal: 14 },
     bubbleOwn: { backgroundColor: c.primary, borderBottomRightRadius: 4 },
     bubbleOther: { backgroundColor: c.surface, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: c.border },
@@ -330,8 +330,8 @@ function createStyles(c: Colors) {
       borderRadius: 12, borderWidth: 1,
       paddingVertical: 2, paddingHorizontal: 7,
     },
-    reactionEmoji: { fontSize: 13 },
-    reactionCount: { fontSize: 12 },
+    reactionEmoji: { fontSize: 13, fontFamily: 'Manrope_500Medium' },
+    reactionCount: { fontSize: 12, fontFamily: 'Manrope_500Medium' },
     reactionTooltip: {
       position: 'absolute',
       bottom: 30,
@@ -352,12 +352,13 @@ function createStyles(c: Colors) {
       fontSize: 18,
       textAlign: 'center',
       marginBottom: 5,
+      fontFamily: 'Manrope_500Medium',
     },
     reactionTooltipName: {
       fontSize: 12,
       color: '#fff',
-      fontWeight: '500',
       paddingVertical: 1,
+      fontFamily: 'Manrope_500Medium',
     },
     // Web compact action bar — collapses to width:0 when hidden so messages sit flush
     actionBarContainer: {
@@ -374,7 +375,7 @@ function createStyles(c: Colors) {
       width: 26, height: 26, borderRadius: 13, borderWidth: 1,
       justifyContent: 'center', alignItems: 'center',
     },
-    actionBtnEmoji: { fontSize: 13 },
+    actionBtnEmoji: { fontSize: 13, fontFamily: 'Manrope_500Medium' },
     // Floating panels — absolute so they don't push layout
     floatingReactionPicker: {
       position: 'absolute',
@@ -399,11 +400,11 @@ function createStyles(c: Colors) {
     floatingAlignLeft: { left: 0 },
     floatingAlignRight: { right: 0 },
     pickerEmojiBtn: { padding: 4, borderRadius: 12 },
-    pickerEmoji: { fontSize: 20 },
+    pickerEmoji: { fontSize: 20, fontFamily: 'Manrope_500Medium' },
     menuItem: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       paddingVertical: 8, paddingHorizontal: 12,
     },
-    menuItemText: { fontSize: 14 },
+    menuItemText: { fontSize: 14, fontFamily: 'Manrope_500Medium' },
   })
 }

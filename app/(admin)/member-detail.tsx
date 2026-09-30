@@ -402,14 +402,14 @@ export default function MemberDetailScreen() {
                   style={styles.rankOption}
                   onPress={() => handleChangeParent(p.id)}
                 >
-                  <Ionicons name="person-outline" size={20} color="#0EA5E9" />
+                  <Ionicons name="person-outline" size={20} color="#0E7490" />
                   <Text style={[
                     styles.rankOptionText,
-                    profile?.parent_id === p.id && { fontWeight: '700', color: '#0EA5E9' },
+                    profile?.parent_id === p.id && { fontWeight: '700', color: '#0E7490' },
                   ]}>
                     {p.full_name}
                   </Text>
-                  {profile?.parent_id === p.id && <Ionicons name="checkmark" size={18} color="#0EA5E9" />}
+                  {profile?.parent_id === p.id && <Ionicons name="checkmark" size={18} color="#0E7490" />}
                 </TouchableOpacity>
               ))
             )}
@@ -448,14 +448,14 @@ export default function MemberDetailScreen() {
                 style={styles.rankOption}
                 onPress={() => handleChangeRank(r.id)}
               >
-                <Ionicons name="ribbon" size={20} color="#EA580C" />
+                <Ionicons name="ribbon" size={20} color="#B8741A" />
                 <Text style={[
                   styles.rankOptionText,
-                  profile.rank_id === r.id && { fontWeight: '700', color: '#EA580C' },
+                  profile.rank_id === r.id && { fontWeight: '700', color: '#B8741A' },
                 ]}>
                   {r.name}
                 </Text>
-                {profile.rank_id === r.id && <Ionicons name="checkmark" size={18} color="#EA580C" />}
+                {profile.rank_id === r.id && <Ionicons name="checkmark" size={18} color="#B8741A" />}
               </TouchableOpacity>
             ))}
           </View>
@@ -465,8 +465,8 @@ export default function MemberDetailScreen() {
       {/* Statystyki — tylko dla ministrancóin */}
       {isMember && (
         <View style={styles.statsRow}>
-          <StatCard icon="trophy" color="#FFC107" value={summary?.total_points ?? 0} label="Punkty" styles={styles} />
-          <StatCard icon="checkmark-circle" color="#16A34A" value={summary?.services_count ?? 0} label="Służby" styles={styles} />
+          <StatCard icon="trophy" color="#C9A55A" value={summary?.total_points ?? 0} label="Punkty" styles={styles} />
+          <StatCard icon="checkmark-circle" color="#2F7D4F" value={summary?.services_count ?? 0} label="Służby" styles={styles} />
           {rank && <StatCard icon="podium" color={c.primary} value={`#${rank}`} label="Ranking" styles={styles} />}
         </View>
       )}
@@ -535,8 +535,8 @@ export default function MemberDetailScreen() {
           ) : (
             points.map((p, i) => (
               <View key={p.id} style={[styles.pointRow, i < points.length - 1 && styles.rowBorder]}>
-                <View style={[styles.pointAmount, { backgroundColor: (p.amount >= 0 ? '#16A34A' : '#DC2626') + '18' }]}>
-                  <Text style={[styles.pointAmountText, { color: p.amount >= 0 ? '#16A34A' : '#DC2626' }]}>
+                <View style={[styles.pointAmount, { backgroundColor: (p.amount >= 0 ? '#2F7D4F' : '#B3261E') + '18' }]}>
+                  <Text style={[styles.pointAmountText, { color: p.amount >= 0 ? '#2F7D4F' : '#B3261E' }]}>
                     {p.amount >= 0 ? '+' : ''}{p.amount}
                   </Text>
                 </View>
@@ -723,14 +723,14 @@ function createStyles(c: Colors) {
       alignItems: 'center', gap: 6,
       ...shadow.md,
     },
-    name: { fontSize: 20, fontWeight: '700', color: c.text },
+    name: { fontSize: 20, color: c.text, fontFamily: 'Manrope_700Bold' },
     roleBadge: { backgroundColor: c.primaryAlpha12, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
-    roleText: { fontSize: 12, color: c.primary, fontWeight: '600' },
+    roleText: { fontSize: 12, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
     infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    infoText: { fontSize: 13, color: c.subtext },
+    infoText: { fontSize: 13, color: c.subtext, fontFamily: 'Manrope_500Medium' },
     rankPill: {
       flexDirection: 'row', alignItems: 'center', gap: 5,
-      backgroundColor: '#EA580C18', borderRadius: 10,
+      backgroundColor: '#B8741A18', borderRadius: 10,
       paddingHorizontal: 10, paddingVertical: 4,
     },
     rankPillEmpty: {
@@ -738,14 +738,14 @@ function createStyles(c: Colors) {
       backgroundColor: c.primarySurface, borderRadius: 10,
       paddingHorizontal: 10, paddingVertical: 4,
     },
-    rankText: { fontSize: 12, color: '#EA580C', fontWeight: '600' },
-    rankTextEmpty: { fontSize: 12, color: c.textTertiary },
+    rankText: { fontSize: 12, color: '#B8741A', fontFamily: 'Manrope_600SemiBold' },
+    rankTextEmpty: { fontSize: 12, color: c.textTertiary, fontFamily: 'Manrope_500Medium' },
     parentPill: {
       flexDirection: 'row', alignItems: 'center', gap: 5,
-      backgroundColor: '#0EA5E918', borderRadius: 10,
+      backgroundColor: '#0E749018', borderRadius: 10,
       paddingHorizontal: 10, paddingVertical: 4,
     },
-    parentText: { fontSize: 12, color: '#0EA5E9', fontWeight: '600' },
+    parentText: { fontSize: 12, color: '#0E7490', fontFamily: 'Manrope_600SemiBold' },
 
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
     modalSheet: {
@@ -755,12 +755,12 @@ function createStyles(c: Colors) {
     modalHeader: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12,
     },
-    modalTitle: { fontSize: 17, fontWeight: '700', color: c.text },
+    modalTitle: { fontSize: 17, color: c.text, fontFamily: 'Manrope_700Bold' },
     rankOption: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.primarySurface,
     },
-    rankOptionText: { flex: 1, fontSize: 15, color: c.text },
+    rankOptionText: { flex: 1, fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
 
     statsRow: { flexDirection: 'row', gap: 10 },
     statCard: {
@@ -768,59 +768,60 @@ function createStyles(c: Colors) {
       alignItems: 'center', gap: 3,
       ...shadow.xs,
     },
-    statValue: { fontSize: 20, fontWeight: '700', color: c.text },
-    statLabel: { fontSize: 11, color: c.subtext, textAlign: 'center' },
+    statValue: { fontSize: 20, color: c.text, fontFamily: 'Manrope_700Bold' },
+    statLabel: { fontSize: 11, color: c.subtext, textAlign: 'center', fontFamily: 'Manrope_500Medium' },
 
     awardButton: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
       backgroundColor: c.primary, borderRadius: 12, padding: 14,
     },
-    awardButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+    awardButtonText: { color: '#fff', fontSize: 15, fontFamily: 'Manrope_600SemiBold' },
     manageRow: {
       flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14, paddingHorizontal: 4,
       borderBottomWidth: 1, borderBottomColor: c.border,
     },
     manageRowLast: { borderBottomWidth: 0 },
-    manageText: { flex: 1, fontSize: 15, fontWeight: '600', color: c.primary },
+    manageText: { flex: 1, fontSize: 15, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
 
     section: { gap: 8 },
-    sectionTitle: { fontSize: 13, fontWeight: '600', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 },
+    sectionTitle: { fontSize: 13, color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Manrope_600SemiBold' },
     sectionCard: {
       backgroundColor: c.surface, borderRadius: 12, overflow: 'hidden',
       ...shadow.xs,
     },
 
     emptyRow: { padding: 16, alignItems: 'center' },
-    emptyText: { fontSize: 14, color: c.textTertiary },
+    emptyText: { fontSize: 14, color: c.textTertiary, fontFamily: 'Manrope_500Medium' },
 
     serviceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
     rowBorder: { borderBottomWidth: 1, borderBottomColor: c.primarySurface },
-    serviceTitle: { fontSize: 14, fontWeight: '600', color: c.text },
-    serviceDate: { fontSize: 12, color: c.subtext, marginTop: 2 },
+    serviceTitle: { fontSize: 14, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    serviceDate: { fontSize: 12, color: c.subtext, marginTop: 2, fontFamily: 'Manrope_500Medium' },
     statusPill: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
-    statusText: { fontSize: 11, fontWeight: '600' },
+    statusText: { fontSize: 11, fontFamily: 'Manrope_600SemiBold' },
 
     pointRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
     pointAmount: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 44, alignItems: 'center' },
-    pointAmountText: { fontSize: 14, fontWeight: '700' },
-    pointReason: { fontSize: 14, color: c.text, fontWeight: '500' },
-    pointDate: { fontSize: 12, color: c.textTertiary, marginTop: 2 },
+    pointAmountText: { fontSize: 14, fontFamily: 'Manrope_700Bold' },
+    pointReason: { fontSize: 14, color: c.text, fontFamily: 'Manrope_500Medium' },
+    pointDate: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontFamily: 'Manrope_500Medium' },
 
     badgeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12 },
-    badgeRowIcon: { fontSize: 22, lineHeight: 26 },
-    badgeRowName: { fontSize: 14, fontWeight: '600', color: c.text },
-    badgeRowMeta: { fontSize: 12, color: c.subtext, marginTop: 2 },
-    badgeRowNote: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontStyle: 'italic' },
+    badgeRowIcon: { fontSize: 22, lineHeight: 26, fontFamily: 'Manrope_500Medium' },
+    badgeRowName: { fontSize: 14, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    badgeRowMeta: { fontSize: 12, color: c.subtext, marginTop: 2, fontFamily: 'Manrope_500Medium' },
+    badgeRowNote: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontStyle: 'italic', fontFamily: 'Manrope_500Medium' },
     awardBadgeBtn: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
       padding: 12, borderTopWidth: 1, borderTopColor: c.primarySurface,
     },
-    awardBadgeBtnText: { fontSize: 14, fontWeight: '600', color: c.primary },
+    awardBadgeBtnText: { fontSize: 14, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
     awardNoteInput: {
       backgroundColor: c.bg, borderRadius: 10,
       paddingHorizontal: 12, paddingVertical: 10,
       fontSize: 14, color: c.text, borderWidth: 1, borderColor: c.border,
       marginTop: 12, marginBottom: 4, minHeight: 60, textAlignVertical: 'top',
+      fontFamily: 'Manrope_500Medium',
     },
   })
 }
@@ -833,7 +834,7 @@ const heroStyles = StyleSheet.create({
   back: { flexDirection: 'row', alignItems: 'center', marginLeft: -6, alignSelf: 'flex-start' },
   backText: { ...sans(700), fontSize: 13 },
   identity: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  name: { fontSize: 32, lineHeight: 35 },
+  name: { fontSize: 32, lineHeight: 35, fontFamily: 'Manrope_500Medium' },
   meta: { ...sans(600), fontSize: 13, opacity: 0.9, marginTop: 4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, cursor: 'pointer' } as any,

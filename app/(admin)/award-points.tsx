@@ -231,17 +231,17 @@ function createStyles(c: Colors) {
       borderWidth: 1, borderColor: c.primaryAlpha20, marginBottom: 8,
     },
     selectedInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    selectedName: { fontSize: 16, fontWeight: '600', color: c.text },
-    selectedRole: { fontSize: 13, color: c.subtext, marginTop: 1 },
+    selectedName: { fontSize: 16, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    selectedRole: { fontSize: 13, color: c.subtext, marginTop: 1, fontFamily: 'Manrope_500Medium' },
 
-    label: { fontSize: 13, fontWeight: '600', color: c.subtext, marginTop: 8 },
+    label: { fontSize: 13, color: c.subtext, marginTop: 8, fontFamily: 'Manrope_600SemiBold' },
 
     searchBox: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       backgroundColor: c.surface, borderRadius: 10, padding: 11,
       borderWidth: 1, borderColor: c.border, marginTop: 4,
     },
-    searchInput: { flex: 1, fontSize: 15, color: c.text },
+    searchInput: { flex: 1, fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
 
     memberList: {
       backgroundColor: c.surface, borderRadius: 10, marginTop: 8,
@@ -251,11 +251,12 @@ function createStyles(c: Colors) {
       flexDirection: 'row', alignItems: 'center', gap: 10,
       padding: 14, borderBottomWidth: 1, borderBottomColor: c.primarySurface,
     },
-    memberName: { flex: 1, fontSize: 15, color: c.text },
+    memberName: { flex: 1, fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
 
     input: {
       backgroundColor: c.surface, borderRadius: 10, padding: 13,
       fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
+      fontFamily: 'Manrope_500Medium',
     },
     inputMultiline: { minHeight: 80, textAlignVertical: 'top' },
 
@@ -264,7 +265,7 @@ function createStyles(c: Colors) {
       alignItems: 'center', marginTop: 16,
     },
     submitButtonDisabled: { opacity: 0.6 },
-    submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    submitButtonText: { color: '#fff', fontSize: 16, fontFamily: 'Manrope_600SemiBold' },
 
     rulesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
     ruleChip: {
@@ -273,8 +274,8 @@ function createStyles(c: Colors) {
       alignItems: 'center',
     },
     ruleChipActive: { backgroundColor: c.primary, borderColor: c.primary },
-    ruleChipLabel: { fontSize: 13, fontWeight: '600', color: c.subtext },
-    ruleChipPts: { fontSize: 11, color: c.textTertiary, marginTop: 1 },
+    ruleChipLabel: { fontSize: 13, color: c.subtext, fontFamily: 'Manrope_600SemiBold' },
+    ruleChipPts: { fontSize: 11, color: c.textTertiary, marginTop: 1, fontFamily: 'Manrope_500Medium' },
     ruleChipLabelActive: { color: '#fff' },
   })
 }

@@ -97,6 +97,6 @@ const styles = StyleSheet.create({
   forgot: { alignSelf: 'flex-end', paddingVertical: 2, cursor: 'pointer' } as any,
   forgotText: { ...sans(700), fontSize: 13 },
   registerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10 },
-  registerText: { fontSize: 13 },
+  registerText: { fontSize: 13, fontFamily: 'Manrope_500Medium' },
   registerLink: { ...sans(800), fontSize: 13 },
 })

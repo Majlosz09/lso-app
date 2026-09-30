@@ -209,11 +209,12 @@ function createStyles(c: Colors) {
       gap: 24,
     },
     slideContent: { alignItems: 'center', gap: 12 },
-    emoji: { fontSize: 52 },
-    title: { fontSize: 22, fontWeight: '800', color: '#fff', textAlign: 'center' },
+    emoji: { fontSize: 52, fontFamily: 'Manrope_500Medium' },
+    title: { fontSize: 22, color: '#fff', textAlign: 'center', fontFamily: 'Manrope_800ExtraBold' },
     description: {
       fontSize: 15, color: 'rgba(255,255,255,0.88)',
       textAlign: 'center', lineHeight: 22,
+      fontFamily: 'Manrope_500Medium',
     },
     dots: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
     dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.35)' },
@@ -223,11 +224,11 @@ function createStyles(c: Colors) {
       flex: 1, backgroundColor: 'rgba(255,255,255,0.18)',
       borderRadius: 12, paddingVertical: 13, alignItems: 'center',
     },
-    skipText: { fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
+    skipText: { fontSize: 15, color: 'rgba(255,255,255,0.85)', fontFamily: 'Manrope_600SemiBold' },
     nextBtn: {
       flex: 2, backgroundColor: '#fff',
       borderRadius: 12, paddingVertical: 13, alignItems: 'center',
     },
-    nextText: { fontSize: 15, fontWeight: '700', color: c.primary },
+    nextText: { fontSize: 15, color: c.primary, fontFamily: 'Manrope_700Bold' },
   })
 }

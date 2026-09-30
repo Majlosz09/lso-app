@@ -130,7 +130,7 @@ export default function RankManagementScreen() {
                   autoFocus
                 />
                 <TouchableOpacity onPress={handleRename} hitSlop={8} disabled={renaming}>
-                  <Ionicons name="checkmark" size={22} color="#16A34A" />
+                  <Ionicons name="checkmark" size={22} color="#2F7D4F" />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleCancelEdit} hitSlop={8}>
                   <Ionicons name="close" size={22} color={c.textTertiary} />
@@ -149,7 +149,7 @@ export default function RankManagementScreen() {
                       <Ionicons name="pencil-outline" size={20} color={c.primary} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => handleDelete(item)} hitSlop={8}>
-                      <Ionicons name="trash-outline" size={20} color="#DC2626" />
+                      <Ionicons name="trash-outline" size={20} color="#B3261E" />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -191,9 +191,10 @@ function createStyles(c: Colors) {
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
     sectionLabel: {
-      fontSize: 12, fontWeight: '700', color: c.textTertiary,
+      fontSize: 12, color: c.textTertiary,
       textTransform: 'uppercase', letterSpacing: 0.8,
       paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8,
+      fontFamily: 'Manrope_700Bold',
     },
     listContent: { paddingBottom: 100 },
 
@@ -207,19 +208,20 @@ function createStyles(c: Colors) {
       backgroundColor: c.primarySurface, justifyContent: 'center', alignItems: 'center',
     },
     rankIconSystem: { backgroundColor: c.primaryAlpha08 },
-    rankName: { flex: 1, fontSize: 15, fontWeight: '500', color: c.text },
+    rankName: { flex: 1, fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
     editInput: {
       flex: 1, fontSize: 15, color: c.text,
       backgroundColor: c.bg, borderRadius: 8,
       paddingHorizontal: 10, paddingVertical: 6,
       borderWidth: 1, borderColor: c.primary,
+      fontFamily: 'Manrope_500Medium',
     },
     rowActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
     systemBadge: {
       backgroundColor: c.primaryAlpha08, borderRadius: 6,
       paddingHorizontal: 7, paddingVertical: 3,
     },
-    systemBadgeText: { fontSize: 10, color: c.primary, fontWeight: '600' },
+    systemBadgeText: { fontSize: 10, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
 
     addRow: {
       position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -231,6 +233,7 @@ function createStyles(c: Colors) {
       flex: 1, backgroundColor: c.bg, borderRadius: 10,
       paddingHorizontal: 14, paddingVertical: 12,
       fontSize: 15, color: c.text,
+      fontFamily: 'Manrope_500Medium',
     },
     addButton: {
       width: 46, height: 46, borderRadius: 12,

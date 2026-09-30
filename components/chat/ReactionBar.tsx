@@ -22,5 +22,5 @@ export function ReactionBar({ onSelect }: Props) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 4 },
   btn: { padding: 6 },
-  emoji: { fontSize: 24 },
+  emoji: { fontSize: 24, fontFamily: 'Manrope_500Medium' },
 })

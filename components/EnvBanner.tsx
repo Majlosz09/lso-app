@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
     position: 'absolute', alignSelf: 'center', zIndex: 9999,
     paddingHorizontal: 10, paddingVertical: 2, borderRadius: 6,
   },
-  dev: { backgroundColor: '#16A34ACC' },
-  prod: { backgroundColor: '#DC2626' },
-  text: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  dev: { backgroundColor: '#2F7D4FCC' },
+  prod: { backgroundColor: '#B3261E' },
+  text: { color: '#fff', fontSize: 11, fontFamily: 'Manrope_700Bold' },
 })

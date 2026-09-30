@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   deskHead: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 32, paddingTop: 24, paddingBottom: 18 },
   deskSeg: { width: 380 },
   bigRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' },
-  big: { fontSize: 64, lineHeight: 68 },
+  big: { fontSize: 64, lineHeight: 68, fontFamily: 'Manrope_500Medium' },
   bigSub: { flexShrink: 1 },
   threeCols: { flexDirection: 'row', gap: 16, alignItems: 'stretch' },
   panel: { flex: 1, gap: 14, padding: 18 },

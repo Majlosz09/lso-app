@@ -105,7 +105,7 @@ function createFormationStyles(c: Colors) {
   return StyleSheet.create({
     section: { gap: 8 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    sectionTitle: { fontSize: 13, fontWeight: '600', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 },
+    sectionTitle: { fontSize: 13, color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Manrope_600SemiBold' },
     formationCard: { backgroundColor: c.surface, borderRadius: 14, padding: 16, ...shadow.xs },
     formationRow: { flexDirection: 'row', alignItems: 'flex-start' },
     formationConnector: { flex: 1, height: 2, backgroundColor: c.border, marginTop: 11 },
@@ -119,7 +119,7 @@ function createFormationStyles(c: Colors) {
     formationCircleDone: { backgroundColor: c.success, borderColor: c.success },
     formationCircleCurrent: { backgroundColor: c.primary, borderColor: c.primary },
     formationDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
-    formationLabel: { textAlign: 'center', fontSize: 9, lineHeight: 12, color: c.textTertiary, fontWeight: '400', marginTop: 4 },
+    formationLabel: { textAlign: 'center', fontSize: 9, lineHeight: 12, color: c.textTertiary, marginTop: 4, fontFamily: 'Manrope_400Regular' },
     formationLabelDone: { color: c.success },
     formationLabelCurrent: { color: c.primary, fontWeight: '700' },
   })
@@ -129,7 +129,7 @@ function createBadgesStyles(c: Colors) {
   return StyleSheet.create({
     section: { gap: 8 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    sectionTitle: { fontSize: 13, fontWeight: '600', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 },
+    sectionTitle: { fontSize: 13, color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Manrope_600SemiBold' },
     badgesCard: { backgroundColor: c.surface, borderRadius: 14, ...shadow.xs },
     badgesScroll: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
     badgeChip: {
@@ -138,7 +138,7 @@ function createBadgesStyles(c: Colors) {
       paddingHorizontal: 12, paddingVertical: 8,
       borderWidth: 1, borderColor: c.primaryAlpha12,
     },
-    badgeChipIcon: { fontSize: 16 },
-    badgeChipName: { fontSize: 12, fontWeight: '600', color: c.primary },
+    badgeChipIcon: { fontSize: 16, fontFamily: 'Manrope_500Medium' },
+    badgeChipName: { fontSize: 12, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
   })
 }

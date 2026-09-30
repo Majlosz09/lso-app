@@ -62,12 +62,12 @@ function createStyles(c: Colors) {
       backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center',
     },
     rowInfo: { flex: 1 },
-    name: { fontSize: 15, fontWeight: '600', color: c.text },
-    sub: { fontSize: 12, color: c.subtext, marginTop: 2 },
+    name: { fontSize: 15, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    sub: { fontSize: 12, color: c.subtext, marginTop: 2, fontFamily: 'Manrope_500Medium' },
     pointsBadge: {
       flexDirection: 'row', alignItems: 'center', gap: 3,
       backgroundColor: c.gold + '15', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3,
     },
-    pointsText: { fontSize: 12, fontWeight: '700', color: c.gold },
+    pointsText: { fontSize: 12, color: c.gold, fontFamily: 'Manrope_700Bold' },
   })
 }

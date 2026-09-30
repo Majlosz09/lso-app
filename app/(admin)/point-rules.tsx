@@ -108,25 +108,26 @@ function createStyles(c: Colors) {
     container: { flex: 1, backgroundColor: c.bg },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     content: { padding: 16, gap: 10 },
-    sectionTitle: { fontSize: 12, fontWeight: '700', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+    sectionTitle: { fontSize: 12, color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, fontFamily: 'Manrope_700Bold' },
     row: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       backgroundColor: c.surface, borderRadius: 12, padding: 14,
       ...shadow.xs,
     },
-    label: { flex: 1, fontSize: 14, fontWeight: '600', color: c.text },
+    label: { flex: 1, fontSize: 14, color: c.text, fontFamily: 'Manrope_600SemiBold' },
     inputGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     input: {
       backgroundColor: c.primarySurface, borderRadius: 8,
       paddingHorizontal: 10, paddingVertical: 7,
-      fontSize: 18, fontWeight: '800', color: c.primary,
+      fontSize: 18, color: c.primary,
       minWidth: 48, textAlign: 'center',
+      fontFamily: 'Manrope_800ExtraBold',
     },
-    unit: { fontSize: 12, color: c.subtext, fontWeight: '600' },
+    unit: { fontSize: 12, color: c.subtext, fontFamily: 'Manrope_600SemiBold' },
     saveBtn: {
       backgroundColor: c.primary, borderRadius: 12,
       padding: 14, alignItems: 'center', marginTop: 8,
     },
-    saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+    saveBtnText: { color: '#fff', fontSize: 15, fontFamily: 'Manrope_700Bold' },
   })
 }

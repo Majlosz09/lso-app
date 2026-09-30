@@ -128,7 +128,7 @@ function WebGoogleMap({ lat, lng, onPick }: {
     <View>
       {mapLoading && (
         <View style={styles.mapPlaceholder}>
-          <ActivityIndicator size="large" color="#EA580C" />
+          <ActivityIndicator size="large" color="#B8741A" />
           <Text style={styles.mapLoadingText}>Ładowanie mapy…</Text>
         </View>
       )}
@@ -231,8 +231,8 @@ export default function GpsLocationPicker({
           {/* Use my location button */}
           <TouchableOpacity style={styles.locationBtn} onPress={handleUseLocation} disabled={locating}>
             {locating
-              ? <ActivityIndicator color="#EA580C" size="small" />
-              : <Ionicons name="navigate-outline" size={16} color="#EA580C" />
+              ? <ActivityIndicator color="#B8741A" size="small" />
+              : <Ionicons name="navigate-outline" size={16} color="#B8741A" />
             }
             <Text style={styles.locationBtnText}>Użyj mojej lokalizacji</Text>
           </TouchableOpacity>
@@ -248,7 +248,7 @@ export default function GpsLocationPicker({
               <Text style={[styles.selectedName, { color: c.text, flex: 1 }]} numberOfLines={1}>
                 {displayName ?? 'Lokalizacja ustawiona'}
               </Text>
-              <TouchableOpacity onPress={() => setPickerOpen(true)} style={[styles.changeBtn, { borderColor: '#EA580C40' }]}>
+              <TouchableOpacity onPress={() => setPickerOpen(true)} style={[styles.changeBtn, { borderColor: '#B8741A40' }]}>
                 <Text style={styles.changeBtnText}>Zmień</Text>
               </TouchableOpacity>
             </View>
@@ -300,7 +300,7 @@ export default function GpsLocationPicker({
           )}
 
           <TouchableOpacity style={styles.locationBtn} onPress={handleUseLocation} disabled={locating}>
-            {locating ? <ActivityIndicator color="#EA580C" size="small" /> : <Ionicons name="navigate-outline" size={16} color="#EA580C" />}
+            {locating ? <ActivityIndicator color="#B8741A" size="small" /> : <Ionicons name="navigate-outline" size={16} color="#B8741A" />}
             <Text style={styles.locationBtnText}>Użyj mojej lokalizacji</Text>
           </TouchableOpacity>
         </>
@@ -332,38 +332,38 @@ const styles = StyleSheet.create({
     height: 320, borderRadius: 10, backgroundColor: '#f5f5f5',
     justifyContent: 'center', alignItems: 'center', gap: 8,
   },
-  mapLoadingText: { fontSize: 13, color: '#888' },
+  mapLoadingText: { fontSize: 13, color: '#888', fontFamily: 'Manrope_500Medium' },
   mapContainer: { height: 320, borderRadius: 10, overflow: 'hidden' },
-  mapHint: { fontSize: 11, color: '#888', marginTop: 4 },
+  mapHint: { fontSize: 11, color: '#888', marginTop: 4, fontFamily: 'Manrope_500Medium' },
 
   selectedRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8,
   },
-  selectedName: { fontSize: 13, fontWeight: '600' },
+  selectedName: { fontSize: 13, fontFamily: 'Manrope_600SemiBold' },
   changeBtn: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4 },
-  changeBtnText: { fontSize: 12, fontWeight: '600', color: '#EA580C' },
+  changeBtnText: { fontSize: 12, color: '#B8741A', fontFamily: 'Manrope_600SemiBold' },
 
   locationBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderColor: '#EA580C40', backgroundColor: '#EA580C08',
+    borderWidth: 1, borderColor: '#B8741A40', backgroundColor: '#B8741A08',
     borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10,
   },
-  locationBtnText: { fontSize: 13, fontWeight: '600', color: '#EA580C' },
+  locationBtnText: { fontSize: 13, color: '#B8741A', fontFamily: 'Manrope_600SemiBold' },
 
   searchRow: { flexDirection: 'row', gap: 8 },
-  searchInput: { flex: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, borderWidth: 1 },
+  searchInput: { flex: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, borderWidth: 1, fontFamily: 'Manrope_500Medium' },
   searchBtn: { width: 42, height: 42, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
 
   resultsList: { borderWidth: 1, borderRadius: 8, overflow: 'hidden' },
   resultRow: { flexDirection: 'row', gap: 8, padding: 10, alignItems: 'flex-start' },
-  resultText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  resultText: { flex: 1, fontSize: 13, lineHeight: 18, fontFamily: 'Manrope_500Medium' },
 
-  error: { fontSize: 12, color: '#DC2626' },
-  cancelText: { fontSize: 13, textAlign: 'center', paddingVertical: 4 },
+  error: { fontSize: 12, color: '#B3261E', fontFamily: 'Manrope_500Medium' },
+  cancelText: { fontSize: 13, textAlign: 'center', paddingVertical: 4, fontFamily: 'Manrope_500Medium' },
 
   radiusRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  radiusLabel: { fontSize: 13, fontWeight: '600', color: '#a05000' },
-  radiusInput: { flex: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, borderWidth: 1 },
-  hint: { fontSize: 12, color: '#a05000' },
+  radiusLabel: { fontSize: 13, color: '#8A6A1F', fontFamily: 'Manrope_600SemiBold' },
+  radiusInput: { flex: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, borderWidth: 1, fontFamily: 'Manrope_500Medium' },
+  hint: { fontSize: 12, color: '#8A6A1F', fontFamily: 'Manrope_500Medium' },
 })

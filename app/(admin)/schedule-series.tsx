@@ -307,11 +307,12 @@ function createStyles(c: Colors) {
     container: { flex: 1, backgroundColor: c.bg },
     content: { padding: 16, gap: 6 },
 
-    label: { fontSize: 13, fontWeight: '600', color: c.subtext, marginTop: 10, marginBottom: 2 },
-    sublabel: { fontSize: 12, color: c.subtext, marginBottom: 4 },
+    label: { fontSize: 13, color: c.subtext, marginTop: 10, marginBottom: 2, fontFamily: 'Manrope_600SemiBold' },
+    sublabel: { fontSize: 12, color: c.subtext, marginBottom: 4, fontFamily: 'Manrope_500Medium' },
     input: {
       backgroundColor: c.surface, borderRadius: 10, padding: 13,
       fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
+      fontFamily: 'Manrope_500Medium',
     },
 
     pickerBtn: {
@@ -319,8 +320,8 @@ function createStyles(c: Colors) {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       borderWidth: 1, borderColor: c.border,
     },
-    pickerBtnText: { flex: 1, fontSize: 14, color: c.text },
-    pickerBtnPlaceholder: { flex: 1, fontSize: 14, color: c.textTertiary },
+    pickerBtnText: { flex: 1, fontSize: 14, color: c.text, fontFamily: 'Manrope_500Medium' },
+    pickerBtnPlaceholder: { flex: 1, fontSize: 14, color: c.textTertiary, fontFamily: 'Manrope_500Medium' },
 
     dateRow: { flexDirection: 'row', gap: 10 },
 
@@ -331,7 +332,7 @@ function createStyles(c: Colors) {
       backgroundColor: c.bg, borderWidth: 1.5, borderColor: c.border,
     },
     categoryDot: { width: 8, height: 8, borderRadius: 4 },
-    categoryChipText: { fontSize: 12, color: c.subtext, fontWeight: '500', flexShrink: 1 },
+    categoryChipText: { fontSize: 12, color: c.subtext, flexShrink: 1, fontFamily: 'Manrope_500Medium' },
 
     dayChips: { flexDirection: 'row', gap: 6, marginTop: 4 },
     dayChip: {
@@ -339,7 +340,7 @@ function createStyles(c: Colors) {
       backgroundColor: c.primarySurface, alignItems: 'center',
     },
     dayChipActive: { backgroundColor: c.primary },
-    dayChipText: { fontSize: 12, fontWeight: '600', color: c.subtext },
+    dayChipText: { fontSize: 12, color: c.subtext, fontFamily: 'Manrope_600SemiBold' },
     dayChipTextActive: { color: '#fff' },
 
     presetsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
@@ -347,19 +348,19 @@ function createStyles(c: Colors) {
       paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
       backgroundColor: c.surface, borderWidth: 1, borderColor: c.border,
     },
-    presetBtnText: { fontSize: 13, color: c.primary, fontWeight: '600' },
+    presetBtnText: { fontSize: 13, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
 
     timeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    dayLabel: { width: 26, fontSize: 14, fontWeight: '700', color: c.primary },
+    dayLabel: { width: 26, fontSize: 14, color: c.primary, fontFamily: 'Manrope_700Bold' },
 
     preview: {
       backgroundColor: c.primaryAlpha08, borderRadius: 12, padding: 14, marginTop: 16,
       borderWidth: 1, borderColor: c.primaryAlpha12, gap: 4,
     },
     previewEmpty: { backgroundColor: c.primarySurface, borderColor: c.border },
-    previewEmptyText: { fontSize: 13, color: c.textTertiary, textAlign: 'center' },
-    previewCount: { fontSize: 15, fontWeight: '700', color: c.primary },
-    previewSummary: { fontSize: 13, color: c.subtext },
+    previewEmptyText: { fontSize: 13, color: c.textTertiary, textAlign: 'center', fontFamily: 'Manrope_500Medium' },
+    previewCount: { fontSize: 15, color: c.primary, fontFamily: 'Manrope_700Bold' },
+    previewSummary: { fontSize: 13, color: c.subtext, fontFamily: 'Manrope_500Medium' },
 
     submitBtn: {
       backgroundColor: c.primary, borderRadius: 12, padding: 16,
@@ -367,6 +368,6 @@ function createStyles(c: Colors) {
       gap: 8, marginTop: 8,
     },
     submitBtnDisabled: { opacity: 0.45 },
-    submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    submitBtnText: { color: '#fff', fontSize: 16, fontFamily: 'Manrope_600SemiBold' },
   })
 }
