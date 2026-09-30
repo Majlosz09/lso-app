@@ -9,13 +9,14 @@ import { useTheme } from '../../../lib/ThemeContext'
 import { sans, serif, VESTMENT_NAMES, VestmentColor } from '../../../lib/theme'
 import { shadow } from '../../../lib/shadows'
 import { getLiturgicalDay } from '../../../lib/liturgy'
-import { addDays, dayMonth, dayNum, dayShort, localDateStr, relativeDay, shortDate } from '../../../lib/dates'
+import { addDays, dayMonth, dayNum, dayShort, localDateStr, pl, relativeDay, shortDate } from '../../../lib/dates'
 import { STATUS_LABELS } from '../../../lib/status'
 import { useIsDesktop } from '../../../hooks/useIsDesktop'
 import { useLiturgyHeader } from '../../../hooks/useLiturgyHeader'
 import { ChildDuty, ChildSummary, useChildren } from '../../../hooks/useChildren'
 import { announcementWhen } from '../../../components/announcements/AnnouncementsFeed'
 import { AppText, Avatar, Badge, Card, Icon, SectionHeader } from '../../../components/ui'
+import { useUnreadAnnouncements } from '../../../hooks/useUnreadAnnouncements'
 
 type Ann = { id: string; title: string; created_at: string; author: { full_name: string } | null }
 type DutyRow = ChildDuty & { child: string }
@@ -129,10 +130,14 @@ export default function ParentHome() {
     </Card>
   )
 
+  const unreadAnn = useUnreadAnnouncements()
   const annCard = (
     <Card flush>
       <View style={[styles.cardHead, styles.rowBetween]}>
-        <AppText variant="eyebrow" color={c.goldInk}>Ogłoszenia dla rodziców</AppText>
+        <View style={styles.annTitle}>
+          <AppText variant="eyebrow" color={c.goldInk}>Ogłoszenia dla rodziców</AppText>
+          {unreadAnn > 0 && <Badge label={`${unreadAnn} ${pl(unreadAnn, ['nowe', 'nowe', 'nowych'])}`} tone="navy" />}
+        </View>
         <Pressable onPress={() => router.push('/(parent)/(parent-tabs)/announcements')}><AppText variant="label" color={c.primary}>Wszystkie →</AppText></Pressable>
       </View>
       {anns.length === 0 ? <AppText muted style={styles.pad}>Brak ogłoszeń.</AppText> : anns.map(a => (
@@ -225,6 +230,7 @@ export default function ParentHome() {
 }
 
 const styles = StyleSheet.create({
+  annTitle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   flex: { flex: 1, minWidth: 0 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   pad: { padding: 14, gap: 4 },

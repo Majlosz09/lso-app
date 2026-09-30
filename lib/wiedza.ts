@@ -403,3 +403,20 @@ export function getAllSlowniczekItems(): WiedzaItem[] {
 export function getSlowniczekTags(): string[] {
   return ['Naczynia', 'Kościół', 'Szaty', 'Kolory']
 }
+
+// ── N8: przeczytane hasła (klucze w content_reads: „<kategoria>/<id hasła>”) ──
+export function wiedzaKey(categoryId: string, itemId: string): string {
+  return `${categoryId}/${itemId}`
+}
+
+/** Klucze wbudowanych haseł kategorii (albo wszystkich kategorii). */
+export function builtInKeys(categoryId?: string): string[] {
+  return WIEDZA_DATA
+    .filter(c => !categoryId || c.id === categoryId)
+    .flatMap(c => c.sections.flatMap(s => s.items.map(i => wiedzaKey(c.id, i.id))))
+}
+
+/** Ile z podanych kluczy jest przeczytanych. */
+export function countRead(keys: string[], reads: Set<string>): number {
+  return keys.filter(k => reads.has(k)).length
+}

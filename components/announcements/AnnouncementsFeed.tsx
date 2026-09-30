@@ -9,6 +9,7 @@ import { localDateStr, relativeDay } from '../../lib/dates'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 import type { Announcement } from '../../types/database'
+import { ensureReads, useReadsStore } from '../../stores/readsStore'
 import { AppText, Badge, Icon, ScreenHeader } from '../ui'
 
 const FIXED_AUDIENCE: Record<string, string> = { all: 'Wszyscy', members: 'Ministranci', parents: 'Rodzice' }
@@ -35,6 +36,21 @@ export function AnnouncementsFeed({ homeHref, showBack = true }: { homeHref: str
   const [open, setOpen] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const reads = useReadsStore(st => st.announcement)
+  const readsOn = useReadsStore(st => st.available)
+  const markRead = useReadsStore(st => st.markRead)
+  useEffect(() => { ensureReads(profile?.id) }, [profile?.id])
+  // „Nowe” = nieprzeczytane w chwili otwarcia ekranu (znacznik zostaje do wyjścia)
+  const [fresh, setFresh] = useState<Set<string> | null>(null)
+  useEffect(() => {
+    if (fresh || loading || !readsOn) return
+    setFresh(new Set(items.filter(a => !reads.has(a.id)).map(a => a.id)))
+  }, [loading, readsOn, items])
+  // N6: rozwinięte = przeczytane
+  useEffect(() => {
+    if (!profile?.id || !readsOn) return
+    for (const id of Object.keys(open)) if (open[id]) markRead(profile.id, 'announcement', id)
+  }, [open, readsOn, profile?.id])
 
   const load = async () => {
     if (!profile?.parish_id) return
@@ -92,6 +108,7 @@ export function AnnouncementsFeed({ homeHref, showBack = true }: { homeHref: str
                 <AppText style={styles.pinnedText}>PRZYPIĘTE</AppText>
               </View>
             )}
+            {fresh?.has(a.id) && <Badge label="NOWE" tone="navy" />}
             <Badge label={audience(a.target_audience).toUpperCase()} tone="gold" />
           </View>
           {isDesktop && (

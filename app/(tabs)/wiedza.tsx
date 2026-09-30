@@ -5,13 +5,14 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans, serif } from '../../lib/theme'
-import { WIEDZA_DATA, WiedzaCategory } from '../../lib/wiedza'
+import { WIEDZA_DATA, WiedzaCategory, wiedzaKey } from '../../lib/wiedza'
+import { ensureReads, useReadsStore } from '../../stores/readsStore'
 import { pl } from '../../lib/dates'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
 import { AppText, Button, Card, Icon, ScreenHeader } from '../../components/ui'
 
-type Entry = { id: string; title: string; subtitle?: string | null; content: string; route: string; categoryId: string; section: string }
+type Entry = { id: string; /** klucz w content_reads (N8) */ key: string; title: string; subtitle?: string | null; content: string; route: string; categoryId: string; section: string }
 type DbEntry = { id: string; category_id: string; section: string; title: string; subtitle: string | null; content: string }
 
 /** Wszystkie hasła (wbudowane + wpisy parafii) płasko, z adresem ekranu hasła. */
@@ -21,14 +22,14 @@ export function flattenWiedza(db: DbEntry[]): Entry[] {
     for (const sec of cat.sections) {
       for (const it of sec.items) {
         out.push({
-          ...it, categoryId: cat.id, section: sec.title,
+          ...it, key: wiedzaKey(cat.id, it.id), categoryId: cat.id, section: sec.title,
           route: cat.searchable ? `/wiedza/slowniczek/${it.id}` : `/wiedza/${cat.id}/${it.id}`,
         })
       }
     }
     for (const e of db.filter(d => d.category_id === cat.id)) {
       out.push({
-        id: `db-${e.id}`, title: e.title, subtitle: e.subtitle, content: e.content,
+        id: `db-${e.id}`, key: wiedzaKey(cat.id, `__db_${e.id}`), title: e.title, subtitle: e.subtitle, content: e.content,
         categoryId: cat.id, section: e.section || 'Wpisy parafii', route: `/wiedza/${cat.id}/__db_${e.id}`,
       })
     }
@@ -51,6 +52,11 @@ export default function WiedzaScreen() {
   const { colors: c } = useTheme()
   const { palette } = useLiturgyHeader()
   const parishId = useAuthStore(s => s.profile?.parish_id)
+  const profileId = useAuthStore(s => s.profile?.id)
+  const reads = useReadsStore(s => s.wiedza)
+  const readsOn = useReadsStore(s => s.available)
+  const markRead = useReadsStore(s => s.markRead)
+  useEffect(() => { ensureReads(profileId) }, [profileId])
   const [db, setDb] = useState<DbEntry[]>([])
   const [query, setQuery] = useState('')
   const [catId, setCatId] = useState(WIEDZA_DATA[0]?.id)
@@ -66,6 +72,20 @@ export default function WiedzaScreen() {
   const entries = useMemo(() => flattenWiedza(db), [db])
   const results = useMemo(() => searchWiedza(entries, query), [entries, query])
   const countFor = (cat: WiedzaCategory) => entries.filter(e => e.categoryId === cat.id).length
+  const readFor = (cat: WiedzaCategory) => entries.filter(e => e.categoryId === cat.id && reads.has(e.key)).length
+  /** „12 haseł” albo (N8) „3 z 12 przeczytane” */
+  const countLabel = (cat: WiedzaCategory) => readsOn && readFor(cat) > 0
+    ? `${readFor(cat)} z ${countFor(cat)} przeczytane`
+    : `${countFor(cat)} ${pl(countFor(cat), ['hasło', 'hasła', 'haseł'])}`
+  const totalRead = entries.filter(e => reads.has(e.key)).length
+
+  // Web: wyświetlony artykuł = przeczytany
+  const deskCat = WIEDZA_DATA.find(w => w.id === catId) ?? WIEDZA_DATA[0]
+  const deskEntries = entries.filter(e => e.categoryId === deskCat.id)
+  const deskItem = deskEntries.find(e => e.id === itemId) ?? deskEntries[0]
+  useEffect(() => {
+    if (isDesktop && deskItem && profileId) markRead(profileId, 'wiedza', deskItem.key)
+  }, [isDesktop, deskItem?.key, profileId, readsOn])
 
   const search = (onHeader: boolean) => (
     <View style={[styles.search, { backgroundColor: c.surface, borderColor: onHeader ? 'transparent' : c.inputBorder }]}>
@@ -109,9 +129,9 @@ export default function WiedzaScreen() {
 
   // ── Web: kategorie | hasła | artykuł ─────────────────────────────────────
   if (isDesktop) {
-    const cat = WIEDZA_DATA.find(w => w.id === catId) ?? WIEDZA_DATA[0]
-    const catEntries = entries.filter(e => e.categoryId === cat.id)
-    const item = catEntries.find(e => e.id === itemId) ?? catEntries[0]
+    const cat = deskCat
+    const catEntries = deskEntries
+    const item = deskItem
     const idx = item ? catEntries.indexOf(item) : -1
     const next = idx >= 0 ? catEntries[idx + 1] : undefined
     return (
@@ -130,7 +150,7 @@ export default function WiedzaScreen() {
                 <View style={styles.flex}>
                   <AppText style={[styles.catTitle, { color: active ? '#FFFFFF' : c.text }]}>{w.title}</AppText>
                   <AppText style={[styles.catSub, { color: active ? '#C9D3E3' : c.subtext }]}>
-                    {`${countFor(w)} ${pl(countFor(w), ['hasło', 'hasła', 'haseł'])}`}
+                    {countLabel(w)}
                   </AppText>
                 </View>
               </Pressable>
@@ -152,7 +172,8 @@ export default function WiedzaScreen() {
                   ]}
                 >
                   {active && <View style={[styles.selBar, { backgroundColor: c.gold }]} />}
-                  <AppText style={[styles.itemTitle, { color: c.text }, active && sans(800)]} numberOfLines={2}>{e.title}</AppText>
+                  <AppText style={[styles.itemTitle, styles.flex, { color: c.text }, active && sans(800)]} numberOfLines={2}>{e.title}</AppText>
+                  {reads.has(e.key) && <Icon name="check-circle" size={16} color={c.success} filled />}
                 </Pressable>
               )
             })}
@@ -196,7 +217,7 @@ export default function WiedzaScreen() {
           <>
             <View style={styles.catHead}>
               <AppText variant="title">Kategorie</AppText>
-              <AppText variant="small" muted>{`${entries.length} ${pl(entries.length, ['hasło', 'hasła', 'haseł'])}`}</AppText>
+              <AppText variant="small" muted>{readsOn && totalRead > 0 ? `${totalRead} z ${entries.length} przeczytane` : `${entries.length} ${pl(entries.length, ['hasło', 'hasła', 'haseł'])}`}</AppText>
             </View>
             <View style={styles.grid}>
               {WIEDZA_DATA.map(w => (
@@ -207,7 +228,7 @@ export default function WiedzaScreen() {
                 >
                   <AppText style={styles.emoji}>{w.emoji}</AppText>
                   <AppText variant="bodyStrong">{w.title}</AppText>
-                  <AppText variant="small" muted>{`${countFor(w)} ${pl(countFor(w), ['hasło', 'hasła', 'haseł'])}`}</AppText>
+                  <AppText variant="small" muted>{countLabel(w)}</AppText>
                 </Card>
               ))}
             </View>
@@ -237,7 +258,7 @@ const styles = StyleSheet.create({
   catRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, borderWidth: 1, cursor: 'pointer' } as any,
   catTitle: { ...sans(800), fontSize: 14 },
   catSub: { ...sans(600), fontSize: 11 },
-  itemRow: { paddingHorizontal: 16, paddingVertical: 12, cursor: 'pointer' } as any,
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 12, cursor: 'pointer' } as any,
   selBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 },
   itemTitle: { ...sans(600), fontSize: 14 },
   article: { padding: 32, gap: 14 },

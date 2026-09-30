@@ -1,7 +1,7 @@
 // Nawigacja redesignu v2: menu sidebaru (web ≥ 1024 px) i tytuły topbaru per rola.
 
 export type NavRole = 'member' | 'admin' | 'parent'
-export type BadgeKey = 'chat' | 'pending' | 'excuses'
+export type BadgeKey = 'chat' | 'pending' | 'excuses' | 'announcements'
 
 export type NavItem = {
   key: string
@@ -19,7 +19,7 @@ export const NAV: Record<NavRole, NavItem[]> = {
     { key: 'schedule', label: 'Grafik', icon: 'calendar-month', href: '/(tabs)/schedule', paths: ['/schedule', '/attendance', '/service'] },
     { key: 'points', label: 'Punkty', icon: 'trophy', href: '/(tabs)/points', paths: ['/points', '/badge-catalog', '/member-profile'] },
     { key: 'chat', label: 'Czat', icon: 'forum', href: '/(tabs)/chat', paths: ['/chat'], badge: 'chat' },
-    { key: 'announcements', label: 'Ogłoszenia', icon: 'bullhorn', href: '/(tabs)/announcements', paths: ['/announcements'] },
+    { key: 'announcements', label: 'Ogłoszenia', icon: 'bullhorn', href: '/(tabs)/announcements', paths: ['/announcements'], badge: 'announcements' },
     { key: 'wiedza', label: 'Wiedza', icon: 'book-open-variant', href: '/(tabs)/wiedza', paths: ['/wiedza'] },
   ],
   admin: [
@@ -37,7 +37,7 @@ export const NAV: Record<NavRole, NavItem[]> = {
     { key: 'home', label: 'Dom', icon: 'home', href: '/(parent)/(parent-tabs)', paths: ['/'] },
     { key: 'schedule', label: 'Dyżury dzieci', icon: 'calendar-month', href: '/(parent)/(parent-tabs)/schedule', paths: ['/schedule'] },
     { key: 'points', label: 'Punkty', icon: 'trophy', href: '/(parent)/(parent-tabs)/points', paths: ['/points', '/member-profile'] },
-    { key: 'announcements', label: 'Ogłoszenia', icon: 'bullhorn', href: '/(parent)/(parent-tabs)/announcements', paths: ['/announcements'] },
+    { key: 'announcements', label: 'Ogłoszenia', icon: 'bullhorn', href: '/(parent)/(parent-tabs)/announcements', paths: ['/announcements'], badge: 'announcements' },
     { key: 'chat', label: 'Czat', icon: 'forum', href: '/(parent)/(parent-tabs)/chat', paths: ['/chat'], badge: 'chat' },
   ],
 }

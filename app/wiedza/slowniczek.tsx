@@ -8,7 +8,8 @@ import { Ionicons } from '@expo/vector-icons'
 import { shadow } from '../../lib/shadows'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
-import { getAllSlowniczekItems, getSlowniczekTags } from '../../lib/wiedza'
+import { getAllSlowniczekItems, getSlowniczekTags, wiedzaKey } from '../../lib/wiedza'
+import { useWiedzaReads } from '../../hooks/useWiedzaReads'
 
 const ALL_ITEMS = getAllSlowniczekItems()
 const TAGS = ['Wszystkie', ...getSlowniczekTags()]
@@ -19,6 +20,7 @@ export default function SlowniczekScreen() {
   const router = useRouter()
   const [query, setQuery] = useState('')
   const [activeTag, setActiveTag] = useState('Wszystkie')
+  const { reads } = useWiedzaReads()
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim()
@@ -94,6 +96,9 @@ export default function SlowniczekScreen() {
                 )}
                 <Text style={styles.itemPreview} numberOfLines={2}>{item.content}</Text>
               </View>
+              {reads.has(wiedzaKey('slowniczek', item.id)) && (
+                <Ionicons name="checkmark-circle" size={18} color={c.success} style={{ marginRight: 6 }} />
+              )}
               {item.tag && (
                 <View style={styles.tagBadge}>
                   <Text style={styles.tagBadgeText}>{item.tag}</Text>

@@ -9,7 +9,7 @@ import { useTheme } from '../../lib/ThemeContext'
 import { headerPalette, sans, serif, VESTMENT_DOT, VESTMENT_NAMES, VestmentColor } from '../../lib/theme'
 import { shadow } from '../../lib/shadows'
 import { getLiturgicalDay } from '../../lib/liturgy'
-import { addDays, dayMonth, dayNum, dayShort, localDateStr, longDate, relativeDay, weekdayShortDate } from '../../lib/dates'
+import { addDays, dayMonth, dayNum, dayShort, localDateStr, longDate, pl, relativeDay, weekdayShortDate } from '../../lib/dates'
 import { serviceAvailability } from '../../lib/serviceRules'
 import { effectiveMode } from '../../lib/attendance'
 import { CATEGORY_CONFIG } from '../../types/database'
@@ -21,6 +21,11 @@ import { useServiceActions } from '../../components/services/useServiceActions'
 import { DayStrip } from '../../components/services/DayStrip'
 import { SwapInbox } from '../../components/services/SwapInbox'
 import { useSwapStore } from '../../stores/swapStore'
+import { useUnreadAnnouncements } from '../../hooks/useUnreadAnnouncements'
+import { useWiedzaReads } from '../../hooks/useWiedzaReads'
+import { builtInKeys, countRead } from '../../lib/wiedza'
+
+const WIEDZA_KEYS = builtInKeys()
 import { AppText, Avatar, Badge, Button, Card, HeaderChip, Icon, IconButton, SectionHeader } from '../../components/ui'
 
 type Ann = { id: string; title: string; created_at: string; author: { full_name: string } | null }
@@ -91,6 +96,9 @@ export default function HomeScreen() {
   const { points, anns, rankName, reload } = useHomeData()
   const { next, later } = useNextService(services)
   const [refreshing, setRefreshing] = useState(false)
+  const unreadAnn = useUnreadAnnouncements()
+  const { reads: wiedzaReads, available: readsOn } = useWiedzaReads()
+  const wiedzaRead = countRead(WIEDZA_KEYS, wiedzaReads)
 
   const firstName = (profile?.full_name ?? '').split(' ')[0]
   const dayServices = services.filter(s => s.date === day)
@@ -330,14 +338,19 @@ export default function HomeScreen() {
           {church}
           <View style={styles.shortcuts}>
             <Card style={styles.shortcut} onPress={() => router.push('/(tabs)/announcements')}>
-              <Icon name="bullhorn" size={24} color={c.goldInk} />
+              <View style={styles.shortcutHead}>
+                <Icon name="bullhorn" size={24} color={c.goldInk} />
+                {unreadAnn > 0 && <Badge label={`${unreadAnn} ${pl(unreadAnn, ['nowe', 'nowe', 'nowych'])}`} tone="navy" />}
+              </View>
               <AppText variant="bodyStrong">Ogłoszenia</AppText>
               <AppText variant="small" muted numberOfLines={2}>{anns[0]?.title ?? 'Brak nowych'}</AppText>
             </Card>
             <Card style={styles.shortcut} onPress={() => router.push('/(tabs)/wiedza')}>
               <Icon name="book-open-variant" size={24} color={c.goldInk} />
               <AppText variant="bodyStrong">Wiedza</AppText>
-              <AppText variant="small" muted numberOfLines={2}>Szaty, sprzęty, gesty</AppText>
+              <AppText variant="small" muted numberOfLines={2}>
+                {readsOn && wiedzaRead > 0 ? `${wiedzaRead} z ${WIEDZA_KEYS.length} haseł przeczytanych` : 'Szaty, sprzęty, gesty'}
+              </AppText>
             </Card>
           </View>
         </View>
@@ -379,6 +392,7 @@ const styles = StyleSheet.create({
   dayEmpty: { padding: 14 },
   shortcuts: { flexDirection: 'row', gap: 12 },
   shortcut: { flex: 1, gap: 4 },
+  shortcutHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
   annHead: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10 },
   annRow: { paddingHorizontal: 14, paddingVertical: 12, gap: 2, cursor: 'pointer' } as any,
   wiedza: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, borderRadius: 20, cursor: 'pointer' } as any,

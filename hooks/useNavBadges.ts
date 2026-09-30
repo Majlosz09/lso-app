@@ -2,12 +2,14 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import type { BadgeKey, NavRole } from '../lib/navigation'
+import { useUnreadAnnouncements } from './useUnreadAnnouncements'
 
 export type NavBadges = Partial<Record<BadgeKey, number>>
 
-/** Liczniki w sidebarze: nieprzeczytany czat, oczekujące konta, prośby o usprawiedliwienie. */
+/** Liczniki w sidebarze: nieprzeczytany czat i ogłoszenia, oczekujące konta, prośby o usprawiedliwienie. */
 export function useNavBadges(role: NavRole, enabled = true): NavBadges {
   const parishId = useAuthStore(s => s.profile?.parish_id)
+  const unreadAnn = useUnreadAnnouncements(enabled && role !== 'admin')
 
   const { data } = useQuery({
     queryKey: ['nav-badges', role, parishId],
@@ -35,7 +37,7 @@ export function useNavBadges(role: NavRole, enabled = true): NavBadges {
       }
     },
   })
-  return data ?? {}
+  return { ...(data ?? {}), ...(unreadAnn ? { announcements: unreadAnn } : {}) }
 }
 
 function sumUnread(rows: unknown): number {

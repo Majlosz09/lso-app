@@ -29,6 +29,10 @@ import { ChildSummary, useChildren } from '../../hooks/useChildren'
 import {
   AppText, Avatar, Button, Card, HeaderChip, Icon, ListRow, Segmented, Sheet, TextField,
 } from '../../components/ui'
+import { useWiedzaReads } from '../../hooks/useWiedzaReads'
+import { builtInKeys, countRead } from '../../lib/wiedza'
+
+const WIEDZA_KEYS = builtInKeys()
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Opiekun',
@@ -332,6 +336,8 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
   const { themeOverride, setThemeOverride } = useThemeStore()
   const { profile, session, signOut, parish, pushEnabled } = useAuthStore()
   const { stats, allRanks, badges, parentName } = useProfileData(mode)
+  const { reads: wiedzaReads, available: readsOn } = useWiedzaReads()
+  const wiedzaRead = countRead(WIEDZA_KEYS, wiedzaReads)
   const kids = useChildren(0)
   const [unlinkChild, setUnlinkChild] = useState<ChildSummary | null>(null)
   const doUnlink = async () => {
@@ -451,6 +457,9 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
       <ListRow icon="email" title={session?.user.email ?? '—'} subtitle="E-mail" />
       <ListRow icon="phone" title={profile?.phone ?? 'Nie podano'} subtitle="Telefon" />
       {mode === 'member' && <ListRow icon="calendar" title={profile?.rocznik ? String(profile.rocznik) : 'Nie podano'} subtitle="Rocznik" />}
+      {mode === 'member' && readsOn && (
+        <ListRow icon="book-open-variant" title={`${wiedzaRead} z ${WIEDZA_KEYS.length} haseł`} subtitle="Przeczytane w Wiedzy" onPress={() => router.push('/(tabs)/wiedza')} />
+      )}
       {mode === 'member' && (
         <ListRow icon="human-male-female-child" title={parentName ?? 'Brak połączonego rodzica'} subtitle="Połączony rodzic — widzi Twój grafik i punkty" />
       )}
