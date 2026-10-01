@@ -31,7 +31,7 @@
         "android.permission.RECEIVE_BOOT_COMPLETED"
       ],
       "package": "pl.lsoapp.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "googleServicesFile": "./google-services.json"
     },
     "web": {
