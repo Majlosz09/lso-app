@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { getCatColors, ScheduleCategory } from '../../types/database'
 import { shadow } from '../../lib/shadows'
-import { getLiturgicalDay, getLiturgicalVestmentColor, VESTMENT_LABELS } from '../../lib/liturgy'
+import { getLiturgicalDay, getLiturgicalVestmentColor, VESTMENT_LABELS, useLiturgyVersion } from '../../lib/liturgy'
 import { useTheme } from '../../lib/ThemeContext'
 import { useAuthStore } from '../../stores/authStore'
 import { Colors } from '../../lib/theme'
@@ -20,6 +20,7 @@ type DaySchedule = {
 }
 
 export default function ScheduleDayScreen() {
+  useLiturgyVersion() // odśwież, gdy kalendarz kolejnego roku się policzy
   const { date: initialDate } = useLocalSearchParams<{ date: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()

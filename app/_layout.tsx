@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import Toast from 'react-native-toast-message'
 import * as SplashScreen from 'expo-splash-screen'
+import { preloadLiturgy } from '../lib/liturgy'
 import { useFonts } from 'expo-font'
 import {
   InstrumentSerif_400Regular,
@@ -65,13 +66,22 @@ export default function RootLayout() {
   })
   const fontsReady = fontsLoaded || !!fontError
 
+  // Kalendarz liturgiczny bieżącego roku (liczony na bieżąco) — maks. 2,5 s, potem start mimo wszystko
+  const [liturgyReady, setLiturgyReady] = useState(false)
   useEffect(() => {
-    if (fontsReady) SplashScreen.hideAsync().catch(() => {})
-  }, [fontsReady])
+    const t = setTimeout(() => setLiturgyReady(true), 2500)
+    preloadLiturgy().finally(() => { clearTimeout(t); setLiturgyReady(true) })
+    return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    if (fontsReady && liturgyReady) SplashScreen.hideAsync().catch(() => {})
+  }, [fontsReady, liturgyReady])
 
   // Web: HTML jest renderowany statycznie — wstrzymanie renderu psuje hydratację (React #418),
   // więc tam fonty po prostu podmieniają się po wczytaniu.
   if (!fontsReady && Platform.OS !== 'web') return null
+  if (!liturgyReady) return null
 
   return (
     <QueryClientProvider client={queryClient}>

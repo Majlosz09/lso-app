@@ -6,7 +6,7 @@ import { serviceAvailability } from '../../../lib/serviceRules'
 import { AbsenceSheet } from '../../../components/services/AbsenceSheet'
 import { useTheme } from '../../../lib/ThemeContext'
 import { sans, VESTMENT_DOT, VestmentColor } from '../../../lib/theme'
-import { getLiturgicalDay } from '../../../lib/liturgy'
+import { getLiturgicalDay, useLiturgyVersion } from '../../../lib/liturgy'
 import { dayShort, longDate, shortDate } from '../../../lib/dates'
 import { STATUS_COLORS, STATUS_LABELS } from '../../../lib/status'
 import { useIsDesktop } from '../../../hooks/useIsDesktop'
@@ -28,6 +28,7 @@ const rpcMissing = (msg: string) => /report_child_absence|withdraw_child_absence
 
 /** Nadchodzące dyżury dzieci (4 tygodnie), pogrupowane po dniach. */
 export default function ParentSchedule() {
+  useLiturgyVersion() // odśwież, gdy kalendarz kolejnego roku się policzy
   const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
   const { children, loading, reload } = useChildren(28)

@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans, serif, VESTMENT_DOT, VestmentColor } from '../../lib/theme'
-import { getLiturgicalDay, getLiturgicalBgColor } from '../../lib/liturgy'
+import { getLiturgicalDay, getLiturgicalBgColor, useLiturgyVersion } from '../../lib/liturgy'
 import { localDateStr } from '../../lib/dates'
 import { AppText } from '../ui'
 
@@ -24,6 +24,7 @@ LocaleConfig.defaultLocale = 'pl'
  * Dotknięcie dnia → lista służb tego dnia (schedule-day).
  */
 export function MonthCalendar() {
+  useLiturgyVersion() // odśwież, gdy kalendarz kolejnego roku się policzy
   const router = useRouter()
   const parishId = useAuthStore(s => s.profile?.parish_id)
   const { colors: c, isDark } = useTheme()

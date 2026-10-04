@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans, VESTMENT_DOT, VestmentColor } from '../../lib/theme'
-import { getLiturgicalDay } from '../../lib/liturgy'
+import { getLiturgicalDay, useLiturgyVersion } from '../../lib/liturgy'
 import { dayNum, dayShort, localDateStr } from '../../lib/dates'
 import { AppText } from '../ui'
 
@@ -11,6 +11,7 @@ export function DayStrip({ days, selected, onSelect }: {
   selected: string
   onSelect: (d: string) => void
 }) {
+  useLiturgyVersion() // odśwież, gdy kalendarz kolejnego roku się policzy
   const { colors: c } = useTheme()
   const today = localDateStr()
   return (

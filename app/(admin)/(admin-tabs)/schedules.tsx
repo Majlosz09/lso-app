@@ -7,7 +7,7 @@ import { useAuthStore } from '../../../stores/authStore'
 import { ScheduleCategory, CATEGORY_CONFIG } from '../../../types/database'
 import { useTheme } from '../../../lib/ThemeContext'
 import { sans, serif, VESTMENT_DOT, VestmentColor } from '../../../lib/theme'
-import { getLiturgicalDay } from '../../../lib/liturgy'
+import { getLiturgicalDay, useLiturgyVersion } from '../../../lib/liturgy'
 import { dayShort, localDateStr, pl, shortDate, weekDays as weekOf } from '../../../lib/dates'
 import { useIsDesktop } from '../../../hooks/useIsDesktop'
 import { useLiturgyHeader } from '../../../hooks/useLiturgyHeader'
@@ -39,6 +39,7 @@ type SlotItem = {
 const INACTIVE = ['absent', 'excused', 'confirmed', 'swapped']
 
 export default function SchedulesTab() {
+  useLiturgyVersion() // odśwież, gdy kalendarz kolejnego roku się policzy
   const router = useRouter()
   const isDesktop = useIsDesktop()
   const { profile } = useAuthStore()

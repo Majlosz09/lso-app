@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { getLiturgicalDay, LiturgicalEntry } from '../lib/liturgy'
+import { getLiturgicalDay, LiturgicalEntry, useLiturgyVersion } from '../lib/liturgy'
 import { headerPalette, HeaderPalette, VESTMENT_NAMES, VestmentColor } from '../lib/theme'
 import { useTheme } from '../lib/ThemeContext'
 
@@ -23,6 +23,7 @@ export type LiturgyHeader = {
 export function useLiturgyHeader(dateStr?: string): LiturgyHeader {
   const { isDark } = useTheme()
   const date = dateStr ?? localDateStr()
+  const version = useLiturgyVersion()
   return useMemo(() => {
     const entry = getLiturgicalDay(date)
     const color = (entry.color ?? 'GREEN') as VestmentColor
@@ -32,5 +33,5 @@ export function useLiturgyHeader(dateStr?: string): LiturgyHeader {
       palette: headerPalette(color, isDark),
       vestmentName: VESTMENT_NAMES[color] ?? VESTMENT_NAMES.GREEN,
     }
-  }, [date, isDark])
+  }, [date, isDark, version])
 }

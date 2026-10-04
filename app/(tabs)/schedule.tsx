@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans, VESTMENT_DOT, VestmentColor } from '../../lib/theme'
-import { getLiturgicalDay } from '../../lib/liturgy'
+import { getLiturgicalDay, useLiturgyVersion } from '../../lib/liturgy'
 import { dayShort, localDateStr, monthName, shortDate, weekDays } from '../../lib/dates'
 import { serviceAvailability } from '../../lib/serviceRules'
 import { effectiveMode } from '../../lib/attendance'
@@ -19,6 +19,7 @@ import { AppText, Card, Icon, ScreenHeader, Segmented } from '../../components/u
 type Seg = 'mine' | 'all' | 'free'
 
 export default function ScheduleScreen() {
+  useLiturgyVersion() // odśwież, gdy kalendarz kolejnego roku się policzy
   const router = useRouter()
   const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
