@@ -8,8 +8,8 @@ export type ScheduleCategory = 'msza' | 'nabozenstwo' | 'zbiorka'
 export type ServiceType = 'msza_assigned' | 'msza_extra' | 'nabozenstwo' | 'zbiorka'
 
 export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
-  msza_assigned: 'Msza Święta z dyżurem',
-  msza_extra:    'Msza Święta poza dyżurem',
+  msza_assigned: 'Msza Święta z dyżurem (zapisany)',
+  msza_extra:    'Msza Święta bez zapisu (dodatkowa)',
   nabozenstwo:   'Nabożeństwo',
   zbiorka:       'Zbiórka',
 }

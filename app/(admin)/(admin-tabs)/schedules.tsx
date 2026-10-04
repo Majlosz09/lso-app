@@ -21,6 +21,7 @@ type WeekSchedule = {
   date: string
   time: string
   category: ScheduleCategory
+  service_mode: string
   schedule_assignments: Assignment[]
 }
 type SlotItem = {
@@ -28,6 +29,8 @@ type SlotItem = {
   time: string
   title: string
   category: ScheduleCategory
+  /** none = bez obecności i punktów (nie alarmujemy o braku obsady) */
+  mode: string
   isTemplate: boolean
   schedule: WeekSchedule | null
   names: string[]
@@ -63,7 +66,7 @@ export default function SchedulesTab() {
     setLoading(true)
     supabase
       .from('schedules')
-      .select('id, title, date, time, category, schedule_assignments(status, profile:profiles(full_name))')
+      .select('id, title, date, time, category, service_mode, schedule_assignments(status, profile:profiles(full_name))')
       .eq('parish_id', profile.parish_id)
       .gte('date', days[0])
       .lte('date', days[6])
@@ -83,6 +86,7 @@ export default function SchedulesTab() {
       time: s.time.slice(0, 5),
       title: s.title,
       category: s.category ?? 'msza',
+      mode: s.service_mode ?? 'signup',
       isTemplate: false,
       schedule: s,
       names: s.schedule_assignments.filter(a => !INACTIVE.includes(a.status)).map(a => a.profile?.full_name ?? '').filter(Boolean),
@@ -92,12 +96,12 @@ export default function SchedulesTab() {
       .filter(t => t.slot_date === date && !times.has(String(t.slot_time).slice(0, 5)))
       .map(t => ({
         key: `tpl-${date}-${t.entry_id}`, time: String(t.slot_time).slice(0, 5), title: slotTitle(t),
-        category: t.category as ScheduleCategory, isTemplate: true, schedule: null, names: [],
+        category: t.category as ScheduleCategory, mode: t.service_mode, isTemplate: true, schedule: null, names: [],
       }))
     return { date, slots: [...scheduled, ...tpl].sort((a, b) => a.time.localeCompare(b.time)) }
   }), [days, schedules, slots])
 
-  const allSlots = grouped.flatMap(g => g.slots)
+  const allSlots = grouped.flatMap(g => g.slots).filter(s => s.mode !== 'none')
   const staffedCount = allSlots.filter(s => s.names.length > 0).length
 
   // Wolne miejsce z rozkładu Mszy → tworzy służbę i otwiera jej szczegóły (jak dotąd)
@@ -143,10 +147,12 @@ export default function SchedulesTab() {
     </Sheet>
   )
 
-  const staffText = (s: SlotItem) => s.isTemplate
+  const staffText = (s: SlotItem) => s.mode === 'none' && !s.names.length
+    ? 'bez punktów'
+    : s.isTemplate
     ? 'wolne miejsce z rozkładu'
     : s.names.length ? `${s.names.length} ${pl(s.names.length, ['ministrant', 'ministrantów', 'ministrantów'])}` : 'bez obsady'
-  const staffColor = (s: SlotItem) => (s.names.length ? c.success : s.isTemplate ? c.goldInk : c.dangerStrong)
+  const staffColor = (s: SlotItem) => (s.names.length ? c.success : s.mode === 'none' ? c.subtext : s.isTemplate ? c.goldInk : c.dangerStrong)
 
   // ── Web: siatka tygodnia ─────────────────────────────────────────────────
   if (isDesktop) {

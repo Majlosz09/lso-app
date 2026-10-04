@@ -80,18 +80,19 @@ export const useNotificationsStore = create<State>((set, get) => ({
 export function notificationHref(n: AppNotification, role: 'member' | 'parent' | 'admin'): string {
   if (role === 'admin') {
     if (n.type === 'excuse_request') return '/(admin)/absence-requests'
+    if (n.type === 'attendance_report') return '/(admin)/absence-requests?tab=reports'
     if (n.type === 'member_pending') return '/(admin)/(admin-tabs)/members'
     return '/(admin)/(admin-tabs)'
   }
   if (role === 'parent') {
     if (n.type === 'announcement') return '/(parent)/(parent-tabs)/announcements'
     if (n.type === 'points') return '/(parent)/(parent-tabs)/points'
-    if (n.type === 'assignment' || n.type === 'excuse_decision') return '/(parent)/(parent-tabs)/schedule'
+    if (['assignment', 'excuse_decision', 'schedule_change', 'attendance_report_decision'].includes(n.type)) return '/(parent)/(parent-tabs)/schedule'
     return '/(parent)/(parent-tabs)'
   }
   if (n.type === 'announcement') return '/(tabs)/announcements'
   if (n.type === 'points') return '/(tabs)/points'
-  if (n.type === 'assignment' || n.type === 'excuse_decision') return '/(tabs)/schedule'
+  if (['assignment', 'excuse_decision', 'schedule_change', 'attendance_report_decision'].includes(n.type)) return '/(tabs)/schedule'
   return '/(tabs)'
 }
 
@@ -105,4 +106,7 @@ export const NOTIFICATION_ICON: Record<string, string> = {
   account_approved: 'account-check',
   swap_request: 'swap-horizontal',
   swap_response: 'swap-horizontal',
+  schedule_change: 'calendar-clock',
+  attendance_report: 'account-check',
+  attendance_report_decision: 'account-check',
 }

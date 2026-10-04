@@ -5,7 +5,8 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
-import { MassTemplate, ScheduleCategory, CATEGORY_CONFIG } from '../../types/database'
+import { ScheduleCategory, CATEGORY_CONFIG } from '../../types/database'
+import { SERVICE_MODE_INFO, ServiceMode } from '../../lib/massSchedule'
 import { DatePickerModal } from '../../components/DatePickerModal'
 import { TimePickerModal } from '../../components/TimePickerModal'
 import { useTheme } from '../../lib/ThemeContext'
@@ -39,26 +40,26 @@ export default function ScheduleForm() {
   const [time, setTime] = useState(initTime ?? '')
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [templates, setTemplates] = useState<MassTemplate[]>([])
+  const [slotTimes, setSlotTimes] = useState<string[]>([])
+  const [mode, setMode] = useState<ServiceMode | null>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const days = useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(today, i)), [today])
 
+  // godziny z obowiązującego rozkładu w wybrany dzień (z uwzględnieniem zmian okresowych)
   useEffect(() => {
-    if (profile?.parish_id) {
-      supabase.from('mass_templates').select('*')
-        .eq('parish_id', profile.parish_id)
-        .order('day_of_week').order('time')
-        .then(({ data }) => setTemplates((data as MassTemplate[]) ?? []))
-    }
-  }, [profile?.parish_id])
+    if (!profile?.parish_id) return
+    supabase.rpc('mass_slots', { p_parish: profile.parish_id, p_from: date, p_to: date })
+      .then(({ data }) => setSlotTimes(((data ?? []) as any[]).map(t => String(t.slot_time).slice(0, 5))))
+  }, [profile?.parish_id, date])
+  // domyślnie: Msza = zapisy, nabożeństwo / zbiórka = grafik opiekuna
+  const effectiveMode: ServiceMode = mode ?? (category === 'msza' ? 'signup' : 'assigned')
 
   const effectiveTitle = titleTouched ? title : DEFAULT_TITLE[category]
-  const suggested = useMemo(() => {
-    const dow = new Date(date + 'T12:00:00').getDay()
-    const fromTpl = templates.filter(t => t.day_of_week === dow).map(t => t.time.slice(0, 5))
-    return Array.from(new Set([...fromTpl, ...COMMON_TIMES, ...(time ? [time] : [])])).sort()
-  }, [templates, date, time])
+  const suggested = useMemo(
+    () => Array.from(new Set([...slotTimes, ...COMMON_TIMES, ...(time ? [time] : [])])).sort(),
+    [slotTimes, time],
+  )
 
   const handleSubmit = async () => {
     if (!effectiveTitle.trim()) { Toast.show({ type: 'error', text1: 'Wpisz tytuł służby' }); return }
@@ -72,6 +73,7 @@ export default function ScheduleForm() {
       date,
       time: time + ':00',
       category,
+      service_mode: effectiveMode,
       location: '',
       gps_radius: 100,
       notes: notes.trim() || null,
@@ -121,6 +123,16 @@ export default function ScheduleForm() {
           {suggested.map(t => <Chip key={t} label={t} selected={time === t} onPress={() => setTime(t)} />)}
           <Chip icon="clock-outline" label="Inna…" onPress={() => setShowTimePicker(true)} />
         </View>
+      </View>
+
+      <View style={styles.group}>
+        <AppText variant="label" muted>Zapisy, obecność i punkty</AppText>
+        <View style={styles.chips}>
+          {(['signup', 'assigned', 'none'] as ServiceMode[]).map(m => (
+            <Chip key={m} label={SERVICE_MODE_INFO[m].short} selected={effectiveMode === m} onPress={() => setMode(m)} />
+          ))}
+        </View>
+        <AppText variant="small" muted>{SERVICE_MODE_INFO[effectiveMode].hint}</AppText>
       </View>
 
       <TextField

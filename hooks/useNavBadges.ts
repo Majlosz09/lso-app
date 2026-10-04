@@ -21,7 +21,7 @@ export function useNavBadges(role: NavRole, enabled = true): NavBadges {
         const { data: ch } = await chatReq
         return { chat: sumUnread(ch) }
       }
-      const [{ data: ch }, { data: pending }, { count }] = await Promise.all([
+      const [{ data: ch }, { data: pending }, { count }, { count: reports }] = await Promise.all([
         chatReq,
         supabase.rpc('get_pending_members'),
         supabase
@@ -29,11 +29,14 @@ export function useNavBadges(role: NavRole, enabled = true): NavBadges {
           .select('id, schedule:schedules!inner(parish_id)', { count: 'exact', head: true })
           .eq('status', 'excused')
           .eq('schedule.parish_id', parishId!),
+        supabase.from('attendance_reports').select('id', { count: 'exact', head: true })
+          .eq('parish_id', parishId!).eq('status', 'pending'),
       ])
       return {
         chat: sumUnread(ch),
         pending: Array.isArray(pending) ? pending.length : 0,
-        excuses: count ?? 0,
+        // usprawiedliwienia + zgłoszenia obecności (jeden ekran „Zgłoszenia”)
+        excuses: (count ?? 0) + (reports ?? 0),
       }
     },
   })

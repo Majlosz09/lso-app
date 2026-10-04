@@ -13,7 +13,8 @@ import { headerPalette, sans, serif, VESTMENT_NAMES, VestmentColor } from '../..
 import { getLiturgicalDay } from '../../lib/liturgy'
 import { longDate, longDateCap } from '../../lib/dates'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
-import { AppText, Avatar, Button, Card, HeaderChip, Icon, ListRow, Sheet, TextField } from '../../components/ui'
+import { AppText, Avatar, Button, Card, Chip, HeaderChip, Icon, ListRow, Sheet, TextField } from '../../components/ui'
+import { SERVICE_MODE_INFO, ServiceMode } from '../../lib/massSchedule'
 import { AdminRolesCard } from '../../components/services/RolesCard'
 
 type Assignment = {
@@ -31,6 +32,7 @@ type ScheduleDetail = {
   date: string
   time: string
   category: ScheduleCategory
+  service_mode: ServiceMode
   notes: string | null
   series_id: string | null
   group: { name: string } | null
@@ -65,12 +67,20 @@ export default function ScheduleDetailScreen() {
   const [draftIds, setDraftIds] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
 
+  const changeMode = async (m: ServiceMode) => {
+    if (!schedule || schedule.service_mode === m) return
+    const { error } = await supabase.from('schedules').update({ service_mode: m }).eq('id', schedule.id)
+    if (error) { Toast.show({ type: 'error', text1: 'Nie zapisano', text2: error.message }); return }
+    setSchedule({ ...schedule, service_mode: m })
+    Toast.show({ type: 'success', text1: SERVICE_MODE_INFO[m].label })
+  }
+
   const fetchSchedule = async () => {
     const [scheduleRes, attendanceRes] = await Promise.all([
       supabase
         .from('schedules')
         .select(`
-          id, title, date, time, category, notes, series_id,
+          id, title, date, time, category, service_mode, notes, series_id,
           group:groups(name),
           assignments:schedule_assignments(
             id, profile_id, role, status, absence_reason,
@@ -327,6 +337,18 @@ export default function ScheduleDetailScreen() {
             </View>
           )}
 
+          <Card style={styles.modeCard}>
+            <AppText variant="eyebrow" color={c.goldInk}>Zapisy, obecność i punkty</AppText>
+            <View style={styles.modeChips}>
+              {(['signup', 'assigned', 'none'] as ServiceMode[]).map(m => (
+                <Chip key={m} label={SERVICE_MODE_INFO[m].short} selected={schedule.service_mode === m} onPress={() => changeMode(m)} />
+              ))}
+            </View>
+            <AppText variant="small" muted>
+              {SERVICE_MODE_INFO[schedule.service_mode ?? 'signup'].hint + ' Dotyczy tylko tej służby — stały układ zmienisz w Rozkładzie Mszy.'}
+            </AppText>
+          </Card>
+
           {schedule.category === 'zbiorka' && (
             <Button label="Lista obecności na zbiórce" icon="check-all" onPress={openAttendanceList} />
           )}
@@ -524,6 +546,8 @@ export default function ScheduleDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  modeCard: { gap: 8 },
+  modeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   flex: { flex: 1, minWidth: 0 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   center2: { textAlign: 'center' },

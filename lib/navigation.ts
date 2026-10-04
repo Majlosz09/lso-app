@@ -26,7 +26,7 @@ export const NAV: Record<NavRole, NavItem[]> = {
     { key: 'home', label: 'Pulpit', icon: 'view-dashboard', href: '/(admin)/(admin-tabs)', paths: ['/'] },
     { key: 'schedules', label: 'Grafik', icon: 'calendar-month', href: '/(admin)/(admin-tabs)/schedules', paths: ['/schedules', '/schedule-detail', '/schedule-form', '/schedule-series', '/schedule-day', '/recurring-assignments'] },
     { key: 'members', label: 'Członkowie', icon: 'account-group', href: '/(admin)/(admin-tabs)/members', paths: ['/members', '/member-detail', '/rank-assignment'], badge: 'pending' },
-    { key: 'excuses', label: 'Usprawiedliwienia', icon: 'calendar-remove', href: '/(admin)/absence-requests', paths: ['/absence-requests'], badge: 'excuses' },
+    { key: 'excuses', label: 'Zgłoszenia', icon: 'calendar-remove', href: '/(admin)/absence-requests', paths: ['/absence-requests'], badge: 'excuses' },
     { key: 'points', label: 'Punkty', icon: 'trophy', href: '/(admin)/(admin-tabs)/points', paths: ['/points', '/award-points', '/badge-management'] },
     { key: 'statistics', label: 'Statystyki', icon: 'chart-bar', href: '/(admin)/statistics', paths: ['/statistics'] },
     { key: 'announcements', label: 'Ogłoszenia', icon: 'bullhorn', href: '/(admin)/(admin-tabs)/announcements', paths: ['/announcements'] },

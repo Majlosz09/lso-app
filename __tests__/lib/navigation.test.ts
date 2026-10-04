@@ -4,7 +4,7 @@ describe('navigation', () => {
   it('menus per role match the handoff', () => {
     expect(NAV.member.map(i => i.label)).toEqual(['Pulpit', 'Grafik', 'Punkty', 'Czat', 'Ogłoszenia', 'Wiedza'])
     expect(NAV.admin.map(i => i.label)).toEqual([
-      'Pulpit', 'Grafik', 'Członkowie', 'Usprawiedliwienia', 'Punkty', 'Statystyki', 'Ogłoszenia', 'Czat', 'Ustawienia parafii',
+      'Pulpit', 'Grafik', 'Członkowie', 'Zgłoszenia', 'Punkty', 'Statystyki', 'Ogłoszenia', 'Czat', 'Ustawienia parafii',
     ])
     expect(NAV.parent.map(i => i.label)).toEqual(['Dom', 'Dyżury dzieci', 'Punkty', 'Ogłoszenia', 'Czat'])
   })

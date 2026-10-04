@@ -34,6 +34,11 @@ export default function AdminHome() {
       title: `${data.excuses.count} ${pl(data.excuses.count, ['usprawiedliwienie', 'usprawiedliwienia', 'usprawiedliwień'])}`,
       sub: data.excuses.names.slice(0, 4).join(', '), href: '/(admin)/absence-requests',
     },
+    data.attendanceReports.count > 0 && {
+      key: 'ar', icon: 'account-question', tone: 'gold',
+      title: `${data.attendanceReports.count} ${pl(data.attendanceReports.count, ['zgłoszenie', 'zgłoszenia', 'zgłoszeń'])} obecności`,
+      sub: data.attendanceReports.names.slice(0, 4).join(', '), href: '/(admin)/absence-requests?tab=reports',
+    },
     data.pending.count > 0 && {
       key: 'pe', icon: 'account-plus', tone: 'gold',
       title: `${data.pending.count} ${pl(data.pending.count, ['osoba', 'osoby', 'osób'])} do zatwierdzenia`,

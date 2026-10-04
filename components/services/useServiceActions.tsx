@@ -304,7 +304,17 @@ export function useServiceActions(onChanged: () => void) {
     </>
   )
 
-  return { checkIn, openSignUp, openUnsign, openAbsence, openSwap, pendingSwap, cancelSwap, busyId, sheets, mode, methods, primary, onChanged }
+  // ── Zgłoszenie obecności po fakcie (do 48 h, zatwierdza opiekun) ──
+  const reportAttendance = async (s: Service) => {
+    setBusyId(s.id)
+    const { error } = await supabase.rpc('report_attendance', { p_date: s.date, p_time: s.time, p_category: s.category })
+    setBusyId(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Nie wysłano', text2: error.message }); return }
+    Toast.show({ type: 'success', text1: 'Zgłoszenie wysłane do opiekuna', text2: 'Punkty dostaniesz po zatwierdzeniu.' })
+    onChanged()
+  }
+
+  return { reportAttendance, checkIn, openSignUp, openUnsign, openAbsence, openSwap, pendingSwap, cancelSwap, busyId, sheets, mode, methods, primary, onChanged }
 }
 
 const styles = StyleSheet.create({

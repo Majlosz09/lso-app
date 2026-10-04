@@ -13,6 +13,7 @@ import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { Service, useServices } from '../../hooks/useServices'
 import { useServiceActions } from '../../components/services/useServiceActions'
 import { AppText, Button, Card, Chip, Icon } from '../../components/ui'
+import { ReportAttendanceSheet, reportable } from '../../components/services/ReportAttendanceSheet'
 
 const NAVY = '#071C3A'
 const MUTED = '#C9D3E3'
@@ -25,14 +26,15 @@ const COPY: Record<string, { title: string; accent: string; icon: string; hint: 
   admin: { title: 'Obecność', accent: 'zaznacza opiekun', icon: 'shield-check', hint: 'W tej parafii listę obecności odhacza ksiądz lub opiekun po służbie.' },
 }
 
-/** Pierwsza służba z otwartym oknem meldowania (najpierw moje), inaczej najbliższa moja. */
-function pickService(services: Service[], mode: string): { service?: Service; ready: boolean } {
-  const open = services.filter(s => serviceAvailability(s, mode).canCheckIn)
-  const ready = open.find(s => s.mine) ?? open[0]
-  if (ready) return { service: ready, ready: true }
+/** Służby z otwartym oknem meldowania (najpierw moje), inaczej najbliższa moja. */
+function pickService(services: Service[], mode: string): { open: Service[]; service?: Service; ready: boolean } {
+  const open = services
+    .filter(s => serviceAvailability(s, mode).canCheckIn)
+    .sort((a, b) => Number(!!b.mine) - Number(!!a.mine) || a.time.localeCompare(b.time))
+  if (open.length) return { open, service: open[0], ready: true }
   const now = Date.now()
   const upcoming = services.find(s => s.mine && !s.attended && new Date(`${s.date}T${s.time}`).getTime() > now)
-  return { service: upcoming, ready: false }
+  return { open, service: upcoming, ready: false }
 }
 
 export default function AttendanceScreen() {
@@ -42,13 +44,19 @@ export default function AttendanceScreen() {
   const { colors: c } = useTheme()
   const parish = useAuthStore(s => s.parish)
   const today = localDateStr()
-  const { services, loading, refresh } = useServices(today, addDays(today, 7))
+  // od przedwczoraj — do zgłoszeń obecności po fakcie (48 h)
+  const { services, loading, refresh } = useServices(addDays(today, -2), addDays(today, 7))
+  const [reportOpen, setReportOpen] = useState(false)
+  const [chosenId, setChosenId] = useState<string | null>(null)
   const actions = useServiceActions(refresh)
   // metoda główna parafii; pozostałe włączone metody jako „Inna metoda”
   const [method, setMethod] = useState<AttendanceMethod | null>(actions.primary)
   useEffect(() => { setMethod(actions.primary) }, [actions.primary])
   const mode = actions.mode === 'admin' ? 'admin' : (method ?? 'button')
-  const { service, ready } = useMemo(() => pickService(services, actions.mode), [services, actions.mode])
+  const picked = useMemo(() => pickService(services, actions.mode), [services, actions.mode])
+  const ready = picked.ready
+  const service = picked.open.find(s => s.id === chosenId) ?? picked.service
+  const canReport = services.some(s => reportable(s))
   const copy = COPY[mode] ?? COPY.button
   const attendedToday = services.find(s => s.date === today && s.attended)
 
@@ -99,6 +107,24 @@ export default function AttendanceScreen() {
         <View style={styles.bottom}>
           {loading ? (
             <ActivityIndicator color={c.gold} />
+          ) : picked.open.length > 1 ? (
+            <View style={styles.choices}>
+              <AppText style={styles.hintSmall}>Na czym jesteś?</AppText>
+              {picked.open.map(s => {
+                const on = s.id === service?.id
+                return (
+                  <Pressable key={s.id} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => setChosenId(s.id)}>
+                    <Card style={[styles.svcCard, on && { borderColor: c.gold, borderWidth: 2 }]}>
+                      <Icon name={on ? 'radiobox-marked' : 'radiobox-blank'} size={22} color={on ? c.goldInk : c.subtext} filled />
+                      <View style={styles.flex}>
+                        <AppText variant="bodyStrong" numberOfLines={1}>{`${s.title} · ${s.time}`}</AppText>
+                        <AppText variant="small" muted>{s.mine ? 'Twój dyżur' : 'bez zapisu — liczy się jak służba dodatkowa'}</AppText>
+                      </View>
+                    </Card>
+                  </Pressable>
+                )
+              })}
+            </View>
           ) : service ? (
             <Card large style={styles.svcCard}>
               <View style={[styles.dateTile, { backgroundColor: c.primary }]}>
@@ -108,7 +134,7 @@ export default function AttendanceScreen() {
               <View style={styles.flex}>
                 <AppText variant="bodyStrong" numberOfLines={1}>{`${service.title} · ${service.time}`}</AppText>
                 <AppText variant="small" muted>
-                  {`${dayShort(service.date)} ${shortDate(service.date)} · ${service.mine ? 'Twój dyżur' : 'bez przydziału'}`}
+                  {`${dayShort(service.date)} ${shortDate(service.date)} · ${service.mine ? 'Twój dyżur' : 'bez zapisu — liczy się jak służba dodatkowa'}`}
                 </AppText>
               </View>
             </Card>
@@ -138,9 +164,16 @@ export default function AttendanceScreen() {
           ) : (
             <Button label="Przejdź do grafiku" variant="outlineLight" onPress={() => router.replace('/(tabs)/schedule')} />
           )}
+          {canReport && (
+            <Pressable accessibilityRole="button" onPress={() => setReportOpen(true)} style={styles.reportLink}>
+              <Icon name="account-question" size={18} color={GOLD_I} />
+              <AppText style={styles.reportText}>Byłeś, ale nie potwierdziłeś? Zgłoś obecność</AppText>
+            </Pressable>
+          )}
         </View>
       </ScrollView>
       {actions.sheets}
+      <ReportAttendanceSheet visible={reportOpen} onClose={() => setReportOpen(false)} services={services} onSent={refresh} />
     </View>
   )
 }
@@ -161,6 +194,9 @@ const styles = StyleSheet.create({
   frameText: { ...sans(700), fontSize: 13, color: MUTED },
   hint: { ...sans(500), fontSize: 14, lineHeight: 21, color: MUTED, textAlign: 'center', maxWidth: 320 },
   methods: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  choices: { gap: 8 },
+  reportLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10 },
+  reportText: { ...sans(700), fontSize: 13, color: GOLD_I, textDecorationLine: 'underline' },
   hintSmall: { ...sans(500), fontSize: 12, color: '#8497B5', textAlign: 'center' },
   bottom: { gap: 12 },
   svcCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },

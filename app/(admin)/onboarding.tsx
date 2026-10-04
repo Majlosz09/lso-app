@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { ServiceType, SERVICE_TYPE_LABELS, AttendanceMode } from '../../types/database'
+import { SERVICE_MODE_INFO, ServiceMode } from '../../lib/massSchedule'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import GpsLocationPicker from '../../components/GpsLocationPicker'
@@ -82,6 +83,7 @@ export default function OnboardingScreen() {
   const [selectedDay, setSelectedDay] = useState(0)
   const [timeInput, setTimeInput] = useState('')
   const [labelInput, setLabelInput] = useState('')
+  const [sundayMode, setSundayMode] = useState<ServiceMode>('assigned')
 
   const [pointValues, setPointValues] = useState<Record<ServiceType, string>>({
     msza_assigned: '5', msza_extra: '3', nabozenstwo: '3', zbiorka: '5',
@@ -131,7 +133,10 @@ export default function OnboardingScreen() {
 
     if (masses.length > 0) {
       const { error: massErr } = await supabase.from('mass_templates').insert(
-        masses.map(m => ({ parish_id: profile?.parish_id, day_of_week: m.day, time: m.time + ':00', label: m.label || null }))
+        masses.map(m => ({
+          parish_id: profile?.parish_id, day_of_week: m.day, time: m.time + ':00', label: m.label || null,
+          service_mode: m.day === 0 ? sundayMode : 'signup',
+        }))
       )
       if (massErr) { setSaving(false); Alert.alert('Błąd', 'Nie udało się zapisać rozkładu mszy.'); return }
     }
@@ -276,6 +281,23 @@ export default function OnboardingScreen() {
                 </View>
               ))
             )}
+
+            {masses.some(m => m.day === 0) && (
+              <View style={styles.daySection}>
+                <Text style={styles.daySectionHeader}>Niedziele — jak wygląda służba?</Text>
+                <View style={styles.dayChips}>
+                  {(['signup', 'assigned', 'none'] as ServiceMode[]).map(m => (
+                    <TouchableOpacity key={m} style={[styles.dayChip, sundayMode === m && styles.dayChipActive]} onPress={() => setSundayMode(m)}>
+                      <Text style={[styles.dayChipText, sundayMode === m && styles.dayChipTextActive]}>{SERVICE_MODE_INFO[m].short}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text style={styles.subtitle}>{SERVICE_MODE_INFO[sundayMode].hint}</Text>
+              </View>
+            )}
+            <Text style={styles.subtitle}>
+              Zmiany na wybrany czas (np. październik z różańcem) ustawisz później: Ustawienia parafii → Rozkład Mszy → Zmiany okresowe.
+            </Text>
           </>
         )}
 

@@ -113,7 +113,10 @@ export default function PointRulesScreen() {
     <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]}>
       <Card large style={styles.card}>
         <AppText variant="eyebrow" color={c.goldInk}>Punkty za służbę</AppText>
-        <AppText variant="small" muted>Przyznawane automatycznie po potwierdzeniu obecności.</AppText>
+        <AppText variant="small" muted>
+          Przyznawane automatycznie po potwierdzeniu obecności albo po przyjęciu zgłoszenia obecności.
+          „Bez zapisu” = ministrant przyszedł, choć nie był zapisany. Służby w trybie „Bez punktów” nie są punktowane (Rozkład Mszy).
+        </AppText>
         {SERVICE_TYPES.map((type, i) => (
           <View key={type} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.border }]}>
             <View style={[styles.iconTile, { backgroundColor: c.goldSurface }]}>

@@ -11,11 +11,13 @@ import { STATUS_LABELS } from '../../lib/status'
 import { CATEGORY_CONFIG } from '../../types/database'
 import { Service } from '../../hooks/useServices'
 import { AppText, Button, Card, Icon } from '../ui'
+import { reportable } from './ReportAttendanceSheet'
 import { staffingLabel } from './ServiceCard'
 import { MemberRolesCard } from './RolesCard'
 import { isPast } from '../../lib/dates'
 
 type Actions = {
+  reportAttendance?: (s: Service) => void
   checkIn: (s: Service) => void
   openSignUp: (s: Service) => void
   openUnsign: (s: Service) => void
@@ -124,8 +126,8 @@ export function ServiceDetail({ service: s, actions, compactHeader }: {
 
         <View style={styles.tiles}>
           <Card style={styles.tile}>
-            <AppText style={[styles.tileBig, { color: c.text }]}>{pts != null ? `+${pts} pkt` : '—'}</AppText>
-            <AppText variant="small" muted>za obecność</AppText>
+            <AppText style={[styles.tileBig, { color: c.text }]}>{s.serviceMode === 'none' ? '—' : pts != null ? `+${pts} pkt` : '—'}</AppText>
+            <AppText variant="small" muted>{s.serviceMode === 'none' ? 'bez punktów' : 'za obecność'}</AppText>
           </Card>
           <Card style={styles.tile}>
             <AppText style={[styles.tileBig, { color: c.text, fontSize: 15 }]}>
@@ -145,6 +147,21 @@ export function ServiceDetail({ service: s, actions, compactHeader }: {
           </View>
         )}
 
+        {s.serviceMode === 'none' && (
+          <View style={[styles.note, { backgroundColor: c.borderLight }]}>
+            <Icon name="minus-circle" size={20} color={c.subtext} />
+            <AppText style={[styles.noteText, { color: c.subtext }]}>Na tej służbie nie ma zapisów, obecności ani punktów.</AppText>
+          </View>
+        )}
+        {s.serviceMode === 'assigned' && !s.mine && !isPast(s.date, s.time) && (
+          <View style={[styles.note, { backgroundColor: c.borderLight }]}>
+            <Icon name="clipboard-account" size={20} color={c.subtext} />
+            <AppText style={[styles.noteText, { color: c.subtext }]}>
+              Obsadę ustala opiekun — zapisy są wyłączone. Jeśli przyjdziesz, potwierdź obecność na miejscu (liczy się jak służba dodatkowa).
+            </AppText>
+          </View>
+        )}
+
         {avail.adminMarks && (
           <View style={[styles.note, { backgroundColor: c.borderLight }]}>
             <Icon name="shield-check" size={20} color={c.subtext} />
@@ -155,6 +172,9 @@ export function ServiceDetail({ service: s, actions, compactHeader }: {
         <View style={styles.actions}>
           {avail.canCheckIn && (
             <Button label="Potwierdź obecność" icon="account-check" onPress={() => actions.checkIn(s)} loading={busy} />
+          )}
+          {!avail.canCheckIn && actions.reportAttendance && isPast(s.date, s.time) && reportable(s) && (
+            <Button label="Byłem — zgłoś obecność" icon="account-question" variant="secondary" onPress={() => actions.reportAttendance!(s)} loading={busy} />
           )}
           {avail.canSignUp && (
             <Button label="Zapisz się" icon="plus" onPress={() => actions.openSignUp(s)} loading={busy} />

@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
 import Toast from 'react-native-toast-message'
-import { Stack } from 'expo-router'
+import { Stack, useLocalSearchParams } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans } from '../../lib/theme'
 import { dayShort, longDate, pl, shortDate } from '../../lib/dates'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
-import { AppText, Avatar, Badge, Button, Card, Icon, Sheet } from '../../components/ui'
+import { AppText, Avatar, Badge, Button, Card, Icon, Segmented, Sheet } from '../../components/ui'
+import { AttendanceReportsList } from '../../components/admin/AttendanceReportsList'
 
 const REJECTION_NOTE =
   'Usprawiedliwienie nie zostało zatwierdzone. Skontaktuj się z księdzem, aby wyjaśnić sytuację.'
@@ -32,6 +33,16 @@ export default function AbsenceRequestsScreen() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [confirm, setConfirm] = useState<Pending | null>(null)
+  const params = useLocalSearchParams<{ tab?: string }>()
+  const [tab, setTab] = useState<'absence' | 'reports'>(params.tab === 'reports' ? 'reports' : 'absence')
+  const [reportCount, setReportCount] = useState<number | null>(null)
+  useEffect(() => { if (params.tab === 'reports') setTab('reports') }, [params.tab])
+  useEffect(() => {
+    if (!profile?.parish_id) return
+    supabase.from('attendance_reports').select('id', { count: 'exact', head: true })
+      .eq('parish_id', profile.parish_id).eq('status', 'pending')
+      .then(({ count }) => setReportCount(c => c ?? count ?? 0))
+  }, [profile?.parish_id])
 
   const fetchRequests = async () => {
     try {
@@ -116,8 +127,17 @@ export default function AbsenceRequestsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: 'Usprawiedliwienia' }} />
+      <Stack.Screen options={{ title: 'Zgłoszenia' }} />
       <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]}>
+        <Segmented<'absence' | 'reports'>
+          options={[
+            { value: 'absence', label: `Nieobecności${requests.length ? ` (${requests.length})` : ''}` },
+            { value: 'reports', label: `Obecności${reportCount ? ` (${reportCount})` : ''}` },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+        {tab === 'reports' ? <AttendanceReportsList isDesktop={isDesktop} onCount={setReportCount} /> : <>
         <View style={styles.top}>
           <Badge label={`${requests.length} do rozpatrzenia`} tone={requests.length ? 'gold' : 'muted'} />
           {requests.length >= 2 && (
@@ -125,6 +145,7 @@ export default function AbsenceRequestsScreen() {
           )}
         </View>
         {body}
+        </>}
       </ScrollView>
       <Sheet
         visible={!!confirm}
