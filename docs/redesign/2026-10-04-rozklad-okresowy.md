@@ -52,3 +52,11 @@ Demo: `node scripts/rozklad-demo-dev.mjs` — „Październik — różaniec” 
    zostanie odrzucony przez `sign_up_for_slot` z czytelnym komunikatem.
 4. Istniejące niedziele dostają tryb „Grafik” (jak dotąd: obsada od opiekuna) — teraz ministrant może się na nich
    zameldować bez zapisu (Msza dodatkowa). Parafia, która nie chce punktów w niedziele, ustawia „Bez punktów”.
+
+## Rok liturgiczny w rozkładzie (2026-10-05)
+
+Migracja `20261005000000_rozklad_liturgiczny.sql`: baza liczy Wielkanoc i święta na każdy rok (`easter_date`,
+`liturgical_anchor`, `liturgical_anchors`), zmiany okresowe mają rodzaj `dates` / `season` / `feasts` i opcję
+„jak w niedzielę” (`copy_dow`). Smoke: `node scripts/rozklad-liturgia-smoke-dev.mjs` (daty z bazy = kalendarz
+aplikacji 2026–2060). Przy wdrożeniu na produkcję: istniejącym parafiom zaproponować (albo dodać) okres
+„Uroczystości nakazane (porządek niedzielny)” — nowe parafie dostają go w kreatorze.
