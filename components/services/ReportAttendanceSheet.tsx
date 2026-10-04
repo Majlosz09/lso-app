@@ -28,7 +28,7 @@ export function ReportAttendanceSheet({ visible, onClose, services, onSent }: Pr
   const { colors: c } = useTheme()
   const today = localDateStr()
   const candidates = useMemo(
-    () => services.filter(s => reportable(s)).sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time)).slice(0, 8),
+    () => services.filter(s => reportable(s)).sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time)).slice(0, 5),
     [services, visible],
   )
   const [pick, setPick] = useState<string | 'other' | null>(null)

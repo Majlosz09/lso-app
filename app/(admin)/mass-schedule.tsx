@@ -241,7 +241,7 @@ export default function MassScheduleScreen() {
               <Chip label="Cały tydzień" onPress={() => setFormDays(ALL_DAYS)} />
             </View>
             <AppText variant="small" muted>
-              {`${rangeText(form)} · ${daysText(form.days)}${activeNow ? ' · obowiązuje teraz' : ''}. ` +
+              {`${rangeText(form)} · ${daysText(form.days)}${activeNow ? ' · trwa teraz' : ''}. ` +
                 'W te dni poniższy układ ZASTĘPUJE stały rozkład. Pusty dzień = brak Mszy (odwołane).'}
             </AppText>
             <Button compact variant="ghost" icon="restore" label="Wypełnij stałym rozkładem"
@@ -332,7 +332,7 @@ export default function MassScheduleScreen() {
                 <Card key={p.id} large onPress={() => openPeriod(p)} style={[styles.card, ended && { opacity: 0.6 }]}>
                   <View style={styles.row}>
                     <AppText variant="bodyStrong" style={styles.flex}>{p.name}</AppText>
-                    {now && <AppText variant="small" color={c.success}>obowiązuje teraz</AppText>}
+                    {now && <AppText variant="small" color={c.success}>trwa teraz</AppText>}
                     {ended && <AppText variant="small" muted>zakończona</AppText>}
                     <Icon name="chevron-right" size={20} color={c.subtext} />
                   </View>
