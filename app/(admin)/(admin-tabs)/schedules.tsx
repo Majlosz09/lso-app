@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { supabase } from '../../../lib/supabase'
+import { slotTitle } from '../../../lib/massSchedule'
 import { useAuthStore } from '../../../stores/authStore'
-import { MassTemplate, ScheduleCategory, CATEGORY_CONFIG } from '../../../types/database'
+import { ScheduleCategory, CATEGORY_CONFIG } from '../../../types/database'
 import { useTheme } from '../../../lib/ThemeContext'
 import { sans, serif, VESTMENT_DOT, VestmentColor } from '../../../lib/theme'
 import { getLiturgicalDay } from '../../../lib/liturgy'
@@ -42,7 +43,7 @@ export default function SchedulesTab() {
   const { palette } = useLiturgyHeader()
   const [weekOffset, setWeekOffset] = useState(0)
   const [schedules, setSchedules] = useState<WeekSchedule[]>([])
-  const [templates, setTemplates] = useState<MassTemplate[]>([])
+  const [slots, setSlots] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [creatingSlotKey, setCreatingSlotKey] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
@@ -50,11 +51,12 @@ export default function SchedulesTab() {
   const days = useMemo(() => weekOf(weekOffset), [weekOffset])
   const today = localDateStr()
 
+  // obowiązujący rozkład tygodnia (stały + zmiany okresowe)
   useEffect(() => {
     if (!profile?.parish_id) return
-    supabase.from('mass_templates').select('*').eq('parish_id', profile.parish_id).order('day_of_week').order('time')
-      .then(({ data }) => { if (data) setTemplates(data as MassTemplate[]) })
-  }, [profile?.parish_id])
+    supabase.rpc('mass_slots', { p_parish: profile.parish_id, p_from: days[0], p_to: days[6] })
+      .then(({ data }) => { if (data) setSlots(data as any[]) })
+  }, [profile?.parish_id, days])
 
   const loadSchedules = useCallback(() => {
     if (!profile?.parish_id) return
@@ -76,7 +78,6 @@ export default function SchedulesTab() {
   useFocusEffect(useCallback(() => { loadSchedules() }, [loadSchedules]))
 
   const grouped = useMemo(() => days.map(date => {
-    const dow = new Date(date + 'T12:00:00').getDay()
     const scheduled: SlotItem[] = schedules.filter(s => s.date === date).map(s => ({
       key: s.id,
       time: s.time.slice(0, 5),
@@ -87,14 +88,14 @@ export default function SchedulesTab() {
       names: s.schedule_assignments.filter(a => !INACTIVE.includes(a.status)).map(a => a.profile?.full_name ?? '').filter(Boolean),
     }))
     const times = new Set(scheduled.map(s => s.time))
-    const tpl: SlotItem[] = templates
-      .filter(t => t.day_of_week === dow && !times.has(t.time.slice(0, 5)))
+    const tpl: SlotItem[] = slots
+      .filter(t => t.slot_date === date && !times.has(String(t.slot_time).slice(0, 5)))
       .map(t => ({
-        key: `tpl-${date}-${t.id}`, time: t.time.slice(0, 5), title: t.label ?? 'Msza Święta',
-        category: 'msza' as ScheduleCategory, isTemplate: true, schedule: null, names: [],
+        key: `tpl-${date}-${t.entry_id}`, time: String(t.slot_time).slice(0, 5), title: slotTitle(t),
+        category: t.category as ScheduleCategory, isTemplate: true, schedule: null, names: [],
       }))
     return { date, slots: [...scheduled, ...tpl].sort((a, b) => a.time.localeCompare(b.time)) }
-  }), [days, schedules, templates])
+  }), [days, schedules, slots])
 
   const allSlots = grouped.flatMap(g => g.slots)
   const staffedCount = allSlots.filter(s => s.names.length > 0).length

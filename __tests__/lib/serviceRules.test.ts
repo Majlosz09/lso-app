@@ -41,8 +41,11 @@ describe('serviceAvailability', () => {
     expect(r.adminMarks).toBe(true)
   })
 
-  it('sunday and attended services have no actions', () => {
-    expect(serviceAvailability({ ...base, date: '2026-10-04', time: '10:00' }, 'button', NOW).canSignUp).toBe(false)
+  it('service mode: assigned → check-in but no sign up; none → nothing; attended → nothing', () => {
+    expect(serviceAvailability({ ...base, serviceMode: 'assigned', date: '2026-10-04', time: '10:00' }, 'button', NOW).canSignUp).toBe(false)
+    expect(serviceAvailability({ ...base, serviceMode: 'assigned', date: '2026-09-29', time: '12:10' }, 'button', NOW).canCheckIn).toBe(true)
+    expect(serviceAvailability({ ...base, serviceMode: 'none', date: '2026-09-29', time: '12:10' }, 'button', NOW).canCheckIn).toBe(false)
+    expect(serviceAvailability({ ...base, serviceMode: 'signup', date: '2026-10-04', time: '10:00' }, 'button', NOW).canSignUp).toBe(true)
     const att = serviceAvailability({ ...base, attended: true, date: '2026-09-29', time: '12:10' }, 'button', NOW)
     expect(att.canCheckIn).toBe(false)
   })
@@ -53,7 +56,7 @@ describe('serviceAvailability', () => {
   })
 
   it('devotion (nabożeństwo) → check-in only in window, no sign up', () => {
-    const r = serviceAvailability({ ...base, category: 'nabozenstwo', date: '2026-09-30', time: '17:30' }, 'button', NOW)
+    const r = serviceAvailability({ ...base, category: 'nabozenstwo', serviceMode: 'assigned', date: '2026-09-30', time: '17:30' }, 'button', NOW)
     expect(r.canSignUp).toBe(false)
   })
 

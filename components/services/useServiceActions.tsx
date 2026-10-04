@@ -52,26 +52,15 @@ export function useServiceActions(onChanged: () => void) {
     setBusyId(s.id)
     let scheduleId = s.id
     if (s.isTemplate) {
-      // wolne miejsce z rozkładu Mszy — najpierw zapis (tworzy służbę), potem obecność
-      const { data, error } = await supabase.rpc('sign_up_for_slot', { p_date: s.date, p_time_label: s.time, p_mode: 'once' })
-      if (error && !error.message.includes('Już jesteś zapisany')) {
+      // pozycja z rozkładu bez służby w bazie — tworzymy służbę BEZ zapisu
+      // (meldowanie bez zapisu = punkty jak za Mszę dodatkową / nabożeństwo)
+      const { data, error } = await supabase.rpc('materialize_slot', { p_date: s.date, p_time_label: s.time })
+      if (error || !data) {
         setBusyId(null)
-        Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+        Toast.show({ type: 'error', text1: 'Błąd', text2: error?.message ?? 'Nie znaleziono służby.' })
         return
       }
-      if (data) {
-        scheduleId = (data as any).schedule_id
-      } else {
-        const { data: sch } = await supabase
-          .from('schedules').select('id')
-          .eq('parish_id', profile!.parish_id)
-          .eq('date', s.date)
-          .gte('time', s.time + ':00')
-          .lt('time', s.time + ':59')
-          .maybeSingle()
-        if (!sch) { setBusyId(null); Toast.show({ type: 'error', text1: 'Błąd', text2: 'Nie znaleziono służby.' }); return }
-        scheduleId = sch.id
-      }
+      scheduleId = data as string
     }
     const { data, error } = await supabase.rpc('check_in_and_award_points', {
       p_schedule_id: scheduleId,

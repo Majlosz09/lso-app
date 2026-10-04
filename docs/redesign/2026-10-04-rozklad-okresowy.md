@@ -1,0 +1,38 @@
+# Zmiany okresowe rozkładu + tryby służby + obecność bez zapisu (2026-10-04)
+
+Gałąź `redesign/v2`, tylko LSO-dev / lso-app-dev. Web + mobile.
+
+## Decyzje (z użytkownikiem)
+
+- **Tryb służby** (`service_mode`) na każdej pozycji rozkładu i na każdej służbie (`schedules`):
+  `signup` (zapisy + obecność + punkty) · `assigned` (obsadę ustala opiekun; obecność + punkty) · `none` (bez zapisów, obecności i punktów).
+  Niedziela = przełącznik trybu całego dnia (+ pytanie w onboardingu). Migracja: istniejące niedziele → `assigned` (dotychczasowe zachowanie),
+  istniejące nabożeństwa/zbiórki → `assigned`.
+- **Okresy** (`mass_periods` + `mass_period_entries`, OSOBNE tabele — wersja 1.1 czyta `mass_templates` bezpośrednio):
+  nazwa, od–do, `repeat_yearly`, `days_of_week`; na objęte dni ich pozycje ZASTĘPUJĄ stały rozkład. Pusty okres = odwołanie.
+  Nakładanie: krótszy okres wygrywa, przy równej długości nowszy. Pozycja okresu pamięta `base_template_id` → stałe zapisy idą za nią.
+- Pozycje rozkładu mają `category` (`msza` | `nabozenstwo`) — różaniec może być w rozkładzie.
+- Edytor (stały rozkład i okres — ten sam komponent, szkic + „Zapisz”): przesuń godziny ±min na wybranych dniach, usuń wszystko z dni,
+  tryb dla całego dnia, kopiuj dzień. Logika: `lib/massSchedule.ts` (+ testy).
+- Zapis zmian rozkładu: jedno RPC z `dry_run` → podgląd skutków (zapisy na znikające godziny). Domyślnie **przenieś na odpowiadającą /
+  najbliższą godzinę i powiadom**; alternatywy: odwołaj z powiadomieniem / zostaw. Puste zmaterializowane służby na znikających godzinach — usuń;
+  służby z obecnością — zostają. Tryb `none` na służbie z zapisami → zapisy odwołane z powiadomieniem.
+- Usunięcie obejścia 17:00/17:30 (miesiące 5, 6, 10) z `sign_up_for_slot`; stały zapis mapowany przez `origin_id`.
+  **Rollout na prod:** utworzyć dla parafii użytkownika okresy maj/czerwiec/październik zanim obejście zniknie.
+- `sign_up_for_slot` waliduje pozycję z obowiązującego rozkładu i tryb `signup`. Nowe `materialize_slot(date, time)` — tworzy służbę
+  bez przydziału (meldowanie bez zapisu → punkty „Msza (dodatkowa)” / „Nabożeństwo”, jak już liczy `check_in_and_award_points_impl`).
+  Dziś `doCheckIn` na wolnym miejscu najpierw się ZAPISUJE → liczy się jak dyżur — do poprawy.
+- `check_in_and_award_points` (wrapper): odmowa dla `service_mode = 'none'`.
+- **Obecność bez zapisu:** ekran Obecność = lista „Na czym jesteś?” (wszystkie służby z otwartym oknem, moje pierwsze).
+  **Zgłoszenie po fakcie** do 48 h po rozpoczęciu (`attendance_reports`, status pending/approved/rejected) → kolejka opiekuna
+  (obok usprawiedliwień), punkty dopiero po akceptacji (`decide_attendance_report` woła impl). Powiadomienia: `add_notification_with_parent`,
+  `add_notification_admins`.
+- `serviceRules`: reguła „niedziela = brak akcji” zastąpiona trybem służby; wypisać się można tylko w trybie `signup`.
+
+## Etapy
+
+A1 migracja (tabele, `mass_slots` SQL, `save_rozklad_change`, sign_up/materialize/wrapper) · A2 `useServices` + `serviceRules` na nowym
+wyliczaniu · A3 ekran rozkładu (zakładki Stały / Zmiany okresowe, edytor, kreator okresu) + tryb w schedule-form/detail + onboarding ·
+A4 podgląd skutków · B1 ekran Obecność · B2 zgłoszenia po fakcie + kolejka opiekuna · C seed demo (październik z różańcem), smoke, deploy dev.
+
+Stan: `lib/massSchedule.ts` + testy gotowe; reszta czeka na dostęp do LSO-dev.

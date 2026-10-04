@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useRealtimeTable } from './useRealtimeTable'
 import type { AssignmentStatus, ScheduleCategory } from '../types/database'
+import { ServiceMode, slotTitle } from '../lib/massSchedule'
 
 export type ServicePerson = { profileId: string; name: string; status: AssignmentStatus; isMe: boolean; role: string }
 
@@ -14,13 +15,15 @@ export type MyAssignment = {
 }
 
 export type Service = {
-  /** id służby albo `tpl-<data>-<id szablonu>` dla wolnego miejsca z rozkładu Mszy */
+  /** id służby albo `tpl-<data>-<godzina>` dla pozycji z rozkładu, dla której służba jeszcze nie istnieje */
   id: string
   date: string
   /** HH:MM */
   time: string
   title: string
   category: ScheduleCategory
+  /** zapisy / grafik opiekuna / bez obecności i punktów */
+  serviceMode: ServiceMode
   notes: string | null
   /** wolne miejsce z rozkładu Mszy (służba jeszcze nie istnieje w bazie) */
   isTemplate: boolean
@@ -49,16 +52,13 @@ export function useServices(from: string, to: string) {
     const [schedRes, tplRes] = await Promise.all([
       supabase
         .from('schedules')
-        .select('id, date, time, title, category, notes')
+        .select('id, date, time, title, category, service_mode, notes')
         .eq('parish_id', profile.parish_id)
         .gte('date', from)
         .lte('date', to)
         .order('date').order('time'),
-      supabase
-        .from('mass_templates')
-        .select('id, day_of_week, time, label')
-        .eq('parish_id', profile.parish_id)
-        .order('day_of_week').order('time'),
+      // obowiązujący rozkład (stały + zmiany okresowe)
+      supabase.rpc('mass_slots', { p_parish: profile.parish_id, p_from: from, p_to: to }),
     ])
     const schedules = (schedRes.data ?? []) as any[]
     const ids = schedules.map(s => s.id)
@@ -97,6 +97,7 @@ export function useServices(from: string, to: string) {
         time: (s.time ?? '').slice(0, 5),
         title: s.title,
         category: (s.category ?? 'msza') as ScheduleCategory,
+        serviceMode: (s.service_mode ?? 'signup') as ServiceMode,
         notes: s.notes ?? null,
         isTemplate: false,
         mine: mine
@@ -109,20 +110,17 @@ export function useServices(from: string, to: string) {
       }
     })
 
-    // Wolne miejsca z rozkładu Mszy tam, gdzie służba jeszcze nie powstała
-    const templates = (tplRes.data ?? []) as any[]
-    if (templates.length) {
+    // Pozycje rozkładu, dla których służba jeszcze nie powstała
+    const slots = (tplRes.data ?? []) as any[]
+    if (slots.length) {
       const taken = new Set(list.map(s => `${s.date}_${s.time}`))
-      for (let d = from; d <= to; d = nextDay(d)) {
-        const dow = new Date(d + 'T12:00:00').getDay()
-        for (const t of templates.filter(t => t.day_of_week === dow)) {
-          const time = t.time.slice(0, 5)
-          if (taken.has(`${d}_${time}`)) continue
-          list.push({
-            id: `tpl-${d}-${t.id}`, date: d, time, title: t.label ?? 'Msza Święta', category: 'msza',
-            notes: null, isTemplate: true, mine: null, attended: false, people: [],
-          })
-        }
+      for (const t of slots) {
+        const time = String(t.slot_time).slice(0, 5)
+        if (taken.has(`${t.slot_date}_${time}`)) continue
+        list.push({
+          id: `tpl-${t.slot_date}-${time}`, date: t.slot_date, time, title: slotTitle(t), category: t.category,
+          serviceMode: t.service_mode, notes: null, isTemplate: true, mine: null, attended: false, people: [],
+        })
       }
       list.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
     }
@@ -138,8 +136,3 @@ export function useServices(from: string, to: string) {
   return { services, loading, refresh: load }
 }
 
-function nextDay(d: string): string {
-  const x = new Date(d + 'T12:00:00')
-  x.setDate(x.getDate() + 1)
-  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
-}
