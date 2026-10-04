@@ -28,6 +28,21 @@ if (existing) {
   if (r.error) throw r.error
   console.log('Dodano okres', r.data.period_id, 'przeniesiono', r.data.moved)
 }
+// Rok liturgiczny: uroczystości nakazane jak w niedzielę + Adwent z Roratami (daty liczą się same)
+const ensure = async (name, period, entries = []) => {
+  const has = (await sb.from('mass_periods').select('id').eq('parish_id', parish).eq('name', name).maybeSingle()).data
+  if (has) { console.log('Już jest:', name); return }
+  const r = await sb.rpc('save_rozklad', { p_target: 'period', p_period: { name, ...period }, p_entries: entries, p_policy: 'move', p_dry_run: false })
+  if (r.error) throw r.error
+  console.log('Dodano', name)
+}
+await ensure('Uroczystości nakazane (porządek niedzielny)', { rule: 'feasts', feasts: ['jan1', 'jan6', 'corpus_christi', 'aug15', 'nov1', 'christmas'], copy_dow: 0 })
+await ensure('Adwent — Roraty', { rule: 'season', season_from: 'advent_start', season_to: 'dec23', days_of_week: [1, 2, 3, 4, 5, 6] },
+  [1, 2, 3, 4, 5, 6].flatMap(d => [
+    { id: null, day_of_week: d, time: '06:30', label: 'Roraty', category: 'msza', service_mode: 'signup', base_template_id: null },
+    ...tpl.filter(t => t.day_of_week === d).map(t => ({ id: null, day_of_week: d, time: t.time.slice(0, 5), label: null, category: 'msza', service_mode: 'signup', base_template_id: t.id })),
+  ]))
+
 const today = new Date().toISOString().slice(0, 10)
 const { data: slots } = await sb.rpc('mass_slots', { p_parish: parish, p_from: today, p_to: today })
 console.log('Dziś:', (slots ?? []).map(s => `${s.slot_time.slice(0, 5)} ${s.category} ${s.service_mode}`).join(' | '))

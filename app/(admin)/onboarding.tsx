@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { ServiceType, SERVICE_TYPE_LABELS, AttendanceMode } from '../../types/database'
-import { SERVICE_MODE_INFO, ServiceMode } from '../../lib/massSchedule'
+import { HOLY_DAYS, SERVICE_MODE_INFO, ServiceMode } from '../../lib/massSchedule'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import GpsLocationPicker from '../../components/GpsLocationPicker'
@@ -84,6 +84,8 @@ export default function OnboardingScreen() {
   const [timeInput, setTimeInput] = useState('')
   const [labelInput, setLabelInput] = useState('')
   const [sundayMode, setSundayMode] = useState<ServiceMode>('assigned')
+  // uroczystości nakazane w dzień powszedni (1 I, 6 I, Boże Ciało, 15 VIII, 1 XI, 25 XII) — porządek niedzielny
+  const [holyDaysLikeSunday, setHolyDaysLikeSunday] = useState(true)
 
   const [pointValues, setPointValues] = useState<Record<ServiceType, string>>({
     msza_assigned: '5', msza_extra: '3', nabozenstwo: '3', zbiorka: '5',
@@ -139,6 +141,12 @@ export default function OnboardingScreen() {
         }))
       )
       if (massErr) { setSaving(false); Alert.alert('Błąd', 'Nie udało się zapisać rozkładu mszy.'); return }
+      if (holyDaysLikeSunday && masses.some(m => m.day === 0)) {
+        await supabase.rpc('save_rozklad', {
+          p_target: 'period', p_entries: [], p_policy: 'keep', p_dry_run: false,
+          p_period: { name: 'Uroczystości nakazane (porządek niedzielny)', rule: 'feasts', feasts: HOLY_DAYS, copy_dow: 0 },
+        })
+      }
     }
 
     await supabase.from('point_rules').upsert(
@@ -295,8 +303,20 @@ export default function OnboardingScreen() {
                 <Text style={styles.subtitle}>{SERVICE_MODE_INFO[sundayMode].hint}</Text>
               </View>
             )}
+            {masses.some(m => m.day === 0) && (
+              <TouchableOpacity style={styles.daySection} onPress={() => setHolyDaysLikeSunday(v => !v)} accessibilityRole="checkbox"
+                accessibilityState={{ checked: holyDaysLikeSunday }}>
+                <View style={styles.dayChips}>
+                  <View style={[styles.dayChip, holyDaysLikeSunday && styles.dayChipActive]}>
+                    <Text style={[styles.dayChipText, holyDaysLikeSunday && styles.dayChipTextActive]}>{holyDaysLikeSunday ? '✓' : ' '}</Text>
+                  </View>
+                  <Text style={[styles.daySectionHeader, { flex: 1 }]}>Uroczystości nakazane jak w niedzielę</Text>
+                </View>
+                <Text style={styles.subtitle}>1 I, 6 I, Boże Ciało, 15 VIII, 1 XI i 25 XII — Msze według niedzielnego rozkładu. Daty liczą się same co roku.</Text>
+              </TouchableOpacity>
+            )}
             <Text style={styles.subtitle}>
-              Zmiany na wybrany czas (np. październik z różańcem) ustawisz później: Ustawienia parafii → Rozkład Mszy → Zmiany okresowe.
+              Inne zmiany (Adwent z Roratami, Wielki Post, Triduum, październik z różańcem) ustawisz później: Ustawienia parafii → Rozkład Mszy → Zmiany okresowe.
             </Text>
           </>
         )}

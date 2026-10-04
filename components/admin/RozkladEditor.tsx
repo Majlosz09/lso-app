@@ -23,10 +23,12 @@ type Props = {
   days?: number[]
   /** podpowiedź w pustym dniu */
   emptyDayText?: string
+  /** własny nagłówek dnia (np. „W te święta”) */
+  dayTitle?: (day: number) => string
 }
 
 /** Edytor rozkładu (szkic): pozycje per dzień + zmiany zbiorcze na wybranych dniach. */
-export function RozkladEditor({ entries, onChange, days = WEEK_ORDER, emptyDayText = 'Brak Mszy' }: Props) {
+export function RozkladEditor({ entries, onChange, days = WEEK_ORDER, emptyDayText = 'Brak Mszy', dayTitle }: Props) {
   const { colors: c } = useTheme()
   const visibleDays = WEEK_ORDER.filter(d => days.includes(d))
   const [picker, setPicker] = useState<{ key: string } | null>(null)
@@ -108,7 +110,7 @@ export function RozkladEditor({ entries, onChange, days = WEEK_ORDER, emptyDayTe
         return (
           <Card key={day} large style={styles.day}>
             <View style={styles.row}>
-              <AppText variant="heading" style={styles.flex}>{cap(DAY_LONG[day])}</AppText>
+              <AppText variant="heading" style={styles.flex}>{dayTitle ? dayTitle(day) : cap(DAY_LONG[day])}</AppText>
               <Pressable accessibilityRole="button" onPress={() => add(day)} style={[styles.addBtn, { backgroundColor: c.primarySurface }]}>
                 <Icon name="plus" size={16} color={c.primary} />
                 <AppText style={[styles.addText, { color: c.primary }]}>Dodaj</AppText>

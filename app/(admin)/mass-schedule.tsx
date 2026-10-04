@@ -8,14 +8,15 @@ import { useTheme } from '../../lib/ThemeContext'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { DAY_SHORT, localDateStr, parseDate, pl, shortDate } from '../../lib/dates'
 import {
-  DraftEntry, MassPeriod, PeriodEntry, RozkladEntry, SERVICE_MODE_INFO, ServiceMode, draftErrors, draftFromTemplates,
-  draftKey, periodCoversDate, setModeForDays, sortDraft,
+  ANCHOR_LABELS, DraftEntry, LITURGICAL_PRESETS, LiturgicalPreset, MassPeriod, PeriodEntry, PeriodRule, RozkladEntry,
+  SERVICE_MODE_INFO, ServiceMode, draftErrors, draftFromTemplates, draftKey, periodCoversDate, periodDatesText,
+  setModeForDays, sortDraft,
 } from '../../lib/massSchedule'
 import { RozkladEditor, ServiceModeLegend, WEEK_ORDER } from '../../components/admin/RozkladEditor'
 import { RozkladChange, RozkladPolicy, RozkladPreviewSheet } from '../../components/admin/RozkladPreviewSheet'
 import { DatePickerModal } from '../../components/DatePickerModal'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
-import { AppText, Button, Card, Chip, Icon, Segmented, TextField } from '../../components/ui'
+import { AppText, Button, Card, Chip, Icon, Segmented, Sheet, TextField } from '../../components/ui'
 
 type Tab = 'base' | 'periods'
 type PeriodForm = {
@@ -26,6 +27,23 @@ type PeriodForm = {
   repeat_yearly: boolean
   days: number[]
   entries: DraftEntry[]
+  rule: PeriodRule
+  feasts: string[]
+  season_from: string
+  season_to: string
+  season_from_offset: number
+  season_to_offset: number
+  /** „jak w niedzielę” (tylko święta) */
+  copy_dow: number | null
+}
+/** Święta: pozycje bez dnia tygodnia — trzymamy je pod jednym kluczem */
+const FEAST_DOW = 0
+const RULE_LABELS: Record<PeriodRule, string> = { dates: 'Daty', season: 'Okres liturgiczny', feasts: 'Święta' }
+const toFeastDraft = (d: DraftEntry[]) => sortDraft(d.map(e => ({ ...e, day_of_week: FEAST_DOW })))
+const shiftIso = (d: string | undefined, n = 0) => {
+  if (!d) return undefined
+  const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + n)
+  return localDateStr(x)
 }
 type SaveRequest = { target: 'base' | 'period' | 'delete_period'; periodId?: string | null; period?: object; entries: DraftEntry[] }
 
@@ -83,6 +101,17 @@ export default function MassScheduleScreen() {
   const [form, setForm] = useState<PeriodForm | null>(null)
   const [datePick, setDatePick] = useState<'from' | 'to' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [anchorPick, setAnchorPick] = useState<'season_from' | 'season_to' | 'feasts' | null>(null)
+  // daty świąt w tym i przyszłym roku (z bazy — te same co w rozkładzie)
+  const [anchors, setAnchors] = useState<Record<number, Record<string, string>>>({})
+  const year = Number(today.slice(0, 4))
+  useEffect(() => {
+    Promise.all([year, year + 1].map(y => supabase.rpc('liturgical_anchors', { p_year: y }))).then(res => {
+      const out: Record<number, Record<string, string>> = {}
+      res.forEach((r, i) => { out[year + i] = Object.fromEntries(((r.data ?? []) as any[]).map(x => [x.key, x.day])) })
+      setAnchors(out)
+    })
+  }, [year])
 
   // zapis z podglądem
   const [pending, setPending] = useState<SaveRequest | null>(null)
@@ -105,6 +134,27 @@ export default function MassScheduleScreen() {
     setLoading(false)
   }, [profile?.parish_id])
   useEffect(() => { load() }, [load])
+
+  const activeNow = (p: Partial<MassPeriod> & { date_from: string; date_to: string; repeat_yearly: boolean; days_of_week?: number[] }) => {
+    const rule = p.rule ?? 'dates'
+    const a = anchors[year] ?? {}
+    if (rule === 'feasts') return (p.feasts ?? []).some(k => a[k] === today)
+    if (rule === 'season') {
+      const from = shiftIso(a[p.season_from ?? ''], p.season_from_offset ?? 0), to = shiftIso(a[p.season_to ?? ''], p.season_to_offset ?? 0)
+      return !!from && !!to && today >= from && today <= to
+    }
+    return periodCoversDate(p, today)
+  }
+  /** Daty okresu liturgicznego / świąt: tegoroczne, a jeśli już minęły — przyszłoroczne */
+  const liturgicalDates = (p: Parameters<typeof periodDatesText>[0]) => {
+    const fmt = (d: string) => shortDate(d)
+    const thisYear = periodDatesText(p, anchors[year] ?? {}, fmt)
+    const lastThis = p.rule === 'season'
+      ? shiftIso((anchors[year] ?? {})[p.season_to ?? ''], p.season_to_offset ?? 0)
+      : (p.feasts ?? []).map(k => (anchors[year] ?? {})[k]).filter(Boolean).sort().pop()
+    if (lastThis && lastThis < today) return `${year + 1}: ${periodDatesText(p, anchors[year + 1] ?? {}, fmt)}`
+    return thisYear ? `${year}: ${thisYear}` : ''
+  }
 
   const baseDirty = useMemo(() => sig(baseDraft) !== sig(toDraft(templates)), [baseDraft, templates])
 
@@ -162,8 +212,10 @@ export default function MassScheduleScreen() {
   const openPeriod = (p: MassPeriod | null, preset?: ReturnType<typeof presets>[number]) => {
     if (p) {
       setForm({
-        id: p.id, name: p.name, date_from: p.date_from, date_to: p.date_to, repeat_yearly: p.repeat_yearly,
+        id: p.id, name: p.name, date_from: p.date_from ?? today, date_to: p.date_to ?? today, repeat_yearly: p.repeat_yearly,
         days: p.days_of_week, entries: toDraft(periodEntries.filter(e => e.period_id === p.id)),
+        rule: p.rule ?? 'dates', feasts: p.feasts ?? [], season_from: p.season_from ?? 'advent_start', season_to: p.season_to ?? 'dec23',
+        season_from_offset: p.season_from_offset ?? 0, season_to_offset: p.season_to_offset ?? 0, copy_dow: p.copy_dow ?? null,
       })
       return
     }
@@ -171,6 +223,22 @@ export default function MassScheduleScreen() {
     setForm({
       id: null, name: ps.name, date_from: ps.from, date_to: ps.to, repeat_yearly: ps.yearly, days: ps.days,
       entries: draftFromTemplates(templates, ps.days),
+      rule: 'dates', feasts: [], season_from: 'advent_start', season_to: 'dec23', season_from_offset: 0, season_to_offset: 0, copy_dow: null,
+    })
+  }
+  /** Gotowa zmiana roku liturgicznego (daty liczą się co roku same). */
+  const openLiturgical = (ps: LiturgicalPreset) => {
+    const days = ps.days ?? [0, 1, 2, 3, 4, 5, 6]
+    const extra = (d: number) => (ps.extra ?? []).map(x => ({ ...x, id: null, key: draftKey(), day_of_week: d, base_template_id: null }))
+    let entries: DraftEntry[] = []
+    if (ps.rule === 'season') entries = sortDraft([...draftFromTemplates(templates, days), ...days.flatMap(extra)])
+    if (ps.rule === 'feasts' && ps.copy_dow == null) {
+      entries = toFeastDraft([...(ps.fillFromDow != null ? draftFromTemplates(templates, [ps.fillFromDow]) : []), ...extra(FEAST_DOW)])
+    }
+    setForm({
+      id: null, name: ps.name, date_from: today, date_to: today, repeat_yearly: true, days, entries,
+      rule: ps.rule, feasts: ps.feasts ?? [], season_from: ps.season_from ?? 'advent_start', season_to: ps.season_to ?? 'dec23',
+      season_from_offset: 0, season_to_offset: 0, copy_dow: ps.copy_dow ?? null,
     })
   }
   const setFormDays = (days: number[]) => {
@@ -189,11 +257,15 @@ export default function MassScheduleScreen() {
   const savePeriod = () => {
     if (!form) return
     if (!form.name.trim()) { Toast.show({ type: 'error', text1: 'Podaj nazwę zmiany' }); return }
-    if (form.date_to < form.date_from) { Toast.show({ type: 'error', text1: 'Data końca jest przed początkiem' }); return }
-    save({
-      target: 'period', periodId: form.id, entries: form.entries,
-      period: { name: form.name.trim(), date_from: form.date_from, date_to: form.date_to, repeat_yearly: form.repeat_yearly, days_of_week: form.days },
-    })
+    if (form.rule === 'dates' && form.date_to < form.date_from) { Toast.show({ type: 'error', text1: 'Data końca jest przed początkiem' }); return }
+    if (form.rule === 'feasts' && form.feasts.length === 0) { Toast.show({ type: 'error', text1: 'Wybierz co najmniej jedno święto' }); return }
+    const common = { name: form.name.trim(), rule: form.rule, days_of_week: form.rule === 'feasts' ? [0, 1, 2, 3, 4, 5, 6] : form.days }
+    const period = form.rule === 'dates'
+      ? { ...common, date_from: form.date_from, date_to: form.date_to, repeat_yearly: form.repeat_yearly }
+      : form.rule === 'season'
+        ? { ...common, season_from: form.season_from, season_to: form.season_to, season_from_offset: form.season_from_offset, season_to_offset: form.season_to_offset }
+        : { ...common, feasts: form.feasts, copy_dow: form.copy_dow }
+    save({ target: 'period', periodId: form.id, entries: form.rule === 'feasts' && form.copy_dow != null ? [] : form.entries, period })
   }
 
   if (loading) {
@@ -205,7 +277,12 @@ export default function MassScheduleScreen() {
 
   // ── formularz okresu ──
   if (form) {
-    const activeNow = periodCoversDate(form, today)
+    const nowActive = activeNow({ ...form, id: undefined, days_of_week: form.days })
+    const isFeasts = form.rule === 'feasts'
+    const changeRule = (rule: PeriodRule) => setForm({
+      ...form, rule,
+      entries: rule === 'feasts' ? toFeastDraft(form.entries.filter(e => e.day_of_week === form.entries[0]?.day_of_week)) : draftFromTemplates(templates, form.days),
+    })
     return (
       <View style={[styles.flex, { backgroundColor: c.bg }]}>
         <ScrollView contentContainerStyle={body} keyboardShouldPersistTaps="handled">
@@ -217,6 +294,46 @@ export default function MassScheduleScreen() {
               </View>
             )}
             <TextField label="Nazwa" value={form.name} onChangeText={v => setForm({ ...form, name: v })} placeholder="np. Październik — różaniec" />
+            <Segmented<PeriodRule>
+              options={(['dates', 'season', 'feasts'] as PeriodRule[]).map(r => ({ value: r, label: RULE_LABELS[r] }))}
+              value={form.rule}
+              onChange={changeRule}
+            />
+            {form.rule === 'season' && (
+              <>
+                <View style={styles.dates}>
+                  {(['season_from', 'season_to'] as const).map(k => (
+                    <Pressable key={k} onPress={() => setAnchorPick(k)} style={[styles.dateBox, { backgroundColor: c.inputBg }]}>
+                      <AppText variant="small" muted>{k === 'season_from' ? 'Od' : 'Do'}</AppText>
+                      <AppText variant="bodyStrong" numberOfLines={1}>{ANCHOR_LABELS[form[k]] ?? form[k]}</AppText>
+                    </Pressable>
+                  ))}
+                </View>
+                <AppText variant="small" muted>{`Liczone co roku od nowa — ${liturgicalDates(form)}`}</AppText>
+              </>
+            )}
+            {isFeasts && (
+              <>
+                <View style={styles.chips}>
+                  {form.feasts.map(k => (
+                    <Chip key={k} label={ANCHOR_LABELS[k] ?? k} icon="close" selected
+                      onPress={() => setForm({ ...form, feasts: form.feasts.filter(x => x !== k) })} />
+                  ))}
+                  <Chip label="Dodaj święto" icon="plus" onPress={() => setAnchorPick('feasts')} />
+                </View>
+                <AppText variant="small" muted>{`Daty liczą się same każdego roku — ${liturgicalDates(form)}`}</AppText>
+                <Pressable accessibilityRole="switch" accessibilityState={{ checked: form.copy_dow != null }}
+                  onPress={() => setForm({ ...form, copy_dow: form.copy_dow == null ? 0 : null })} style={styles.toggle}>
+                  <View style={styles.flex}>
+                    <AppText variant="bodyStrong">Jak w niedzielę</AppText>
+                    <AppText variant="small" muted>W te dni obowiązuje niedzielny stały rozkład — zmienisz niedziele, zmienią się i święta.</AppText>
+                  </View>
+                  <Switch value={form.copy_dow != null} onValueChange={v => setForm({ ...form, copy_dow: v ? 0 : null })}
+                    trackColor={{ true: c.primary, false: c.inputBorder }} thumbColor="#FFFFFF" />
+                </Pressable>
+              </>
+            )}
+            {form.rule === 'dates' && <>
             <View style={styles.dates}>
               {(['from', 'to'] as const).map(k => (
                 <Pressable key={k} onPress={() => setDatePick(k)} style={[styles.dateBox, { backgroundColor: c.inputBg }]}>
@@ -240,16 +357,38 @@ export default function MassScheduleScreen() {
               <Chip label="Pn–Sb" onPress={() => setFormDays(MON_SAT)} />
               <Chip label="Cały tydzień" onPress={() => setFormDays(ALL_DAYS)} />
             </View>
+            </>}
+            {form.rule === 'season' && (
+              <>
+                <AppText variant="small" muted>Dni, których dotyczy (pozostałe dni bez zmian):</AppText>
+                <View style={styles.chips}>
+                  {WEEK_ORDER.map(d => <Chip key={d} label={DAY_SHORT[d]} selected={form.days.includes(d)} onPress={() => toggleFormDay(d)} />)}
+                </View>
+              </>
+            )}
             <AppText variant="small" muted>
-              {`${rangeText(form)} · ${daysText(form.days)}${activeNow ? ' · trwa teraz' : ''}. ` +
-                'W te dni poniższy układ ZASTĘPUJE stały rozkład. Pusty dzień = brak Mszy (odwołane).'}
+              {(form.rule === 'dates' ? `${rangeText(form)} · ${daysText(form.days)}` : form.rule === 'season' ? daysText(form.days) : 'w każdy dzień tygodnia') +
+                (nowActive ? ' · trwa teraz' : '') + '. ' +
+                (isFeasts && form.copy_dow != null
+                  ? 'W te dni obowiązuje niedzielny rozkład.'
+                  : 'W te dni poniższy układ ZASTĘPUJE stały rozkład. Pusty dzień = brak Mszy (odwołane).')}
             </AppText>
-            <Button compact variant="ghost" icon="restore" label="Wypełnij stałym rozkładem"
-              onPress={() => setForm({ ...form, entries: draftFromTemplates(templates, form.days) })} />
+            {!isFeasts && (
+              <Button compact variant="ghost" icon="restore" label="Wypełnij stałym rozkładem"
+                onPress={() => setForm({ ...form, entries: draftFromTemplates(templates, form.days) })} />
+            )}
+            {isFeasts && form.copy_dow == null && (
+              <Button compact variant="ghost" icon="restore" label="Wypełnij niedzielnym rozkładem"
+                onPress={() => setForm({ ...form, entries: toFeastDraft(draftFromTemplates(templates, [0])) })} />
+            )}
           </Card>
 
-          <RozkladEditor entries={form.entries} onChange={entries => setForm({ ...form, entries })} days={form.days}
-            emptyDayText="Brak Mszy — w tym okresie odwołane" />
+          {!(isFeasts && form.copy_dow != null) && (
+            <RozkladEditor entries={form.entries} onChange={entries => setForm({ ...form, entries })}
+              days={isFeasts ? [FEAST_DOW] : form.days}
+              dayTitle={isFeasts ? () => 'W te święta' : undefined}
+              emptyDayText={isFeasts ? 'Brak Mszy w te dni' : 'Brak Mszy — w tym okresie odwołane'} />
+          )}
           <ServiceModeLegend />
 
           <Button label={form.id ? 'Zapisz zmianę' : 'Dodaj zmianę okresową'} icon="check" onPress={savePeriod} loading={saving && !pending} />
@@ -268,6 +407,27 @@ export default function MassScheduleScreen() {
           }}
           onClose={() => setDatePick(null)}
         />
+        <Sheet
+          visible={!!anchorPick}
+          onClose={() => setAnchorPick(null)}
+          eyebrow="Rok liturgiczny"
+          title={anchorPick === 'feasts' ? 'Dodaj święto' : anchorPick === 'season_from' ? 'Początek okresu' : 'Koniec okresu'}
+        >
+          <View style={styles.chips}>
+            {Object.entries(ANCHOR_LABELS).map(([k, label]) => {
+              const on = anchorPick === 'feasts' ? form.feasts.includes(k) : anchorPick ? form[anchorPick] === k : false
+              return (
+                <Chip key={k} label={label} selected={on} onPress={() => {
+                  if (anchorPick === 'feasts') {
+                    setForm({ ...form, feasts: on ? form.feasts.filter(x => x !== k) : [...form.feasts, k] })
+                  } else if (anchorPick) {
+                    setForm({ ...form, [anchorPick]: k }); setAnchorPick(null)
+                  }
+                }} />
+              )
+            })}
+          </View>
+        </Sheet>
         <ConfirmDialog
           visible={confirmDelete}
           title="Usunąć zmianę okresową?"
@@ -319,6 +479,11 @@ export default function MassScheduleScreen() {
                 Zmiana okresowa zastępuje stały rozkład w wybranym czasie — np. w październiku: 17:00 Msza, 17:30 różaniec, 18:00 Msza.
                 Zapisy ministrantów na zmienione godziny przeniesiesz jednym kliknięciem.
               </AppText>
+              <AppText variant="eyebrow" color={c.goldInk}>Rok liturgiczny — daty liczą się same</AppText>
+              <View style={styles.chips}>
+                {LITURGICAL_PRESETS.map(ps => <Chip key={ps.label} icon="plus" label={ps.label} onPress={() => openLiturgical(ps)} />)}
+              </View>
+              <AppText variant="eyebrow" color={c.goldInk}>Stałe daty</AppText>
               <View style={styles.chips}>
                 {presets(today).map(ps => <Chip key={ps.label} icon="plus" label={ps.label} onPress={() => openPeriod(null, ps)} />)}
               </View>
@@ -326,8 +491,15 @@ export default function MassScheduleScreen() {
             {periods.length === 0 && <AppText variant="small" muted style={styles.empty}>Brak zmian okresowych — obowiązuje stały rozkład.</AppText>}
             {periods.map(p => {
               const n = periodEntries.filter(e => e.period_id === p.id).length
-              const now = periodCoversDate(p, today)
-              const ended = !p.repeat_yearly && p.date_to < today
+              const rule = p.rule ?? 'dates'
+              const now = activeNow(p)
+              const ended = rule === 'dates' && !p.repeat_yearly && p.date_to < today
+              const what = rule === 'feasts' && p.copy_dow != null
+                ? 'jak w niedzielę'
+                : n ? `${n} ${pl(n, ['pozycja', 'pozycje', 'pozycji'])}` : 'Msze odwołane'
+              const when = rule === 'dates'
+                ? `${rangeText(p)} · ${daysText(p.days_of_week)}`
+                : rule === 'season' ? `${liturgicalDates(p)} · ${daysText(p.days_of_week)}` : liturgicalDates(p)
               return (
                 <Card key={p.id} large onPress={() => openPeriod(p)} style={[styles.card, ended && { opacity: 0.6 }]}>
                   <View style={styles.row}>
@@ -337,7 +509,7 @@ export default function MassScheduleScreen() {
                     <Icon name="chevron-right" size={20} color={c.subtext} />
                   </View>
                   <AppText variant="small" muted>
-                    {`${rangeText(p)} · ${daysText(p.days_of_week)} · ${n ? `${n} ${pl(n, ['pozycja', 'pozycje', 'pozycji'])}` : 'Msze odwołane'}`}
+                    {`${rule === 'dates' ? '' : `${rule === 'season' ? 'Okres liturgiczny' : 'Święta'} · `}${when} · ${what}`}
                   </AppText>
                 </Card>
               )
