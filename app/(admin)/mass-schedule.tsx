@@ -35,6 +35,8 @@ type PeriodForm = {
   season_to_offset: number
   /** „jak w niedzielę” (tylko święta) */
   copy_dow: number | null
+  /** podpowiedź z gotowego szablonu */
+  hint?: string
 }
 /** Święta: pozycje bez dnia tygodnia — trzymamy je pod jednym kluczem */
 const FEAST_DOW = 0
@@ -238,7 +240,7 @@ export default function MassScheduleScreen() {
     setForm({
       id: null, name: ps.name, date_from: today, date_to: today, repeat_yearly: true, days, entries,
       rule: ps.rule, feasts: ps.feasts ?? [], season_from: ps.season_from ?? 'advent_start', season_to: ps.season_to ?? 'dec23',
-      season_from_offset: 0, season_to_offset: 0, copy_dow: ps.copy_dow ?? null,
+      season_from_offset: 0, season_to_offset: 0, copy_dow: ps.copy_dow ?? null, hint: ps.hint,
     })
   }
   const setFormDays = (days: number[]) => {
@@ -251,7 +253,7 @@ export default function MassScheduleScreen() {
   }
   const toggleFormDay = (d: number) => form && setFormDays(form.days.includes(d) ? form.days.filter(x => x !== d) : [...form.days, d])
   const applyPreset = (ps: ReturnType<typeof presets>[number]) => form && setForm({
-    ...form, name: form.id ? form.name : ps.name, date_from: ps.from, date_to: ps.to, repeat_yearly: ps.yearly, days: ps.days,
+    ...form, rule: 'dates', hint: undefined, name: form.id ? form.name : ps.name, date_from: ps.from, date_to: ps.to, repeat_yearly: ps.yearly, days: ps.days,
     entries: form.id ? form.entries.filter(e => ps.days.includes(e.day_of_week)) : draftFromTemplates(templates, ps.days),
   })
   const savePeriod = () => {
@@ -288,7 +290,8 @@ export default function MassScheduleScreen() {
         <ScrollView contentContainerStyle={body} keyboardShouldPersistTaps="handled">
           <Card large style={styles.card}>
             <AppText variant="eyebrow" color={c.goldInk}>{form.id ? 'Edycja zmiany okresowej' : 'Nowa zmiana okresowa'}</AppText>
-            {!form.id && (
+            {!!form.hint && <AppText variant="small" color={c.goldText}>{form.hint}</AppText>}
+            {!form.id && form.rule === 'dates' && (
               <View style={styles.chips}>
                 {presets(today).map(ps => <Chip key={ps.label} label={ps.label} onPress={() => applyPreset(ps)} />)}
               </View>
@@ -367,11 +370,13 @@ export default function MassScheduleScreen() {
               </>
             )}
             <AppText variant="small" muted>
-              {(form.rule === 'dates' ? `${rangeText(form)} · ${daysText(form.days)}` : form.rule === 'season' ? daysText(form.days) : 'w każdy dzień tygodnia') +
-                (nowActive ? ' · trwa teraz' : '') + '. ' +
+              {(form.rule === 'dates' ? `${rangeText(form)} · ${daysText(form.days)}. ` : form.rule === 'season' ? `${daysText(form.days)}. ` : '') +
+                (nowActive ? 'Trwa teraz. ' : '') +
                 (isFeasts && form.copy_dow != null
                   ? 'W te dni obowiązuje niedzielny rozkład.'
-                  : 'W te dni poniższy układ ZASTĘPUJE stały rozkład. Pusty dzień = brak Mszy (odwołane).')}
+                  : isFeasts
+                    ? 'W te święta poniższe godziny ZASTĘPUJĄ stały rozkład. Brak godzin = brak Mszy.'
+                    : 'W te dni poniższy układ ZASTĘPUJE stały rozkład. Pusty dzień = brak Mszy (odwołane).')}
             </AppText>
             {!isFeasts && (
               <Button compact variant="ghost" icon="restore" label="Wypełnij stałym rozkładem"
