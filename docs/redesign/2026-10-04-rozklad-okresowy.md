@@ -35,4 +35,20 @@ A1 migracja (tabele, `mass_slots` SQL, `save_rozklad_change`, sign_up/materializ
 wyliczaniu · A3 ekran rozkładu (zakładki Stały / Zmiany okresowe, edytor, kreator okresu) + tryb w schedule-form/detail + onboarding ·
 A4 podgląd skutków · B1 ekran Obecność · B2 zgłoszenia po fakcie + kolejka opiekuna · C seed demo (październik z różańcem), smoke, deploy dev.
 
-Stan: `lib/massSchedule.ts` + testy gotowe; reszta czeka na dostęp do LSO-dev.
+## Stan (2026-10-04)
+
+Etapy A1–C zrobione, na LSO-dev i https://lso-app-dev.pages.dev.
+Migracje: `20261004000000_rozklad_okresowy.sql`, `20261004010000_attendance_reports.sql`.
+Smoke: `node scripts/rozklad-smoke-dev.mjs` (17 OK), `node scripts/attendance-reports-smoke-dev.mjs` (12 OK).
+Demo: `node scripts/rozklad-demo-dev.mjs` — „Październik — różaniec” w parafii demo.
+
+## Przed wdrożeniem na produkcję
+
+1. Migracje w kolejności jak wyżej (po wszystkich z redesignu).
+2. Parafia, która korzystała z obejścia 17:00/17:30 (maj, czerwiec, październik): od razu po migracji dodać
+   zmiany okresowe na te miesiące (co roku), inaczej stałe zapisy przestaną się przesuwać.
+3. Aplikacja 1.1 (sklepy) czyta `mass_templates` bez kategorii i trybu — nabożeństwo dodane do STAŁEGO rozkładu
+   pokaże jako „Msza”; okresów nie widzi (pokazuje stały rozkład). Zapis w 1.1 na służbę „Grafik” / „Bez punktów”
+   zostanie odrzucony przez `sign_up_for_slot` z czytelnym komunikatem.
+4. Istniejące niedziele dostają tryb „Grafik” (jak dotąd: obsada od opiekuna) — teraz ministrant może się na nich
+   zameldować bez zapisu (Msza dodatkowa). Parafia, która nie chce punktów w niedziele, ustawia „Bez punktów”.
