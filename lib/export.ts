@@ -8,6 +8,8 @@ export type MemberExportRow = {
   present: number
   attendanceRate: number  // 0-100, 1 decimal place; 0 when scheduled=0
   points: number
+  /** obecności przyjęte ze zgłoszenia po fakcie (wliczone w present) */
+  reported?: number
 }
 
 export type ExportData = {
@@ -28,7 +30,7 @@ export async function buildExportData(
   const fromDate = new Date(from + 'T00:00:00.000Z')
   const toDate   = new Date(to + 'T23:59:59.999Z')
 
-  const [profilesRes, assignmentsRes, pointsRes] = await Promise.all([
+  const [profilesRes, assignmentsRes, pointsRes, reportsRes] = await Promise.all([
     supabase
       .from('profiles')
       .select('id, full_name')
@@ -37,7 +39,7 @@ export async function buildExportData(
       .eq('is_active', true),
     supabase
       .from('schedule_assignments')
-      .select('profile_id, status, schedule:schedules!inner(parish_id)')
+      .select('profile_id, status, schedule:schedules!inner(parish_id, service_mode)')
       .eq('schedule.parish_id', parishId)
       .gte('schedule.date', from)
       .lte('schedule.date', to),
@@ -47,16 +49,30 @@ export async function buildExportData(
       .eq('parish_id', parishId)
       .gte('created_at', fromDate.toISOString())
       .lte('created_at', toDate.toISOString()),
+    supabase
+      .from('attendance_reports')
+      .select('profile_id')
+      .eq('parish_id', parishId)
+      .eq('status', 'approved')
+      .gte('service_date', from)
+      .lte('service_date', to),
   ])
 
   if (profilesRes.error) throw new Error(profilesRes.error.message)
   const profiles:    { id: string; full_name: string }[]       = profilesRes.data    ?? []
-  const assignments: { profile_id: string; status: string }[]  = assignmentsRes.data ?? []
+  // służby „bez punktów” (tryb none) nie wchodzą do frekwencji
+  const assignments: { profile_id: string; status: string }[] =
+    (assignmentsRes.data ?? []).filter((a: any) => a.schedule?.service_mode !== 'none')
+  const reportRows:  { profile_id: string }[]                  = reportsRes?.data   ?? []
   const pointRows:   { profile_id: string; amount: number }[]  = pointsRes.data      ?? []
 
-  const map = new Map<string, { scheduled: number; present: number; points: number }>()
+  const map = new Map<string, { scheduled: number; present: number; points: number; reported: number }>()
   for (const p of profiles) {
-    map.set(p.id, { scheduled: 0, present: 0, points: 0 })
+    map.set(p.id, { scheduled: 0, present: 0, points: 0, reported: 0 })
+  }
+  for (const r of reportRows) {
+    const m = map.get(r.profile_id)
+    if (m) m.reported++
   }
   for (const a of assignments) {
     const m = map.get(a.profile_id)
@@ -81,6 +97,7 @@ export async function buildExportData(
           ? 0
           : Math.round((s.present / s.scheduled) * 1000) / 10,
         points: s.points,
+        reported: s.reported,
       }
     })
     .sort((a, b) => b.points - a.points || b.present - a.present)
@@ -113,12 +130,12 @@ export function generateCSV(data: ExportData, opts?: { pointsOnly?: boolean }): 
     lines.push('')
     lines.push('Statystyki obecności')
     lines.push('')
-    lines.push('Lp.,Imię i nazwisko,Liczba służb,Obecny,Frekwencja')
+    lines.push('Lp.,Imię i nazwisko,Liczba służb,Obecny,Frekwencja,Ze zgłoszeń')
     if (data.members.length === 0) {
       lines.push(noData)
     } else {
       data.members.forEach((m, i) =>
-        lines.push(`${i + 1},"${m.fullName}",${m.scheduled},${m.present},${m.attendanceRate.toFixed(1)}%`)
+        lines.push(`${i + 1},"${m.fullName}",${m.scheduled},${m.present},${m.attendanceRate.toFixed(1)}%,${m.reported ?? 0}`)
       )
     }
   }
@@ -130,7 +147,7 @@ export function generateHTML(data: ExportData, opts?: { pointsOnly?: boolean }):
   const pointsOnly = opts?.pointsOnly ?? false
   const MEDAL = ['🥇', '🥈', '🥉']
   const noData3 = '<tr><td colspan="3" style="text-align:center;padding:16px;color:#888">Brak danych w wybranym okresie</td></tr>'
-  const noData4 = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#888">Brak danych w wybranym okresie</td></tr>'
+  const noData4 = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#888">Brak danych w wybranym okresie</td></tr>'
 
   const rankingRows = data.members.length === 0 ? noData3 : data.members
     .map((m, i) => {
@@ -142,7 +159,7 @@ export function generateHTML(data: ExportData, opts?: { pointsOnly?: boolean }):
   const attendanceRows = data.members.length === 0 ? noData4 : data.members
     .map((m, i) => {
       const rateColor = m.attendanceRate >= 80 ? '#16a34a' : m.attendanceRate >= 50 ? '#d97706' : '#dc2626'
-      return `<tr><td style="text-align:center;color:#888">${i + 1}</td><td>${m.fullName}</td><td style="text-align:right">${m.scheduled}</td><td style="text-align:right">${m.present}</td><td style="text-align:right;font-weight:600;color:${rateColor}">${m.attendanceRate.toFixed(1)}%</td></tr>`
+      return `<tr><td style="text-align:center;color:#888">${i + 1}</td><td>${m.fullName}</td><td style="text-align:right">${m.scheduled}</td><td style="text-align:right">${m.present}</td><td style="text-align:right;font-weight:600;color:${rateColor}">${m.attendanceRate.toFixed(1)}%</td><td style="text-align:right;color:#888">${m.reported ?? 0}</td></tr>`
     }).join('\n')
 
   const generatedDate = new Date(data.generatedAt).toLocaleDateString('pl-PL')
@@ -150,7 +167,7 @@ export function generateHTML(data: ExportData, opts?: { pointsOnly?: boolean }):
   const attendanceSection = pointsOnly ? '' : `
 <h2>Statystyki obecności</h2>
 <table>
-  <thead><tr><th style="width:40px;text-align:center">Lp.</th><th>Imię i nazwisko</th><th style="text-align:right">Służby</th><th style="text-align:right">Obecny</th><th style="text-align:right">Frekwencja</th></tr></thead>
+  <thead><tr><th style="width:40px;text-align:center">Lp.</th><th>Imię i nazwisko</th><th style="text-align:right">Służby</th><th style="text-align:right">Obecny</th><th style="text-align:right">Frekwencja</th><th style="text-align:right">Ze zgłoszeń</th></tr></thead>
   <tbody>${attendanceRows}</tbody>
 </table>`
 
@@ -222,12 +239,12 @@ export function generateXLSX(data: ExportData, opts?: { pointsOnly?: boolean }):
       name: 'Frekwencja',
       titleRows: [0],
       headerRow: meta.length,
-      widths: [6, 32, 14, 10, 12],
+      widths: [6, 32, 14, 10, 12, 12],
       percentCols: [4],
       rows: [
         ...meta,
-        ['Lp.', 'Imię i nazwisko', 'Liczba służb', 'Obecny', 'Frekwencja'],
-        ...data.members.map((m, i) => [i + 1, m.fullName, m.scheduled, m.present, m.attendanceRate / 100]),
+        ['Lp.', 'Imię i nazwisko', 'Liczba służb', 'Obecny', 'Frekwencja', 'Ze zgłoszeń'],
+        ...data.members.map((m, i) => [i + 1, m.fullName, m.scheduled, m.present, m.attendanceRate / 100, m.reported ?? 0]),
         ...empty,
       ],
     })

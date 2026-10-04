@@ -14,6 +14,7 @@ import { Service, useServices } from '../../hooks/useServices'
 import { useServiceActions } from '../../components/services/useServiceActions'
 import { AppText, Button, Card, Chip, Icon } from '../../components/ui'
 import { ReportAttendanceSheet, reportable } from '../../components/services/ReportAttendanceSheet'
+import { ReportsStatus } from '../../components/services/ChildReports'
 
 const NAVY = '#071C3A'
 const MUTED = '#C9D3E3'
@@ -43,6 +44,7 @@ export default function AttendanceScreen() {
   const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
   const parish = useAuthStore(s => s.parish)
+  const profileId = useAuthStore(s => s.profile?.id)
   const today = localDateStr()
   // od przedwczoraj — do zgłoszeń obecności po fakcie (48 h)
   const { services, loading, refresh } = useServices(addDays(today, -2), addDays(today, 7))
@@ -170,6 +172,7 @@ export default function AttendanceScreen() {
               <AppText style={styles.reportText}>Byłeś, ale nie potwierdziłeś? Zgłoś obecność</AppText>
             </Pressable>
           )}
+          {!!profileId && <ReportsStatus profileIds={[profileId]} canWithdraw title="Moje zgłoszenia" />}
         </View>
       </ScrollView>
       {actions.sheets}

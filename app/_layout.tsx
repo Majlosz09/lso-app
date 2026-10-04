@@ -4,6 +4,7 @@ import { Stack, useRouter, useSegments } from 'expo-router'
 import Toast from 'react-native-toast-message'
 import * as SplashScreen from 'expo-splash-screen'
 import { preloadLiturgy } from '../lib/liturgy'
+import { usePushTapRouting } from '../hooks/usePushTapRouting'
 import { useFonts } from 'expo-font'
 import {
   InstrumentSerif_400Regular,
@@ -95,6 +96,7 @@ export default function RootLayout() {
 function AuthGate() {
   const { session, profile, isLoading, setSession } = useAuthStore()
   const router = useRouter()
+  usePushTapRouting()
   const segments = useSegments()
   const [showOnboarding, setShowOnboarding] = useState(false)
 

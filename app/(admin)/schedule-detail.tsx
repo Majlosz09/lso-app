@@ -349,7 +349,7 @@ export default function ScheduleDetailScreen() {
             </AppText>
           </Card>
 
-          {schedule.category === 'zbiorka' && (
+          {schedule.category === 'zbiorka' && schedule.service_mode !== 'none' && (
             <Button label="Lista obecności na zbiórce" icon="check-all" onPress={openAttendanceList} />
           )}
 
@@ -386,7 +386,7 @@ export default function ScheduleDetailScreen() {
                       </AppText>
                     </View>
                   </Pressable>
-                  {togglingAttendance === a.profile_id ? (
+                  {schedule.service_mode === 'none' && !present ? null : togglingAttendance === a.profile_id ? (
                     <ActivityIndicator size="small" color={c.success} />
                   ) : (
                     <Pressable

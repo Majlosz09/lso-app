@@ -12,13 +12,14 @@ import { STATUS_COLORS, STATUS_LABELS } from '../../../lib/status'
 import { useIsDesktop } from '../../../hooks/useIsDesktop'
 import { ChildDuty, useChildren } from '../../../hooks/useChildren'
 import { AppText, Avatar, Button, Card, ScreenHeader } from '../../../components/ui'
+import { ChildReports } from '../../../components/services/ChildReports'
 
 type Duty = ChildDuty & { child: string; avatar: string | null }
 
 /** N14: rodzic może zgłosić nieobecność dziecka na tych samych zasadach co ministrant. */
 function canReport(d: ChildDuty): boolean {
   return serviceAvailability(
-    { date: d.date, time: d.time, category: d.category as any, mine: { id: d.assignmentId, status: d.status } as any, attended: d.status === 'present' },
+    { date: d.date, time: d.time, category: d.category as any, serviceMode: d.serviceMode as any, mine: { id: d.assignmentId, status: d.status } as any, attended: d.status === 'present' },
     'self',
   ).canReportAbsence
 }
@@ -113,7 +114,10 @@ export default function ParentSchedule() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await reload(); setRefreshing(false) }} />}
     >
       {!isDesktop && <ScreenHeader eyebrow="Najbliższe 4 tygodnie" title="Dyżury dzieci" />}
-      <View style={[styles.body, isDesktop && styles.desktop]}>{body}</View>
+      <View style={[styles.body, isDesktop && styles.desktop]}>
+        <ChildReports childIds={children.map(ch => ch.id)} names={Object.fromEntries(children.map(ch => [ch.id, ch.full_name]))} />
+        {body}
+      </View>
       <AbsenceSheet
         visible={!!absenceFor}
         title={absenceFor ? `${absenceFor.child.split(' ')[0]} nie może być` : 'Nieobecność'}

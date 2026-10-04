@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/authStore'
 import { attendanceRate } from '../lib/serviceRules'
 import { addDays, localDateStr } from '../lib/dates'
 
-export type ChildDuty = { assignmentId: string; scheduleId: string; date: string; time: string; title: string; category: string; status: string }
+export type ChildDuty = { assignmentId: string; scheduleId: string; date: string; time: string; title: string; category: string; status: string; serviceMode: string }
 
 export type ChildSummary = {
   id: string
@@ -41,7 +41,7 @@ export function useChildren(daysAhead = 14) {
         ? supabase.from('points_summary').select('profile_id, total_points, services_count').eq('parish_id', profile.parish_id).order('total_points', { ascending: false })
         : Promise.resolve({ data: [] as any[] }),
       supabase.from('schedule_assignments')
-        .select('id, profile_id, status, schedule:schedules!inner(id, date, time, title, category)')
+        .select('id, profile_id, status, schedule:schedules!inner(id, date, time, title, category, service_mode)')
         .in('profile_id', ids)
         .gte('schedule.date', addDays(today, -60))
         .lte('schedule.date', addDays(today, daysAhead)),
@@ -64,7 +64,7 @@ export function useChildren(daysAhead = 14) {
         badges: ((badges.data ?? []) as any[]).filter(b => b.profile_id === k.id).map(b => b.badge_definition?.icon).filter(Boolean),
         duties: mine
           .filter(a => a.schedule.date >= today)
-          .map(a => ({ assignmentId: a.id, scheduleId: a.schedule.id, date: a.schedule.date, time: (a.schedule.time ?? '').slice(0, 5), title: a.schedule.title, category: a.schedule.category, status: a.status }))
+          .map(a => ({ assignmentId: a.id, scheduleId: a.schedule.id, date: a.schedule.date, time: (a.schedule.time ?? '').slice(0, 5), title: a.schedule.title, category: a.schedule.category, status: a.status, serviceMode: a.schedule.service_mode ?? 'signup' }))
           .sort((x, y) => x.date.localeCompare(y.date) || x.time.localeCompare(y.time)),
       }
     }))

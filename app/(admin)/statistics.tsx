@@ -33,10 +33,11 @@ export default function StatisticsScreen() {
     const from = addDays(to, -Number(period))
     setLoading(true)
     Promise.all([
-      supabase.from('schedules').select('id, category, date').eq('parish_id', parishId).gte('date', from).lte('date', to),
+      // służby „bez punktów” nie wchodzą do statystyk obecności
+      supabase.from('schedules').select('id, category, date').eq('parish_id', parishId).neq('service_mode', 'none').gte('date', from).lte('date', to),
       supabase.from('schedule_assignments')
-        .select('profile_id, status, schedule:schedules!inner(id, date, category, parish_id)')
-        .eq('schedule.parish_id', parishId).gte('schedule.date', from).lte('schedule.date', to),
+        .select('profile_id, status, schedule:schedules!inner(id, date, category, parish_id, service_mode)')
+        .eq('schedule.parish_id', parishId).neq('schedule.service_mode', 'none').gte('schedule.date', from).lte('schedule.date', to),
       supabase.from('points').select('profile_id, amount').eq('parish_id', parishId).gte('created_at', new Date(from + 'T00:00:00').toISOString()),
       supabase.from('profiles').select('id, full_name').eq('parish_id', parishId).eq('role', 'member').eq('is_active', true),
     ]).then(([s, a, p, n]) => {
