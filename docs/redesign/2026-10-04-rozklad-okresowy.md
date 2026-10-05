@@ -118,3 +118,9 @@ z kluczami haseł (`wiedza_keys`) — liczy baza. Smoke: `formation-smoke-dev` (
 `20261005100000_challenges.sql`: `challenges`, `challenge_completions`, wyzwalacz na `attendance` (INSERT/DELETE)
 przelicza wyzwania, premia `points.source = 'challenge'`, `challenge_board`, `recount_challenge`. Szablony w `lib/challenges.ts`
 (daty z `liturgical_anchors`). Smoke: `challenges-smoke-dev` (9 OK); demo: `npx tsx scripts/challenges-demo-dev.ts`.
+
+## Miesięczny raport dla proboszcza (2026-10-05)
+
+`20261005110000_monthly_report.sql`: `monthly_report(miesiąc)` (tylko opiekun), `notify_monthly_reports()` + **pg_cron
+`lso-monthly-report` (`0 7 1 * *` = 9:00 PL)** — przy wdrożeniu na produkcję zadanie powstaje z migracją. Zbiórki nie liczą się
+do obsady. Ekran `/monthly-report`, wydruk `lib/monthlyReport.ts`. Smoke: `monthly-report-smoke-dev` (7 OK).
