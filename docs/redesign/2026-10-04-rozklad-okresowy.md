@@ -97,3 +97,12 @@ Demo: filip@lso-demo.test jest pomocnikiem.
 każdym Accept; zawijanie linii RFC 5545). Link do kalendarza: `<SUPABASE_URL>/rest/v1/rpc/calendar_feed?token=…&apikey=<anon>`.
 Strona `/g/[token]` (bez logowania), wydruk `lib/printSchedule.ts`. Na produkcji: `EXPO_PUBLIC_WEB_URL` domyślnie app.lsoapp.com
 (strona /g musi być wdrożona w webie produkcyjnym razem z resztą). Smoke: `public-calendar-smoke-dev` (13 OK).
+
+## Ministrant bez konta + import + kod osobisty (2026-10-05)
+
+`20261005080000_managed_members.sql`: `profiles.managed`, `claim_code`; **FK profiles.id → auth.users zdjęty**
+(profil kasuje wyzwalacz `on_auth_user_deleted`). Wyzwalacze czatu / powiadomień pomijają profile bez konta,
+operacje systemowe ustawiają `lso.sys` (obejście ochrony pól profilu i przydziałów). `import_members`, `regenerate_claim_code`,
+`claim_code_info` (anon), `claim_member_profile` (przenosi dane z 13 tabel). Ekran `/import-members`, kod w rejestracji.
+Smoke: `import-claim-smoke-dev` (14 OK). Przy wdrożeniu: sprawdzić, że żadna funkcja produkcyjna nie zakłada istnienia konta
+dla każdego profilu (np. push — profile bez konta nie mają tokenu, to OK).
