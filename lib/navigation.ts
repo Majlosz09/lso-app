@@ -91,6 +91,7 @@ const EXTRA_TITLES: Record<string, string> = {
   '/rank-management': 'Rangi',
   '/mass-schedule': 'Rozkład Mszy',
   '/churches': 'Kościoły i kaplice',
+  '/kiosk': 'Tryb zakrystii',
   '/point-rules': 'Reguły punktów',
   '/wiedza-admin': 'Wiedza parafii',
   '/chat-reports': 'Zgłoszenia z czatu',

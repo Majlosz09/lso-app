@@ -33,7 +33,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const role = navRoleFor(profile, segments[0] === '(admin)')
   const badges = useNavBadges(role, ready)
 
-  if (!ready) return <>{children}</>
+  // tryb zakrystii (tablet) — pełny ekran, bez menu
+  if (!ready || pathname === '/kiosk') return <>{children}</>
 
   const active = activeNavItem(role, pathname)
   const root = isRootPath(role, pathname)

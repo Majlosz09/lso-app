@@ -21,10 +21,12 @@ type Props = {
   /** służby z ostatnich dni (z grafiku i rozkładu) */
   services: Service[]
   onSent: () => void
+  /** rodzic zgłasza za dziecko */
+  forChild?: { id: string; name: string } | null
 }
 
 /** „Byłem, ale nie potwierdziłem” — zgłoszenie obecności do opiekuna (do 48 h). */
-export function ReportAttendanceSheet({ visible, onClose, services, onSent }: Props) {
+export function ReportAttendanceSheet({ visible, onClose, services, onSent, forChild }: Props) {
   const { colors: c } = useTheme()
   const today = localDateStr()
   const candidates = useMemo(
@@ -53,8 +55,8 @@ export function ReportAttendanceSheet({ visible, onClose, services, onSent }: Pr
     }
     setBusy(true)
     const { error } = await supabase.rpc('report_attendance', other
-      ? { p_date: day, p_time: time, p_title: title.trim(), p_category: category, p_note: note.trim() || null }
-      : { p_date: chosen!.date, p_time: chosen!.time, p_category: chosen!.category, p_note: note.trim() || null, p_church_id: chosen!.churchId })
+      ? { p_date: day, p_time: time, p_title: title.trim(), p_category: category, p_note: note.trim() || null, p_for_child: forChild?.id ?? null }
+      : { p_date: chosen!.date, p_time: chosen!.time, p_category: chosen!.category, p_note: note.trim() || null, p_church_id: chosen!.churchId, p_for_child: forChild?.id ?? null })
     setBusy(false)
     if (error) { Toast.show({ type: 'error', text1: 'Nie wysłano', text2: error.message }); return }
     Toast.show({ type: 'success', text1: 'Wysłano do opiekuna', text2: 'Punkty dostaniesz po zatwierdzeniu.' })
@@ -67,11 +69,13 @@ export function ReportAttendanceSheet({ visible, onClose, services, onSent }: Pr
       visible={visible}
       onClose={onClose}
       eyebrow="Zgłoś obecność"
-      title="Na czym byłeś?"
+      title={forChild ? `Na czym był ${forChild.name}?` : 'Na czym byłeś?'}
       footer={<Button label="Wyślij do opiekuna" icon="send" onPress={send} loading={busy} disabled={!pick} />}
     >
       <AppText variant="small" muted>
-        Zapomniałeś się zapisać albo potwierdzić obecność? Zgłoś to do 48 godzin — opiekun zatwierdzi, a punkty dostaniesz jak za tę służbę.
+        {forChild
+          ? `${forChild.name} był na służbie, ale nie ma telefonu albo zapomniał potwierdzić? Zgłoś to do 48 godzin — opiekun zatwierdzi, a punkty trafią na konto dziecka.`
+          : 'Zapomniałeś się zapisać albo potwierdzić obecność? Zgłoś to do 48 godzin — opiekun zatwierdzi, a punkty dostaniesz jak za tę służbę.'}
       </AppText>
       <View style={styles.list}>
         {candidates.map(s => (

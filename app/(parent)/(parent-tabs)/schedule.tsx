@@ -4,6 +4,11 @@ import Toast from 'react-native-toast-message'
 import { supabase } from '../../../lib/supabase'
 import { serviceAvailability } from '../../../lib/serviceRules'
 import { AbsenceSheet } from '../../../components/services/AbsenceSheet'
+import { ChildSignUpSheet } from '../../../components/services/ChildSignUpSheet'
+import { ReportAttendanceSheet } from '../../../components/services/ReportAttendanceSheet'
+import { useServices } from '../../../hooks/useServices'
+import { addDays, localDateStr } from '../../../lib/dates'
+import { Chip } from '../../../components/ui'
 import { useTheme } from '../../../lib/ThemeContext'
 import { sans, VESTMENT_DOT, VestmentColor } from '../../../lib/theme'
 import { getLiturgicalDay, useLiturgyVersion } from '../../../lib/liturgy'
@@ -36,6 +41,26 @@ export default function ParentSchedule() {
   const [refreshing, setRefreshing] = useState(false)
   const [absenceFor, setAbsenceFor] = useState<Duty | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  // dziecko bez telefonu: rodzic zapisuje / wypisuje / zgłasza obecność
+  const today = localDateStr()
+  const { services, refresh: refreshServices } = useServices(addDays(today, -2), addDays(today, 14))
+  const [childId, setChildId] = useState<string | null>(null)
+  const [signUpOpen, setSignUpOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const activeChild = children.find(ch => ch.id === childId) ?? children[0] ?? null
+  const childRef = activeChild ? { id: activeChild.id, name: activeChild.full_name.split(' ')[0] } : null
+  const takenIds = new Set((activeChild?.duties ?? []).map(d => d.scheduleId))
+
+  const unsign = async (d: Duty) => {
+    setBusy(d.assignmentId)
+    const { error } = await supabase.rpc('unsign_child', { p_assignment_id: d.assignmentId })
+    setBusy(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Nie wypisano', text2: error.message }); return }
+    Toast.show({ type: 'success', text1: 'Wypisano', text2: `${d.child} · ${d.title} ${d.time}` })
+    reload()
+  }
+  const canUnsign = (d: Duty) => d.status === 'assigned' && d.serviceMode === 'signup'
+    && new Date(`${d.date}T${d.time}`).getTime() > Date.now() + 30 * 60_000
 
   const report = async (text: string) => {
     const d = absenceFor
@@ -101,6 +126,9 @@ export default function ParentSchedule() {
             ) : d.status === 'excused' ? (
               <Button label="Wycofaj zgłoszenie" icon="undo" variant="ghost" compact style={styles.action} loading={busy === d.assignmentId} onPress={() => withdraw(d)} />
             ) : null}
+            {canUnsign(d) && (
+              <Button label="Wypisz" icon="logout" variant="ghost" compact style={styles.action} loading={busy === d.assignmentId} onPress={() => unsign(d)} />
+            )}
             </View>
           ))}
         </Card>
@@ -115,6 +143,22 @@ export default function ParentSchedule() {
     >
       {!isDesktop && <ScreenHeader eyebrow="Najbliższe 4 tygodnie" title="Dyżury dzieci" />}
       <View style={[styles.body, isDesktop && styles.desktop]}>
+        {children.length > 0 && (
+          <Card style={styles.kidActions}>
+            <AppText variant="eyebrow" color={c.goldInk}>Dziecko bez telefonu?</AppText>
+            {children.length > 1 && (
+              <View style={styles.kidChips}>
+                {children.map(ch => (
+                  <Chip key={ch.id} label={ch.full_name.split(' ')[0]} selected={activeChild?.id === ch.id} onPress={() => setChildId(ch.id)} />
+                ))}
+              </View>
+            )}
+            <View style={styles.kidButtons}>
+              <Button label="Zapisz na Mszę" icon="calendar-plus" compact style={styles.flex} onPress={() => setSignUpOpen(true)} />
+              <Button label="Zgłoś obecność" icon="account-check" variant="secondary" compact style={styles.flex} onPress={() => setReportOpen(true)} />
+            </View>
+          </Card>
+        )}
         <ChildReports childIds={children.map(ch => ch.id)} names={Object.fromEntries(children.map(ch => [ch.id, ch.full_name]))} />
         {body}
       </View>
@@ -126,12 +170,19 @@ export default function ParentSchedule() {
         onClose={() => setAbsenceFor(null)}
         onSubmit={report}
       />
+      <ChildSignUpSheet visible={signUpOpen} onClose={() => setSignUpOpen(false)} child={childRef}
+        services={services} takenScheduleIds={takenIds} onDone={() => { reload(); refreshServices() }} />
+      <ReportAttendanceSheet visible={reportOpen} onClose={() => setReportOpen(false)} forChild={childRef}
+        services={services} onSent={() => { reload(); refreshServices() }} />
     </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
+  kidActions: { gap: 10 },
+  kidChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  kidButtons: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   loader: { marginTop: 40 },
   body: { padding: 16, gap: 16, paddingBottom: 32 },
   desktop: { padding: 28, paddingHorizontal: 32, maxWidth: 900 },
