@@ -106,3 +106,9 @@ operacje systemowe ustawiają `lso.sys` (obejście ochrony pól profilu i przydz
 `claim_code_info` (anon), `claim_member_profile` (przenosi dane z 13 tabel). Ekran `/import-members`, kod w rejestracji.
 Smoke: `import-claim-smoke-dev` (14 OK). Przy wdrożeniu: sprawdzić, że żadna funkcja produkcyjna nie zakłada istnienia konta
 dla każdego profilu (np. push — profile bez konta nie mają tokenu, to OK).
+
+## Ścieżka formacji (2026-10-05)
+
+`20261005090000_formation_path.sql`: `rank_requirements` (per parafia i stopień), `profiles.rank_since`, wyzwalacz awansu
+(powiadomienie `promotion` z push), `formation_progress(profil)` i `formation_ready()`. Działy Wiedzy zapisywane razem
+z kluczami haseł (`wiedza_keys`) — liczy baza. Smoke: `formation-smoke-dev` (13 OK); demo: `npx tsx scripts/formation-demo-dev.ts`.
