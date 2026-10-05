@@ -31,7 +31,7 @@ export const NAV: Record<NavRole, NavItem[]> = {
     { key: 'statistics', label: 'Statystyki', icon: 'chart-bar', href: '/(admin)/statistics', paths: ['/statistics'] },
     { key: 'announcements', label: 'Ogłoszenia', icon: 'bullhorn', href: '/(admin)/(admin-tabs)/announcements', paths: ['/announcements'] },
     { key: 'chat', label: 'Czat', icon: 'forum', href: '/(admin)/(admin-tabs)/chat', paths: ['/chat', '/chat-reports'], badge: 'chat' },
-    { key: 'settings', label: 'Ustawienia parafii', icon: 'cog', href: '/(admin)/parish-settings', paths: ['/parish-settings', '/mass-schedule', '/point-rules', '/rank-management', '/wiedza-admin'] },
+    { key: 'settings', label: 'Ustawienia parafii', icon: 'cog', href: '/(admin)/parish-settings', paths: ['/parish-settings', '/mass-schedule', '/churches', '/point-rules', '/rank-management', '/wiedza-admin'] },
   ],
   parent: [
     { key: 'home', label: 'Dom', icon: 'home', href: '/(parent)/(parent-tabs)', paths: ['/'] },
@@ -90,6 +90,7 @@ const EXTRA_TITLES: Record<string, string> = {
   '/rank-assignment': 'Przydziel rangi',
   '/rank-management': 'Rangi',
   '/mass-schedule': 'Rozkład Mszy',
+  '/churches': 'Kościoły i kaplice',
   '/point-rules': 'Reguły punktów',
   '/wiedza-admin': 'Wiedza parafii',
   '/chat-reports': 'Zgłoszenia z czatu',

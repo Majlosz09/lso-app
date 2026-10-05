@@ -69,7 +69,7 @@ export function ServiceDetail({ service: s, actions, compactHeader }: {
       <View style={[styles.head, { backgroundColor: pal.bg, paddingTop: compactHeader ? 20 : 20 }]}>
         <AppText variant="eyebrow" color={pal.accent}>{`${cat.label} · ${VESTMENT_NAMES[color]}`}</AppText>
         <AppText style={[serif(), styles.title, { color: pal.fg }]}>{s.title}</AppText>
-        <AppText style={[styles.when, { color: pal.fg }]}>{`${longDateCap(s.date)} · ${s.time}`}</AppText>
+        <AppText style={[styles.when, { color: pal.fg }]}>{`${longDateCap(s.date)} · ${s.time}${s.churchName ? ` · ${s.churchName}` : ''}`}</AppText>
         <AppText style={[styles.lit, { color: pal.fg }]} numberOfLines={2}>{lit.name}</AppText>
       </View>
 

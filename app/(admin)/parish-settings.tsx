@@ -267,6 +267,7 @@ https://app.lsoapp.com` })
     <Card flush>
       <View style={styles.cardHead}><AppText variant="eyebrow" color={c.goldInk}>Konfiguracja</AppText></View>
       <ListRow first icon="clock-outline" title="Rozkład Mszy Świętych" subtitle="Stały tydzień, zmiany okresowe, niedziele" onPress={() => router.push('/(admin)/mass-schedule')} />
+      <ListRow icon="church" title="Kościoły i kaplice" subtitle="Filie, kaplice i ich lokalizacja GPS" onPress={() => router.push('/(admin)/churches' as any)} />
       <ListRow icon="star-circle" title="Reguły punktowania" subtitle="Ile punktów za jaką służbę" onPress={() => router.push('/(admin)/point-rules')} />
       <ListRow icon="calendar-sync" title="Stałe dyżury" subtitle="Kto służy co tydzień" onPress={() => router.push('/(admin)/recurring-assignments')} />
       <ListRow icon="shield-star" title="Rangi" subtitle="Ścieżka formacji i przypisywanie" onPress={() => router.push('/(admin)/rank-management')} />

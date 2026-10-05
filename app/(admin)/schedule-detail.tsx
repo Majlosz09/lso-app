@@ -15,6 +15,7 @@ import { longDate, longDateCap } from '../../lib/dates'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { AppText, Avatar, Button, Card, Chip, HeaderChip, Icon, ListRow, Sheet, TextField } from '../../components/ui'
 import { SERVICE_MODE_INFO, ServiceMode } from '../../lib/massSchedule'
+import { churchLabel, useChurches } from '../../hooks/useChurches'
 import { AdminRolesCard } from '../../components/services/RolesCard'
 
 type Assignment = {
@@ -33,6 +34,7 @@ type ScheduleDetail = {
   time: string
   category: ScheduleCategory
   service_mode: ServiceMode
+  church_id: string | null
   notes: string | null
   series_id: string | null
   group: { name: string } | null
@@ -50,6 +52,7 @@ export default function ScheduleDetailScreen() {
   const isDesktop = useIsDesktop()
   const [confirmSeries, setConfirmSeries] = useState(false)
   const [schedule, setSchedule] = useState<ScheduleDetail | null>(null)
+  const { byId: churchById, multi: multiChurch } = useChurches()
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [attendanceIds, setAttendanceIds] = useState<Set<string>>(new Set())
@@ -80,7 +83,7 @@ export default function ScheduleDetailScreen() {
       supabase
         .from('schedules')
         .select(`
-          id, title, date, time, category, service_mode, notes, series_id,
+          id, title, date, time, category, service_mode, church_id, notes, series_id,
           group:groups(name),
           assignments:schedule_assignments(
             id, profile_id, role, status, absence_reason,
@@ -311,7 +314,7 @@ export default function ScheduleDetailScreen() {
           </View>
           <AppText variant="eyebrow" color={pal.accent}>{`${catCfg.label} · ${VESTMENT_NAMES[vest]}`}</AppText>
           <AppText style={[serif(), styles.title, { color: pal.fg }]}>{schedule.title}</AppText>
-          <AppText style={[styles.when, { color: pal.fg }]}>{`${longDateCap(schedule.date)} · ${schedule.time?.slice(0, 5)}`}</AppText>
+          <AppText style={[styles.when, { color: pal.fg }]}>{`${longDateCap(schedule.date)} · ${schedule.time?.slice(0, 5)}${multiChurch && schedule.church_id && churchById[schedule.church_id] ? ` · ${churchLabel(churchById[schedule.church_id])}` : ''}`}</AppText>
           <AppText style={[styles.lit, { color: pal.fg }]} numberOfLines={2}>{lit.name}</AppText>
           {schedule.series_id && <HeaderChip label="Część cyklu służb" palette={pal} />}
         </View>

@@ -15,7 +15,7 @@ export type MyAssignment = {
 }
 
 export type Service = {
-  /** id służby albo `tpl-<data>-<godzina>` dla pozycji z rozkładu, dla której służba jeszcze nie istnieje */
+  /** id służby albo `tpl-<data>-<godzina>-<kościół>` dla pozycji z rozkładu, dla której służba jeszcze nie istnieje */
   id: string
   date: string
   /** HH:MM */
@@ -24,6 +24,12 @@ export type Service = {
   category: ScheduleCategory
   /** zapisy / grafik opiekuna / bez obecności i punktów */
   serviceMode: ServiceMode
+  /** kościół / kaplica (null = baza bez kościołów) */
+  churchId: string | null
+  /** nazwa do pokazania — tylko gdy parafia ma kilka kościołów i to nie jest kościół główny */
+  churchName: string | null
+  /** GPS kościoła tej służby (do potwierdzenia obecności) */
+  churchGps: { lat: number; lng: number; radius: number } | null
   notes: string | null
   /** wolne miejsce z rozkładu Mszy (służba jeszcze nie istnieje w bazie) */
   isTemplate: boolean
@@ -49,17 +55,28 @@ export function useServices(from: string, to: string) {
 
   const load = useCallback(async () => {
     if (!profile?.id || !profile.parish_id) return
-    const [schedRes, tplRes] = await Promise.all([
+    const [schedRes, tplRes, chRes] = await Promise.all([
       supabase
         .from('schedules')
-        .select('id, date, time, title, category, service_mode, notes')
+        .select('id, date, time, title, category, service_mode, notes, church_id')
         .eq('parish_id', profile.parish_id)
         .gte('date', from)
         .lte('date', to)
         .order('date').order('time'),
       // obowiązujący rozkład (stały + zmiany okresowe)
       supabase.rpc('mass_slots', { p_parish: profile.parish_id, p_from: from, p_to: to }),
+      supabase.from('churches').select('id, name, short_name, is_main, lat, lng, gps_radius').eq('parish_id', profile.parish_id),
     ])
+    const churches = (chRes.data ?? []) as any[]
+    const churchById = new Map(churches.map(ch => [ch.id, ch]))
+    const churchInfo = (id: string | null | undefined) => {
+      const ch = id ? churchById.get(id) : churches.find(x => x.is_main)
+      return {
+        churchId: ch?.id ?? null,
+        churchName: ch && churches.length > 1 && !ch.is_main ? (ch.short_name?.trim() || ch.name) : null,
+        churchGps: ch?.lat != null && ch?.lng != null ? { lat: ch.lat, lng: ch.lng, radius: ch.gps_radius ?? 200 } : null,
+      }
+    }
     const schedules = (schedRes.data ?? []) as any[]
     const ids = schedules.map(s => s.id)
 
@@ -98,6 +115,7 @@ export function useServices(from: string, to: string) {
         title: s.title,
         category: (s.category ?? 'msza') as ScheduleCategory,
         serviceMode: (s.service_mode ?? 'signup') as ServiceMode,
+        ...churchInfo(s.church_id),
         notes: s.notes ?? null,
         isTemplate: false,
         mine: mine
@@ -113,13 +131,13 @@ export function useServices(from: string, to: string) {
     // Pozycje rozkładu, dla których służba jeszcze nie powstała
     const slots = (tplRes.data ?? []) as any[]
     if (slots.length) {
-      const taken = new Set(list.map(s => `${s.date}_${s.time}`))
+      const taken = new Set(list.map(s => `${s.date}_${s.time}_${s.churchId ?? ''}`))
       for (const t of slots) {
         const time = String(t.slot_time).slice(0, 5)
-        if (taken.has(`${t.slot_date}_${time}`)) continue
+        if (taken.has(`${t.slot_date}_${time}_${t.church_id ?? churchInfo(null).churchId ?? ''}`)) continue
         list.push({
-          id: `tpl-${t.slot_date}-${time}`, date: t.slot_date, time, title: slotTitle(t), category: t.category,
-          serviceMode: t.service_mode, notes: null, isTemplate: true, mine: null, attended: false, people: [],
+          id: `tpl-${t.slot_date}-${time}-${t.church_id ?? 'main'}`, date: t.slot_date, time, title: slotTitle(t), category: t.category,
+          serviceMode: t.service_mode, ...churchInfo(t.church_id), notes: null, isTemplate: true, mine: null, attended: false, people: [],
         })
       }
       list.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))

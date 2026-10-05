@@ -7,6 +7,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { ScheduleCategory, CATEGORY_CONFIG } from '../../types/database'
 import { SERVICE_MODE_INFO, ServiceMode } from '../../lib/massSchedule'
+import { churchLabel, useChurches } from '../../hooks/useChurches'
 import { DatePickerModal } from '../../components/DatePickerModal'
 import { TimePickerModal } from '../../components/TimePickerModal'
 import { useTheme } from '../../lib/ThemeContext'
@@ -42,6 +43,8 @@ export default function ScheduleForm() {
   const [submitting, setSubmitting] = useState(false)
   const [slotTimes, setSlotTimes] = useState<string[]>([])
   const [mode, setMode] = useState<ServiceMode | null>(null)
+  const { churches, main, multi } = useChurches()
+  const [churchId, setChurchId] = useState<string | null>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
   const days = useMemo(() => Array.from({ length: 14 }, (_, i) => addDays(today, i)), [today])
@@ -74,6 +77,7 @@ export default function ScheduleForm() {
       time: time + ':00',
       category,
       service_mode: effectiveMode,
+      church_id: churchId ?? main?.id ?? null,
       location: '',
       gps_radius: 100,
       notes: notes.trim() || null,
@@ -124,6 +128,17 @@ export default function ScheduleForm() {
           <Chip icon="clock-outline" label="Inna…" onPress={() => setShowTimePicker(true)} />
         </View>
       </View>
+
+      {multi && (
+        <View style={styles.group}>
+          <AppText variant="label" muted>Kościół</AppText>
+          <View style={styles.chips}>
+            {churches.map(ch => (
+              <Chip key={ch.id} icon="church" label={churchLabel(ch)} selected={(churchId ?? main?.id) === ch.id} onPress={() => setChurchId(ch.id)} />
+            ))}
+          </View>
+        </View>
+      )}
 
       <View style={styles.group}>
         <AppText variant="label" muted>Zapisy, obecność i punkty</AppText>

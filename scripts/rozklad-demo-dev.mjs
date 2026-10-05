@@ -43,6 +43,24 @@ await ensure('Adwent — Roraty', { rule: 'season', season_from: 'advent_start',
     ...tpl.filter(t => t.day_of_week === d).map(t => ({ id: null, day_of_week: d, time: t.time.slice(0, 5), label: null, category: 'msza', service_mode: 'signup', base_template_id: t.id })),
   ]))
 
+// Kaplica (filia) z własnymi Mszami: niedziela 9:00, środa 17:00
+const CHAPEL = 'Kaplica św. Anny w Zalesiu'
+let chapel = (await sb.from('churches').select('id').eq('parish_id', parish).eq('name', CHAPEL).maybeSingle()).data
+if (!chapel) {
+  const r = await sb.from('churches').insert({ parish_id: parish, name: CHAPEL, short_name: 'Zalesie', lat: 50.812, lng: 19.124, gps_radius: 150 }).select('id').single()
+  if (r.error) throw r.error
+  chapel = r.data
+  const base = (await sb.from('mass_templates').select('*').eq('parish_id', parish)).data
+  const entries = [
+    ...base.map(t => ({ id: t.id, day_of_week: t.day_of_week, time: t.time.slice(0, 5), label: t.label, category: t.category, service_mode: t.service_mode, church_id: t.church_id })),
+    { id: null, day_of_week: 0, time: '09:00', label: 'Msza w kaplicy', category: 'msza', service_mode: 'assigned', church_id: chapel.id },
+    { id: null, day_of_week: 3, time: '17:00', label: 'Msza w kaplicy', category: 'msza', service_mode: 'signup', church_id: chapel.id },
+  ]
+  const s = await sb.rpc('save_rozklad', { p_target: 'base', p_entries: entries, p_policy: 'keep', p_dry_run: false })
+  if (s.error) throw s.error
+  console.log('Dodano kaplicę z Mszami')
+} else console.log('Kaplica już jest')
+
 const today = new Date().toISOString().slice(0, 10)
 const { data: slots } = await sb.rpc('mass_slots', { p_parish: parish, p_from: today, p_to: today })
 console.log('Dziś:', (slots ?? []).map(s => `${s.slot_time.slice(0, 5)} ${s.category} ${s.service_mode}`).join(' | '))

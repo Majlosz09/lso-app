@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { useFocusEffect, useRouter } from 'expo-router'
 import { supabase } from '../../../lib/supabase'
 import { slotTitle } from '../../../lib/massSchedule'
+import { churchLabel, useChurches } from '../../../hooks/useChurches'
 import { useAuthStore } from '../../../stores/authStore'
 import { ScheduleCategory, CATEGORY_CONFIG } from '../../../types/database'
 import { useTheme } from '../../../lib/ThemeContext'
@@ -22,6 +23,7 @@ type WeekSchedule = {
   time: string
   category: ScheduleCategory
   service_mode: string
+  church_id: string | null
   schedule_assignments: Assignment[]
 }
 type SlotItem = {
@@ -31,6 +33,7 @@ type SlotItem = {
   category: ScheduleCategory
   /** none = bez obecności i punktów (nie alarmujemy o braku obsady) */
   mode: string
+  churchId: string | null
   isTemplate: boolean
   schedule: WeekSchedule | null
   names: string[]
@@ -48,6 +51,7 @@ export default function SchedulesTab() {
   const [weekOffset, setWeekOffset] = useState(0)
   const [schedules, setSchedules] = useState<WeekSchedule[]>([])
   const [slots, setSlots] = useState<any[]>([])
+  const { main, byId: churchById, multi } = useChurches()
   const [loading, setLoading] = useState(true)
   const [creatingSlotKey, setCreatingSlotKey] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
@@ -67,7 +71,7 @@ export default function SchedulesTab() {
     setLoading(true)
     supabase
       .from('schedules')
-      .select('id, title, date, time, category, service_mode, schedule_assignments(status, profile:profiles(full_name))')
+      .select('id, title, date, time, category, service_mode, church_id, schedule_assignments(status, profile:profiles(full_name))')
       .eq('parish_id', profile.parish_id)
       .gte('date', days[0])
       .lte('date', days[6])
@@ -88,19 +92,20 @@ export default function SchedulesTab() {
       title: s.title,
       category: s.category ?? 'msza',
       mode: s.service_mode ?? 'signup',
+      churchId: s.church_id ?? null,
       isTemplate: false,
       schedule: s,
       names: s.schedule_assignments.filter(a => !INACTIVE.includes(a.status)).map(a => a.profile?.full_name ?? '').filter(Boolean),
     }))
-    const times = new Set(scheduled.map(s => s.time))
+    const times = new Set(scheduled.map(s => `${s.time}_${s.churchId ?? main?.id ?? ''}`))
     const tpl: SlotItem[] = slots
-      .filter(t => t.slot_date === date && !times.has(String(t.slot_time).slice(0, 5)))
+      .filter(t => t.slot_date === date && !times.has(`${String(t.slot_time).slice(0, 5)}_${t.church_id ?? main?.id ?? ''}`))
       .map(t => ({
         key: `tpl-${date}-${t.entry_id}`, time: String(t.slot_time).slice(0, 5), title: slotTitle(t),
-        category: t.category as ScheduleCategory, mode: t.service_mode, isTemplate: true, schedule: null, names: [],
+        category: t.category as ScheduleCategory, mode: t.service_mode, churchId: t.church_id ?? null, isTemplate: true, schedule: null, names: [],
       }))
     return { date, slots: [...scheduled, ...tpl].sort((a, b) => a.time.localeCompare(b.time)) }
-  }), [days, schedules, slots])
+  }), [days, schedules, slots, main?.id])
 
   const allSlots = grouped.flatMap(g => g.slots).filter(s => s.mode !== 'none')
   const staffedCount = allSlots.filter(s => s.names.length > 0).length
@@ -113,6 +118,7 @@ export default function SchedulesTab() {
       .insert({
         title: slot.title, date, time: slot.time + ':00', category: slot.category, group_id: null,
         location: '', gps_radius: 100, notes: null, created_by: profile?.id, parish_id: profile?.parish_id,
+        church_id: slot.churchId,
       })
       .select('id')
       .single()
@@ -148,6 +154,11 @@ export default function SchedulesTab() {
     </Sheet>
   )
 
+  // nazwa filii / kaplicy (kościoła głównego nie podpisujemy)
+  const churchTag = (s: SlotItem) => {
+    const ch = s.churchId ? churchById[s.churchId] : null
+    return multi && ch && !ch.is_main ? churchLabel(ch) : ''
+  }
   const staffText = (s: SlotItem) => s.mode === 'none' && !s.names.length
     ? 'bez punktów'
     : s.isTemplate
@@ -198,6 +209,7 @@ export default function SchedulesTab() {
                           : <AppText style={[styles.gCount, { color: staffColor(s) }]}>{s.names.length}</AppText>}
                       </View>
                       <AppText variant="bodyStrong" numberOfLines={2}>{s.title}</AppText>
+                      {!!churchTag(s) && <AppText variant="small" color={c.goldInk} numberOfLines={1}>{churchTag(s)}</AppText>}
                       {s.names.map(n => (
                         <View key={n} style={[styles.person, { backgroundColor: c.borderLight }]}>
                           <AppText style={[styles.personRole, { color: c.subtext }]}>MINISTRANT</AppText>
@@ -262,6 +274,7 @@ export default function SchedulesTab() {
                         <View style={[styles.catLine, { backgroundColor: cat.color }]} />
                         <View style={styles.flex}>
                           <AppText variant="bodyStrong" numberOfLines={1}>{s.title}</AppText>
+                          {!!churchTag(s) && <AppText variant="small" color={c.goldInk} numberOfLines={1}>{churchTag(s)}</AppText>}
                           <AppText style={[styles.mStaff, { color: staffColor(s) }]}>{staffText(s)}</AppText>
                         </View>
                         {creatingSlotKey === s.key ? <ActivityIndicator size="small" color={c.primary} /> : <Icon name="chevron-right" size={22} color={c.iconMuted} />}

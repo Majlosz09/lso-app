@@ -16,7 +16,7 @@ import { Topbar, todayLabel } from './Topbar'
 // Ekrany drugiego planu (formularze, listy ustawień) — na desktopie w węższej kolumnie
 const NARROW_PATHS = [
   '/schedule-series', '/schedule-day', '/recurring-assignments', '/rank-management', '/rank-assignment',
-  '/point-rules', '/mass-schedule', '/award-points', '/badge-management', '/wiedza-admin', '/chat-reports',
+  '/point-rules', '/mass-schedule', '/churches', '/award-points', '/badge-management', '/wiedza-admin', '/chat-reports',
   '/chat/new-dm', '/wiedza/', '/onboarding',
 ]
 

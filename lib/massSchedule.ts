@@ -28,6 +28,8 @@ export type RozkladEntry = {
   label: string | null
   category: SlotCategory
   service_mode: ServiceMode
+  /** kościół / kaplica (brak = kościół główny) */
+  church_id?: string | null
 }
 
 export type PeriodEntry = RozkladEntry & {
@@ -290,7 +292,7 @@ export function draftFromTemplates(templates: RozkladEntry[], days: number[]): D
       .filter(t => days.includes(t.day_of_week))
       .map(t => ({
         id: null, key: draftKey(), day_of_week: t.day_of_week, time: hhmm(t.time), label: t.label,
-        category: t.category, service_mode: t.service_mode, base_template_id: t.id,
+        category: t.category, service_mode: t.service_mode, base_template_id: t.id, church_id: t.church_id ?? null,
       })),
   )
 }
@@ -300,13 +302,13 @@ export function sortDraft(entries: DraftEntry[]): DraftEntry[] {
   return [...entries].sort((a, b) => order(a.day_of_week) - order(b.day_of_week) || hhmm(a.time).localeCompare(hhmm(b.time)))
 }
 
-/** Błędy szkicu: zła godzina, dwie pozycje o tej samej porze danego dnia. */
+/** Błędy szkicu: zła godzina, dwie pozycje o tej samej porze danego dnia w tym samym kościele. */
 export function draftErrors(entries: DraftEntry[]): string[] {
   const errs: string[] = []
   const seen = new Set<string>()
   for (const e of entries) {
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hhmm(e.time))) errs.push(`Niepoprawna godzina: ${e.time}`)
-    const k = `${e.day_of_week}_${hhmm(e.time)}`
+    const k = `${e.day_of_week}_${hhmm(e.time)}_${e.church_id ?? ''}`
     if (seen.has(k)) errs.push(`Dwie pozycje o ${hhmm(e.time)} tego samego dnia`)
     seen.add(k)
   }

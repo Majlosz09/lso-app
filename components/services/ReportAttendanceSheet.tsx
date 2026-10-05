@@ -54,7 +54,7 @@ export function ReportAttendanceSheet({ visible, onClose, services, onSent }: Pr
     setBusy(true)
     const { error } = await supabase.rpc('report_attendance', other
       ? { p_date: day, p_time: time, p_title: title.trim(), p_category: category, p_note: note.trim() || null }
-      : { p_date: chosen!.date, p_time: chosen!.time, p_category: chosen!.category, p_note: note.trim() || null })
+      : { p_date: chosen!.date, p_time: chosen!.time, p_category: chosen!.category, p_note: note.trim() || null, p_church_id: chosen!.churchId })
     setBusy(false)
     if (error) { Toast.show({ type: 'error', text1: 'Nie wysłano', text2: error.message }); return }
     Toast.show({ type: 'success', text1: 'Wysłano do opiekuna', text2: 'Punkty dostaniesz po zatwierdzeniu.' })
@@ -80,7 +80,7 @@ export function ReportAttendanceSheet({ visible, onClose, services, onSent }: Pr
             <Icon name={pick === s.id ? 'radiobox-marked' : 'radiobox-blank'} size={20} color={pick === s.id ? c.primary : c.subtext} filled />
             <View style={styles.flex}>
               <AppText variant="bodyStrong" numberOfLines={1}>{`${s.title} · ${s.time}`}</AppText>
-              <AppText variant="small" muted>{`${relativeDay(s.date)}${s.mine ? ' · Twój dyżur' : ''}`}</AppText>
+              <AppText variant="small" muted>{`${relativeDay(s.date)}${s.churchName ? ` · ${s.churchName}` : ''}${s.mine ? ' · Twój dyżur' : ''}`}</AppText>
             </View>
           </Pressable>
         ))}

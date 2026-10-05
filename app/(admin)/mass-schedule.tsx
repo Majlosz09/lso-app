@@ -56,10 +56,11 @@ function toDraft(rows: (RozkladEntry & { base_template_id?: string | null })[]):
   return sortDraft(rows.map(r => ({
     id: r.id, key: draftKey(), day_of_week: r.day_of_week, time: r.time.slice(0, 5), label: r.label,
     category: r.category ?? 'msza', service_mode: r.service_mode ?? 'signup', base_template_id: r.base_template_id ?? null,
+    church_id: r.church_id ?? null,
   })))
 }
 const sig = (d: DraftEntry[]) =>
-  JSON.stringify(sortDraft(d).map(e => [e.id, e.day_of_week, e.time.slice(0, 5), e.label ?? '', e.category, e.service_mode, e.base_template_id ?? null]))
+  JSON.stringify(sortDraft(d).map(e => [e.id, e.day_of_week, e.time.slice(0, 5), e.label ?? '', e.category, e.service_mode, e.base_template_id ?? null, e.church_id ?? null]))
 
 function daysText(days: number[]): string {
   const s = [...days].sort((a, b) => (a || 7) - (b || 7))
@@ -167,7 +168,7 @@ export default function MassScheduleScreen() {
     p_period: req.period ?? null,
     p_entries: req.entries.map(e => ({
       id: e.id, day_of_week: e.day_of_week, time: e.time.slice(0, 5), label: e.label?.trim() || null,
-      category: e.category, service_mode: e.service_mode, base_template_id: e.base_template_id ?? null,
+      category: e.category, service_mode: e.service_mode, base_template_id: e.base_template_id ?? null, church_id: e.church_id ?? null,
     })),
     p_policy: pol,
     p_dry_run: dryRun,

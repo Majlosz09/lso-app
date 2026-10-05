@@ -9,6 +9,7 @@ import {
 } from '../../lib/massSchedule'
 import { TimePickerModal } from '../TimePickerModal'
 import { AppText, Button, Card, Chip, Icon } from '../ui'
+import { churchLabel, useChurches } from '../../hooks/useChurches'
 
 /** Poniedziałek pierwszy */
 export const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]
@@ -33,6 +34,7 @@ export function RozkladEditor({ entries, onChange, days = WEEK_ORDER, emptyDayTe
   const visibleDays = WEEK_ORDER.filter(d => days.includes(d))
   const [picker, setPicker] = useState<{ key: string } | null>(null)
   const [bulkDays, setBulkDays] = useState<number[]>([])
+  const { churches, multi, main } = useChurches()
   const [copyFrom, setCopyFrom] = useState<number | null>(null)
   const [bulkOpen, setBulkOpen] = useState(false)
   const pickedEntry = picker ? entries.find(e => e.key === picker.key) : null
@@ -146,6 +148,15 @@ export function RozkladEditor({ entries, onChange, days = WEEK_ORDER, emptyDayTe
                       onPress={() => update(e.key, { service_mode: m })} />
                   ))}
                 </View>
+                {multi && (
+                  <View style={styles.chips}>
+                    <Icon name="church" size={16} color={c.subtext} />
+                    {churches.map(ch => (
+                      <Chip key={ch.id} label={churchLabel(ch)} selected={(e.church_id ?? main?.id) === ch.id}
+                        onPress={() => update(e.key, { church_id: ch.id })} />
+                    ))}
+                  </View>
+                )}
               </View>
             ))}
           </Card>

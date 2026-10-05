@@ -49,6 +49,12 @@ export function ServiceCard({ service: s, onPress, showPeople, selected }: {
         <View style={[styles.catLine, { backgroundColor: cat.color }]} />
         <View style={styles.flex}>
           <AppText variant="bodyStrong" numberOfLines={1}>{s.title}</AppText>
+          {!!s.churchName && (
+            <View style={styles.church}>
+              <Icon name="church" size={13} color={c.goldInk} />
+              <AppText variant="small" color={c.goldInk} numberOfLines={1}>{s.churchName}</AppText>
+            </View>
+          )}
           <AppText style={[styles.sub, { color: statusNote ? c.subtext : toneColor }]} numberOfLines={1}>
             {statusNote ?? st.text}
           </AppText>
@@ -74,6 +80,7 @@ export function ServiceCard({ service: s, onPress, showPeople, selected }: {
 }
 
 const styles = StyleSheet.create({
+  church: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   card: { borderWidth: 1, borderRadius: 16, overflow: 'hidden', cursor: 'pointer' } as any,
   selBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },

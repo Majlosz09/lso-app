@@ -54,7 +54,7 @@ export function useServiceActions(onChanged: () => void) {
     if (s.isTemplate) {
       // pozycja z rozkładu bez służby w bazie — tworzymy służbę BEZ zapisu
       // (meldowanie bez zapisu = punkty jak za Mszę dodatkową / nabożeństwo)
-      const { data, error } = await supabase.rpc('materialize_slot', { p_date: s.date, p_time_label: s.time })
+      const { data, error } = await supabase.rpc('materialize_slot', { p_date: s.date, p_time_label: s.time, p_church_id: s.churchId })
       if (error || !data) {
         setBusyId(null)
         Toast.show({ type: 'error', text1: 'Błąd', text2: error?.message ?? 'Nie znaleziono służby.' })
@@ -83,15 +83,17 @@ export function useServiceActions(onChanged: () => void) {
       return
     }
     if (m === 'gps') {
-      if (!parish?.lat || !parish?.lng) {
-        Toast.show({ type: 'error', text1: 'Błąd konfiguracji', text2: 'Opiekun nie ustawił lokalizacji kościoła w ustawieniach parafii.' })
+      // GPS kościoła tej Mszy (filia / kaplica), inaczej kościoła parafialnego
+      const gpsTarget = s.churchGps ?? (parish?.lat != null && parish?.lng != null ? { lat: parish.lat, lng: parish.lng, radius: parish.gps_radius ?? 200 } : null)
+      if (!gpsTarget) {
+        Toast.show({ type: 'error', text1: 'Błąd konfiguracji', text2: 'Opiekun nie ustawił lokalizacji tego kościoła.' })
         return
       }
       setBusyId(s.id)
       let gps: CheckInResult = { success: false, message: 'Nie można uzyskać lokalizacji.' }
       try {
         gps = await Promise.race([
-          validateGps({ parishLat: parish.lat, parishLng: parish.lng, parishRadius: parish.gps_radius ?? 200 }),
+          validateGps({ parishLat: gpsTarget.lat, parishLng: gpsTarget.lng, parishRadius: gpsTarget.radius }),
           new Promise<CheckInResult>(resolve => setTimeout(
             () => resolve({ success: false, message: 'Przekroczono czas oczekiwania na lokalizację. Sprawdź czy GPS i uprawnienia są aktywne.' }),
             25_000,
@@ -123,7 +125,7 @@ export function useServiceActions(onChanged: () => void) {
     if (!s) return
     setSignUpFor(null)
     setBusyId(s.id)
-    const { data, error } = await supabase.rpc('sign_up_for_slot', { p_date: s.date, p_time_label: s.time, p_mode: signUpMode })
+    const { data, error } = await supabase.rpc('sign_up_for_slot', { p_date: s.date, p_time_label: s.time, p_mode: signUpMode, p_church_id: s.churchId })
     setBusyId(null)
     if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
     if (signUpMode === 'recurring') {
@@ -307,7 +309,7 @@ export function useServiceActions(onChanged: () => void) {
   // ── Zgłoszenie obecności po fakcie (do 48 h, zatwierdza opiekun) ──
   const reportAttendance = async (s: Service) => {
     setBusyId(s.id)
-    const { error } = await supabase.rpc('report_attendance', { p_date: s.date, p_time: s.time, p_category: s.category })
+    const { error } = await supabase.rpc('report_attendance', { p_date: s.date, p_time: s.time, p_category: s.category, p_church_id: s.churchId })
     setBusyId(null)
     if (error) { Toast.show({ type: 'error', text1: 'Nie wysłano', text2: error.message }); return }
     Toast.show({ type: 'success', text1: 'Zgłoszenie wysłane do opiekuna', text2: 'Punkty dostaniesz po zatwierdzeniu.' })
