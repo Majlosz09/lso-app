@@ -272,6 +272,7 @@ https://app.lsoapp.com` })
       <ListRow icon="account-star" title="Funkcje liturgiczne" subtitle="Lektor, ceremoniarz, turyferariusz… — kto co może pełnić" onPress={() => router.push('/(admin)/functions' as any)} />
       <ListRow icon="tablet" title="Tryb zakrystii (tablet)" subtitle="Dzieci bez telefonu potwierdzają obecność na wspólnym tablecie" onPress={() => router.push('/(admin)/kiosk' as any)} />
       <ListRow icon="star-circle" title="Reguły punktowania" subtitle="Ile punktów za jaką służbę" onPress={() => router.push('/(admin)/point-rules')} />
+      <ListRow icon="trophy" title="Wyzwania sezonowe" subtitle="Roraty, Droga Krzyżowa, Różaniec… z premią punktową" onPress={() => router.push('/(admin)/challenges' as any)} />
       <ListRow icon="calendar-sync" title="Stałe dyżury" subtitle="Kto służy co tydzień" onPress={() => router.push('/(admin)/recurring-assignments')} />
       <ListRow icon="shield-star" title="Rangi" subtitle="Ścieżka formacji i przypisywanie" onPress={() => router.push('/(admin)/rank-management')} />
       <ListRow icon="medal" title="Odznaki" subtitle="Tworzenie i przyznawanie" onPress={() => router.push('/(admin)/badge-management')} />

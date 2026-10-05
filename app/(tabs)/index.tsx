@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
+import { ChallengeCards } from '../../components/ChallengeCards'
 import { HelperCard } from '../../components/layout/HelperCard'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
@@ -286,6 +287,7 @@ export default function HomeScreen() {
           {church}
         </View>
         <View style={styles.desktopRight}>
+          <ChallengeCards />
           {pointsCard}
           {annCard}
           <DailyWordCard />
@@ -324,6 +326,7 @@ export default function HomeScreen() {
         <View style={styles.body}>
           <View style={styles.overlap}>{nextCard(false)}</View>
           <HelperCard />
+          <ChallengeCards />
           <SwapInbox onChanged={refresh} />
           {church}
           <View style={styles.shortcuts}>
