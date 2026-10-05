@@ -34,7 +34,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const badges = useNavBadges(role, ready)
 
   // tryb zakrystii (tablet) — pełny ekran, bez menu
-  if (!ready || pathname === '/kiosk') return <>{children}</>
+  if (!ready || pathname === '/kiosk' || pathname.startsWith('/g/')) return <>{children}</>
 
   const active = activeNavItem(role, pathname)
   const root = isRootPath(role, pathname)

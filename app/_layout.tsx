@@ -121,6 +121,8 @@ function AuthGate() {
     const inPending = segments[1] === 'pending'
     // strona z linku „Zmiana hasła” sama zarządza sesją odzyskiwania — bez przekierowań
     if (segments[1] === 'reset-password') return
+    // publiczny grafik (link od księdza) — bez logowania, bez przekierowań
+    if ((segments[0] as string) === 'g') return
     const isPending = !!profile?.parish_id && profile?.approved === false
 
     // bez sesji: ekrany wymagające konta (oczekiwanie, wybór parafii) → powitanie (np. po „Wyloguj”)
@@ -177,6 +179,7 @@ function AuthGate() {
           <Stack.Screen name="(admin)" />
           <Stack.Screen name="(parent)" />
           <Stack.Screen name="wiedza" options={{ headerShown: false }} />
+          <Stack.Screen name="g/[token]" options={{ headerShown: false }} />
         </Stack>
       </AppShell>
       <Toast config={toastConfig} />

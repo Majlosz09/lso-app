@@ -4,6 +4,7 @@ import { Stack, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import QRCode from 'react-native-qrcode-svg'
 import { supabase } from '../../lib/supabase'
+import { PublicScheduleCard } from '../../components/admin/PublicScheduleCard'
 import { useAuthStore } from '../../stores/authStore'
 import { buildParishQrValue } from '../../lib/checkin'
 import * as Clipboard from 'expo-clipboard'
@@ -292,11 +293,11 @@ https://app.lsoapp.com` })
         )}
         {isDesktop ? (
           <View style={styles.desktop}>
-            <View style={styles.col}>{dataCard}{codeCard}{configCard}</View>
+            <View style={styles.col}>{dataCard}{codeCard}<PublicScheduleCard />{configCard}</View>
             <View style={styles.col}>{attendanceCard}{chatCard}</View>
           </View>
         ) : (
-          <View style={styles.body}>{dataCard}{codeCard}{attendanceCard}{chatCard}{configCard}</View>
+          <View style={styles.body}>{dataCard}{codeCard}<PublicScheduleCard />{attendanceCard}{chatCard}{configCard}</View>
         )}
       </ScrollView>
 

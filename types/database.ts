@@ -50,6 +50,8 @@ export interface Parish {
   parents_see_general?: boolean | null
   members_can_create_polls?: boolean | null
   allow_member_dm: boolean
+  /** link do grafiku bez logowania (null = wyłączony) */
+  public_token?: string | null
 }
 
 export interface PointRule {

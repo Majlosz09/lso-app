@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '../../lib/supabase'
+import { CalendarSubscribeCard } from '../../components/CalendarSubscribeCard'
 import { MemberFunctionsCard } from '../../components/admin/MemberFunctionsCard'
 import { computeAndSyncBadges } from '../../lib/badges'
 import { useAuthStore } from '../../stores/authStore'
@@ -469,6 +470,8 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
   )
 
   const settings = (
+    <>
+    <CalendarSubscribeCard who={admin || profile?.is_helper ? 'staff' : parent ? 'parent' : 'member'} />
     <Card flush>
       <View style={styles.themeBox}>
         <AppText variant="eyebrow" color={c.goldInk}>Wygląd</AppText>
@@ -481,6 +484,7 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
       <ListRow icon="lock-reset" title="Zmień hasło" subtitle="Wyślemy link na Twój e-mail" onPress={() => setPasswordOpen(true)} />
       <ListRow icon="school" title="Instruktaż aplikacji" subtitle="Powtórz samouczek" onPress={() => setShowOnboarding(true)} />
     </Card>
+    </>
   )
 
   const account = (

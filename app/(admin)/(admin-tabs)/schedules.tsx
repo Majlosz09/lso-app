@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { useFocusEffect, useRouter } from 'expo-router'
 import { supabase } from '../../../lib/supabase'
 import { slotTitle } from '../../../lib/massSchedule'
+import { PrintScheduleSheet } from '../../../components/schedule/PrintScheduleSheet'
 import { churchLabel, useChurches } from '../../../hooks/useChurches'
 import { useAuthStore } from '../../../stores/authStore'
 import { ScheduleCategory, CATEGORY_CONFIG } from '../../../types/database'
@@ -55,6 +56,7 @@ export default function SchedulesTab() {
   const [loading, setLoading] = useState(true)
   const [creatingSlotKey, setCreatingSlotKey] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
+  const [printOpen, setPrintOpen] = useState(false)
 
   const days = useMemo(() => weekOf(weekOffset), [weekOffset])
   const today = localDateStr()
@@ -144,7 +146,11 @@ export default function SchedulesTab() {
   )
 
   const addSheet = (
+    <>
+    <PrintScheduleSheet visible={printOpen} onClose={() => setPrintOpen(false)} />
     <Sheet visible={addOpen} onClose={() => setAddOpen(false)} title="Dodaj służbę">
+      <ChoiceCard icon="printer" title="Drukuj grafik" subtitle="Tydzień albo miesiąc na A4 do zakrystii (z kodem QR)"
+        onPress={() => { setAddOpen(false); setPrintOpen(true) }} />
       <ChoiceCard icon="auto-fix" title="Ułóż grafik za mnie" subtitle="Sprawiedliwa propozycja obsady na tydzień albo miesiąc"
         onPress={() => { setAddOpen(false); router.push('/(admin)/auto-schedule' as any) }} />
       <ChoiceCard icon="calendar-plus" title="Jednorazowa służba" subtitle="Jeden termin: dzień, godzina, rodzaj"
@@ -154,6 +160,7 @@ export default function SchedulesTab() {
       <ChoiceCard icon="calendar-sync" title="Stałe dyżury ministrantów" subtitle="Kto służy co tydzień o danej godzinie"
         onPress={() => { setAddOpen(false); router.push('/(admin)/recurring-assignments') }} />
     </Sheet>
+    </>
   )
 
   // nazwa filii / kaplicy (kościoła głównego nie podpisujemy)
@@ -175,6 +182,7 @@ export default function SchedulesTab() {
         <View style={styles.deskBar}>
           {weekNav(false)}
           <AppText variant="small" muted style={styles.flex}>{`${staffedCount} z ${allSlots.length} służb obsadzonych`}</AppText>
+          <Button label="Drukuj" icon="printer" variant="secondary" compact onPress={() => setPrintOpen(true)} />
           <Button label="Ułóż grafik" icon="auto-fix" variant="secondary" compact onPress={() => router.push('/(admin)/auto-schedule' as any)} />
           <Button label="Stałe dyżury" icon="calendar-sync" variant="secondary" compact onPress={() => router.push('/(admin)/recurring-assignments')} />
           <Button label="Cykl służb" icon="calendar-multiple" variant="secondary" compact onPress={() => router.push('/(admin)/schedule-series')} />
