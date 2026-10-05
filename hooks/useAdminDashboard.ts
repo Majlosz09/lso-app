@@ -15,6 +15,8 @@ export type AdminDashboard = {
   excuses: { count: number; names: string[] }
   /** zgłoszenia obecności po fakcie */
   attendanceReports: { count: number; names: string[] }
+  /** ścieżka formacji: spełnili wymagania do kolejnego stopnia */
+  promotions: { count: number; names: string[] }
   pending: { count: number; names: string[] }
   reports: number
   avgAttendance: number | null
@@ -37,7 +39,7 @@ export function useAdminDashboard() {
     const to = addDays(today, 7) > week[6] ? addDays(today, 7) : week[6]
     const since30 = addDays(today, -30)
 
-    const [members, pending, reports, excuses, services, past, attReports] = await Promise.all([
+    const [members, pending, reports, excuses, services, past, attReports, ready] = await Promise.all([
       supabase.from('profiles').select('id', { count: 'exact', head: true })
         .eq('parish_id', parishId).eq('is_active', true).eq('role', 'member'),
       supabase.rpc('get_pending_members'),
@@ -51,6 +53,7 @@ export function useAdminDashboard() {
         .eq('schedule.parish_id', parishId).gte('schedule.date', since30).lt('schedule.date', today),
       supabase.from('attendance_reports').select('id, profile:profiles!attendance_reports_profile_id_fkey(full_name)')
         .eq('parish_id', parishId).eq('status', 'pending'),
+      supabase.rpc('formation_ready'),
     ])
 
     const svc = ((services.data ?? []) as any[]).map(s => ({
@@ -68,6 +71,10 @@ export function useAdminDashboard() {
       members: members.count ?? 0,
       unstaffed7: unstaffed.length,
       firstUnstaffed: unstaffed[0] ?? null,
+      promotions: {
+        count: Array.isArray(ready.data) ? ready.data.length : 0,
+        names: (Array.isArray(ready.data) ? ready.data : []).map((r: any) => firstName(r.full_name)).filter(Boolean),
+      },
       attendanceReports: {
         count: ((attReports.data ?? []) as any[]).length,
         names: ((attReports.data ?? []) as any[]).map(r => firstName(r.profile?.full_name)).filter(Boolean),

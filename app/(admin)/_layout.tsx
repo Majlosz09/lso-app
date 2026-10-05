@@ -53,6 +53,7 @@ export default function AdminLayout() {
       <Stack.Screen name="auto-schedule" options={{ title: 'Ułóż grafik' }} />
       <Stack.Screen name="functions" options={{ title: 'Funkcje liturgiczne' }} />
       <Stack.Screen name="import-members" options={{ title: 'Dodaj ministrantów' }} />
+      <Stack.Screen name="promotions" options={{ title: 'Gotowi do awansu' }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="point-rules" options={{ title: 'Reguły punktowania' }} />
       <Stack.Screen name="schedule-series" options={{ title: 'Nowy cykl służb' }} />

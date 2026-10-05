@@ -7,6 +7,7 @@ import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
+import { RankRequirement, RankRequirementsSheet, requirementSummary } from '../../components/admin/RankRequirementsSheet'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
@@ -25,6 +26,15 @@ export default function RankManagementScreen() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const [renaming, setRenaming] = useState(false)
+  // ścieżka formacji: wymagania do stopni
+  const [reqs, setReqs] = useState<Record<string, RankRequirement>>({})
+  const [reqFor, setReqFor] = useState<{ id: string; name: string } | null>(null)
+  const loadReqs = async () => {
+    if (!profile?.parish_id) return
+    const { data } = await supabase.from('rank_requirements').select('rank_id, min_services, min_months, min_rate, wiedza_categories, note').eq('parish_id', profile.parish_id)
+    setReqs(Object.fromEntries(((data ?? []) as RankRequirement[]).map(r => [r.rank_id, r])))
+  }
+  useEffect(() => { loadReqs() }, [profile?.parish_id])
 
   const fetchRanks = async () => {
     const parishId = profile?.parish_id
@@ -138,7 +148,12 @@ export default function RankManagementScreen() {
               </>
             ) : (
               <>
-                <Text style={styles.rankName}>{item.name}</Text>
+                <TouchableOpacity style={{ flex: 1 }} onPress={() => setReqFor({ id: item.id, name: item.name })} accessibilityLabel={`Wymagania: ${item.name}`}>
+                  <Text style={[styles.rankName, { flex: 0 }]}>{item.name}</Text>
+                  <Text style={{ fontSize: 12, color: reqs[item.id] ? c.primary : c.textTertiary, fontFamily: 'Manrope_600SemiBold' }}>
+                    {`Wymagania: ${requirementSummary(reqs[item.id])}`}
+                  </Text>
+                </TouchableOpacity>
                 {item.is_system ? (
                   <View style={styles.systemBadge}>
                     <Text style={styles.systemBadgeText}>systemowa</Text>
@@ -159,6 +174,8 @@ export default function RankManagementScreen() {
         )}
         contentContainerStyle={[styles.listContent, { paddingBottom: Math.max(insets.bottom, 16) }]}
       />
+
+      <RankRequirementsSheet rank={reqFor} current={reqFor ? reqs[reqFor.id] : undefined} onClose={() => setReqFor(null)} onSaved={loadReqs} />
 
       <View style={styles.addRow}>
         <TextInput

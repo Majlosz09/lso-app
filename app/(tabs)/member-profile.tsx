@@ -10,6 +10,7 @@ import { useTheme } from '../../lib/ThemeContext'
 import { sans } from '../../lib/theme'
 import { pl } from '../../lib/dates'
 import { FormationSection, BadgeWithDef } from '../../components/FormationBadges'
+import { FormationProgressCard } from '../../components/FormationProgressCard'
 import { BadgeGrid } from '../../components/BadgeGrid'
 import { AppText, Avatar, Button, Card, HeaderChip, ScreenHeader, SectionHeader } from '../../components/ui'
 
@@ -141,6 +142,7 @@ export default function MemberProfileScreen() {
     <View style={styles.body}>
       {statTiles}
       {allRanks.length > 0 && <FormationSection ranks={allRanks} currentRankId={member.rank_id} c={c} />}
+      <FormationProgressCard profileId={member.id} who="child" />
       <View>
         <SectionHeader title="Wyróżnienia" />
         <Card><BadgeGrid badges={activeBadges} emptyText="Brak wyróżnień." /></Card>

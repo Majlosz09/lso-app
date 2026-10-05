@@ -34,6 +34,11 @@ export default function AdminHome() {
       title: `${data.excuses.count} ${pl(data.excuses.count, ['usprawiedliwienie', 'usprawiedliwienia', 'usprawiedliwień'])}`,
       sub: data.excuses.names.slice(0, 4).join(', '), href: '/(admin)/absence-requests',
     },
+    data.promotions.count > 0 && {
+      key: 'pr', icon: 'arrow-up-bold-circle', tone: 'gold',
+      title: `${data.promotions.count} ${pl(data.promotions.count, ['osoba gotowa', 'osoby gotowe', 'osób gotowych'])} do awansu`,
+      sub: data.promotions.names.slice(0, 4).join(', '), href: '/(admin)/promotions',
+    },
     data.attendanceReports.count > 0 && {
       key: 'ar', icon: 'account-question', tone: 'gold',
       title: `${data.attendanceReports.count} ${pl(data.attendanceReports.count, ['zgłoszenie', 'zgłoszenia', 'zgłoszeń'])} obecności`,
