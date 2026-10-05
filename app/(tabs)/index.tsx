@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { ChallengeCards } from '../../components/ChallengeCards'
 import { HelperCard } from '../../components/layout/HelperCard'
+import { PendingCheckinsBanner } from '../../components/services/PendingCheckinsBanner'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { headerPalette, sans, serif, VESTMENT_DOT, VESTMENT_NAMES, VestmentColor } from '../../lib/theme'
@@ -95,7 +96,7 @@ export default function HomeScreen() {
   const pal = liturgy.palette
   const [day, setDay] = useState(today)
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(today, i)), [today])
-  const { services, refresh } = useServices(today, days[6])
+  const { services, offline, refresh } = useServices(today, days[6])
   const actions = useServiceActions(refresh)
   const { points, anns, rankName, reload } = useHomeData()
   const { next, later } = useNextService(services)
@@ -281,6 +282,7 @@ export default function HomeScreen() {
     return (
       <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={styles.desktop}>
         <View style={styles.desktopLeft}>
+          <PendingCheckinsBanner offline={offline} />
           <HelperCard />
           <SwapInbox onChanged={refresh} />
           {nextCard(true)}
@@ -325,6 +327,7 @@ export default function HomeScreen() {
 
         <View style={styles.body}>
           <View style={styles.overlap}>{nextCard(false)}</View>
+          <PendingCheckinsBanner offline={offline} />
           <HelperCard />
           <ChallengeCards />
           <SwapInbox onChanged={refresh} />

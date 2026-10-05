@@ -124,3 +124,13 @@ przelicza wyzwania, premia `points.source = 'challenge'`, `challenge_board`, `re
 `20261005110000_monthly_report.sql`: `monthly_report(miesiąc)` (tylko opiekun), `notify_monthly_reports()` + **pg_cron
 `lso-monthly-report` (`0 7 1 * *` = 9:00 PL)** — przy wdrożeniu na produkcję zadanie powstaje z migracją. Zbiórki nie liczą się
 do obsady. Ekran `/monthly-report`, wydruk `lib/monthlyReport.ts`. Smoke: `monthly-report-smoke-dev` (7 OK).
+
+## Meldowanie bez zasięgu (2026-10-05)
+
+`20261005120000_offline_checkin.sql`: `check_in_offline(data, godzina, client_time, metoda, schedule_id?, church_id?)` —
+przyjmuje obecność wysłaną później, jeśli godzina meldowania mieści się w oknie służby (−40 … +100 min), nie jest z przyszłości
+(+5 min tolerancji) i minęło ≤ 48 h; `attendance.checked_at` = godzina meldowania. Klient: `lib/offlineQueue.ts` (AsyncStorage
+`checkin-queue:v1`), `stores/checkinQueueStore.ts` (wysyłka przy starcie, powrocie do aplikacji, zdarzeniu `online` i co minutę),
+`useServiceActions.doCheckIn` przekazuje metodę (manual/qr/gps) i przy błędzie sieci odkłada do kolejki; `useServices` pamięta
+ostatni grafik (`services-cache:v1:*`) i pokazuje go bez sieci; pasek `PendingCheckinsBanner` (Obecność, Dom) z „Wyślij teraz”.
+Smoke: `offline-checkin-smoke-dev` (6 OK) + test w przeglądarce (offline → online, obecność z godziną kliknięcia).

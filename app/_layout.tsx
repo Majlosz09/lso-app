@@ -5,6 +5,7 @@ import Toast from 'react-native-toast-message'
 import * as SplashScreen from 'expo-splash-screen'
 import { preloadLiturgy } from '../lib/liturgy'
 import { usePushTapRouting } from '../hooks/usePushTapRouting'
+import { useCheckinQueueSync } from '../stores/checkinQueueStore'
 import { useFonts } from 'expo-font'
 import {
   InstrumentSerif_400Regular,
@@ -97,6 +98,7 @@ function AuthGate() {
   const { session, profile, isLoading, setSession } = useAuthStore()
   const router = useRouter()
   usePushTapRouting()
+  useCheckinQueueSync()
   const segments = useSegments()
   const [showOnboarding, setShowOnboarding] = useState(false)
 

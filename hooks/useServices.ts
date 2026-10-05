@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useRealtimeTable } from './useRealtimeTable'
 import type { AssignmentStatus, ScheduleCategory } from '../types/database'
 import { ServiceMode, slotTitle } from '../lib/massSchedule'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { isNetworkError, queueKey } from '../lib/offlineQueue'
+import { useCheckinQueue } from '../stores/checkinQueueStore'
 
 export type ServicePerson = { profileId: string; name: string; status: AssignmentStatus; isMe: boolean; role: string }
 
@@ -52,6 +55,9 @@ export function useServices(from: string, to: string) {
   const profile = useAuthStore(s => s.profile)
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
+  /** grafik z pamięci telefonu (brak internetu) */
+  const [offline, setOffline] = useState(false)
+  const queued = useCheckinQueue(st => st.items)
 
   const load = useCallback(async () => {
     if (!profile?.id || !profile.parish_id) return
@@ -67,6 +73,16 @@ export function useServices(from: string, to: string) {
       supabase.rpc('mass_slots', { p_parish: profile.parish_id, p_from: from, p_to: to }),
       supabase.from('churches').select('id, name, short_name, is_main, lat, lng, gps_radius').eq('parish_id', profile.parish_id),
     ])
+    const cacheKey = `services-cache:v1:${profile.id}:${from}:${to}`
+    if (schedRes.error && isNetworkError(schedRes.error)) {
+      // bez zasięgu: ostatnio pobrany grafik (żeby dało się zameldować w zakrystii bez sieci)
+      try {
+        const raw = await AsyncStorage.getItem(cacheKey)
+        if (raw) { setServices(JSON.parse(raw)); setOffline(true) }
+      } catch { /* brak pamięci */ }
+      setLoading(false)
+      return
+    }
     const churches = (chRes.data ?? []) as any[]
     const churchById = new Map(churches.map(ch => [ch.id, ch]))
     const churchInfo = (id: string | null | undefined) => {
@@ -144,13 +160,27 @@ export function useServices(from: string, to: string) {
     }
 
     setServices(list)
+    setOffline(false)
     setLoading(false)
+    try { await Promise.resolve(AsyncStorage.setItem(cacheKey, JSON.stringify(list))) } catch { /* bez pamięci */ }
   }, [profile?.id, profile?.parish_id, from, to])
 
   useEffect(() => { setLoading(true); load() }, [load])
+  // kolejka wysłana → odśwież (obecność jest już w bazie)
+  const prevQueued = useRef(queued.length)
+  useEffect(() => {
+    if (queued.length < prevQueued.current) load()
+    prevQueued.current = queued.length
+  }, [queued.length])
   useRealtimeTable('schedule_assignments', () => { load() })
   useRealtimeTable('schedules', () => { load() }, profile?.parish_id ? `parish_id=eq.${profile.parish_id}` : undefined)
 
-  return { services, loading, refresh: load }
+  // obecność czekająca w kolejce telefonu = już potwierdzona (nie meldujemy drugi raz)
+  const pendingKeys = new Set(queued.filter(q => q.profileId === profile?.id).map(q => q.key))
+  const shown = pendingKeys.size && profile?.id
+    ? services.map(s => pendingKeys.has(queueKey(profile.id, s.date, s.time, s.churchId)) ? { ...s, attended: true } : s)
+    : services
+
+  return { services: shown, loading, offline, refresh: load }
 }
 

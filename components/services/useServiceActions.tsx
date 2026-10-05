@@ -15,6 +15,8 @@ import { AppText, Button, Icon, Sheet } from '../ui'
 import { AbsenceSheet } from './AbsenceSheet'
 import { SwapSheet } from './SwapSheet'
 import { useSwapStore } from '../../stores/swapStore'
+import { useCheckinQueue } from '../../stores/checkinQueueStore'
+import { isNetworkError, queueKey } from '../../lib/offlineQueue'
 
 const DAY_ACC = ['niedzielę', 'poniedziałek', 'wtorek', 'środę', 'czwartek', 'piątek', 'sobotę']
 
@@ -48,13 +50,26 @@ export function useServiceActions(onChanged: () => void) {
   const primary = selfPrimary(parish)
 
   // ── Zameldowanie ─────────────────────────────────────────────────────────
-  const doCheckIn = async (s: Service) => {
+  // brak zasięgu: obecność zostaje w telefonie z godziną meldowania i idzie sama po powrocie sieci
+  const queueOffline = async (s: Service, method: 'manual' | 'qr' | 'gps', clientTime: string) => {
+    await useCheckinQueue.getState().enqueue({
+      key: queueKey(profile!.id, s.date, s.time, s.churchId ?? null), profileId: profile!.id,
+      date: s.date, time: s.time, title: s.title, scheduleId: s.isTemplate ? null : s.id, churchId: s.churchId ?? null,
+      method, clientTime, attempts: 0,
+    })
+    setBusyId(null)
+    Toast.show({ type: 'info', text1: 'Brak internetu — obecność zapisana w telefonie', text2: 'Aplikacja wyśle ją sama, gdy wróci zasięg (do 48 h).' })
+  }
+
+  const doCheckIn = async (s: Service, method: 'manual' | 'qr' | 'gps' = 'manual') => {
     setBusyId(s.id)
+    const clientTime = new Date().toISOString()
     let scheduleId = s.id
     if (s.isTemplate) {
       // pozycja z rozkładu bez służby w bazie — tworzymy służbę BEZ zapisu
       // (meldowanie bez zapisu = punkty jak za Mszę dodatkową / nabożeństwo)
       const { data, error } = await supabase.rpc('materialize_slot', { p_date: s.date, p_time_label: s.time, p_church_id: s.churchId })
+      if (error && isNetworkError(error)) { await queueOffline(s, method, clientTime); return }
       if (error || !data) {
         setBusyId(null)
         Toast.show({ type: 'error', text1: 'Błąd', text2: error?.message ?? 'Nie znaleziono służby.' })
@@ -66,7 +81,9 @@ export function useServiceActions(onChanged: () => void) {
       p_schedule_id: scheduleId,
       p_profile_id: profile!.id,
       p_parish_id: profile!.parish_id,
+      p_method: method,
     })
+    if (error && isNetworkError(error)) { await queueOffline(s, method, clientTime); return }
     setBusyId(null)
     if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
     const result = data as any
@@ -103,7 +120,7 @@ export function useServiceActions(onChanged: () => void) {
         setBusyId(null)
       }
       if (!gps.success) { Toast.show({ type: 'error', text1: 'Nie można zameldować', text2: gps.message }); return }
-      await doCheckIn(s)
+      await doCheckIn(s, 'gps')
       return
     }
     if (m === 'qr') {
@@ -288,7 +305,7 @@ export function useServiceActions(onChanged: () => void) {
               qrScanned.current = true
               const pending = qrFor
               setQrFor(null)
-              if (pending) doCheckIn(pending)
+              if (pending) doCheckIn(pending, 'qr')
             }}
           />
           <View style={styles.qrOverlay} pointerEvents="none">

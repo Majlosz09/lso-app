@@ -13,6 +13,7 @@ import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { Service, useServices } from '../../hooks/useServices'
 import { useServiceActions } from '../../components/services/useServiceActions'
 import { AppText, Button, Card, Chip, Icon } from '../../components/ui'
+import { PendingCheckinsBanner } from '../../components/services/PendingCheckinsBanner'
 import { ReportAttendanceSheet, reportable } from '../../components/services/ReportAttendanceSheet'
 import { ReportsStatus } from '../../components/services/ChildReports'
 
@@ -47,7 +48,7 @@ export default function AttendanceScreen() {
   const profileId = useAuthStore(s => s.profile?.id)
   const today = localDateStr()
   // od przedwczoraj — do zgłoszeń obecności po fakcie (48 h)
-  const { services, loading, refresh } = useServices(addDays(today, -2), addDays(today, 7))
+  const { services, loading, offline, refresh } = useServices(addDays(today, -2), addDays(today, 7))
   const [reportOpen, setReportOpen] = useState(false)
   const [chosenId, setChosenId] = useState<string | null>(null)
   const actions = useServiceActions(refresh)
@@ -81,6 +82,7 @@ export default function AttendanceScreen() {
           )}
           <AppText variant="eyebrow" color={c.gold} style={styles.eyebrow}>Potwierdź obecność</AppText>
         </View>
+        <PendingCheckinsBanner offline={offline} />
 
         <View style={styles.center}>
           <AppText style={[serif(), styles.title]}>
