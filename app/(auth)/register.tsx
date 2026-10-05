@@ -78,6 +78,24 @@ function MemberForm({ onBack }: { onBack: () => void }) {
   const [phone, setPhone] = useState('')
   const [rocznik, setRocznik] = useState('')
   const [inviteCode, setInviteCode] = useState('')
+  // kod osobisty od księdza (ministrant dodany przez parafię bez konta) — przejmie dyżury i punkty
+  const [personalCode, setPersonalCode] = useState('')
+  const [personalInfo, setPersonalInfo] = useState<{ full_name: string; parish: string } | null>(null)
+  const onPersonalCode = async (t: string) => {
+    const v = t.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)
+    setPersonalCode(v)
+    setPersonalInfo(null)
+    if (v.length !== 8) return
+    const { data } = await supabase.rpc('claim_code_info', { p_code: v })
+    const info = data as any
+    if (!info) return
+    setPersonalInfo({ full_name: info.full_name, parish: info.parish })
+    setInviteCode(String(info.invite_code ?? '').toUpperCase())
+    const [first, ...rest] = String(info.full_name).split(' ')
+    if (!firstName.trim()) setFirstName(first)
+    if (!lastName.trim()) setLastName(rest.join(' '))
+    if (!rocznik && info.rocznik) setRocznik(String(info.rocznik))
+  }
   const [loading, setLoading] = useState(false)
 
   const [parishIdPreview, setParishIdPreview] = useState<string | null>(null)
@@ -200,6 +218,18 @@ function MemberForm({ onBack }: { onBack: () => void }) {
       await supabase.rpc('link_parent_to_children', { p_child_ids: selectedChildIds })
     }
 
+    // kod osobisty: konto przejmuje profil założony przez parafię (od razu zatwierdzone)
+    if (role === 'member' && personalInfo && personalCode.length === 8) {
+      const { error: claimErr } = await supabase.rpc('claim_member_profile', { p_code: personalCode })
+      if (!claimErr) {
+        Toast.show({ type: 'success', text1: 'Witaj w służbie!', text2: 'Twoje dyżury i punkty są już na koncie.' })
+        await useAuthStore.getState().fetchProfile()
+        setSession(activeSession)
+        return
+      }
+      Toast.show({ type: 'error', text1: 'Nie udało się użyć kodu osobistego', text2: claimErr.message })
+    }
+
     Toast.show({ type: 'success', text1: 'Konto utworzone', text2: 'Administrator parafii musi jeszcze zatwierdzić Twoje dołączenie.' })
     setSession(activeSession)
   }
@@ -226,6 +256,20 @@ function MemberForm({ onBack }: { onBack: () => void }) {
             onPress={() => setRole('parent')}
           />
         </View>
+
+        {role === 'member' && (
+          <TextField
+            label="Kod osobisty od księdza (jeśli dostałeś)"
+            placeholder="np. ABCD-2345"
+            autoCapitalize="characters"
+            value={personalCode.length > 4 ? `${personalCode.slice(0, 4)}-${personalCode.slice(4)}` : personalCode}
+            onChangeText={onPersonalCode}
+            maxLength={9}
+            hint={personalInfo ? `${personalInfo.full_name} · ${personalInfo.parish} — Twoje dyżury i punkty przejdą na konto.`
+              : personalCode.length === 8 ? 'Nie znamy tego kodu — sprawdź albo zostaw puste.' : undefined}
+            hintTone={personalInfo ? 'success' : 'danger'}
+          />
+        )}
 
         <TextField
           label="Kod parafii"

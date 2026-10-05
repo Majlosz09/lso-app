@@ -24,6 +24,7 @@ type Member = {
   services?: number
   attendance?: number | null
   rankName?: string | null
+  managed?: boolean
   rank_id?: string | null
   role_before_admin?: string | null
 }
@@ -70,7 +71,7 @@ export default function MembersTab() {
       const [profilesRes, pointsRes, ranksRes, assignRes] = await Promise.all([
         supabase
           .from('profiles')
-          .select('id, full_name, role, phone, rocznik, role_before_admin, rank_id')
+          .select('id, full_name, role, phone, rocznik, role_before_admin, rank_id, managed')
           .eq('parish_id', adminProfile!.parish_id)
           .in('role', ['member', 'parent', 'admin'])
           .eq('is_active', true)
@@ -102,6 +103,7 @@ export default function MembersTab() {
           services: servicesMap[p.id] ?? 0,
           attendance: attendanceRate(statuses.get(p.id) ?? []),
           rankName: p.rank_id ? rankName.get(p.rank_id) ?? null : null,
+          managed: !!p.managed,
         }))
       )
       setLoading(false)
@@ -316,7 +318,7 @@ export default function MembersTab() {
           title={m.full_name}
           subtitle={m.role === 'parent'
             ? (m.phone ?? 'Rodzic')
-            : `${m.rankName ?? 'Ministrant'} · ${m.total_points ?? 0} pkt`}
+            : `${m.rankName ?? 'Ministrant'} · ${m.total_points ?? 0} pkt${m.managed ? ' · bez konta' : ''}`}
           right={m.role === 'member' ? (
             <View style={styles.rowRight}>
               <AppText style={[styles.rate, { color: rateColor(m.attendance) }]}>{m.attendance != null ? `${m.attendance}%` : '—'}</AppText>
@@ -466,6 +468,7 @@ export default function MembersTab() {
           <View style={styles.deskSearch}>{search_(false)}</View>
           <View style={styles.deskSeg}>{segments}</View>
           <Badge label={`Kod: ${parish?.invite_code ?? '—'}`} tone="gold" />
+          <Button label="Dodaj / importuj" icon="account-multiple-plus" variant="secondary" compact onPress={() => router.push('/(admin)/import-members' as any)} />
         </View>
         <View style={styles.cols}>
           <View style={styles.colMain}>
@@ -491,6 +494,7 @@ export default function MembersTab() {
         </ScreenHeader>
         <View style={styles.body}>
           {pendingBox}
+          <Button label="Dodaj / importuj ministrantów" icon="account-multiple-plus" variant="secondary" compact onPress={() => router.push('/(admin)/import-members' as any)} />
           {segments}
           {loading ? <ActivityIndicator color={c.primary} /> : filter === 'admin' ? adminList : peopleList}
         </View>

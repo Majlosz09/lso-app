@@ -31,6 +31,8 @@ type MemberProfile = {
   avatar_url: string | null
   rank_id: string | null
   is_helper?: boolean
+  managed?: boolean
+  claim_code?: string | null
   parent_id: string | null
 }
 
@@ -116,7 +118,7 @@ export default function MemberDetailScreen() {
     const today = new Date().toISOString().split('T')[0]
 
     const queries: PromiseLike<any>[] = [
-      supabase.from('profiles').select('id, full_name, role, phone, rocznik, avatar_url, rank_id, parent_id, is_helper').eq('id', id).single(),
+      supabase.from('profiles').select('id, full_name, role, phone, rocznik, avatar_url, rank_id, parent_id, is_helper, managed, claim_code').eq('id', id).single(),
       supabase.from('schedule_assignments')
         .select('id, status, schedule:schedules(id, title, date, time)')
         .eq('profile_id', id)
@@ -327,6 +329,14 @@ export default function MemberDetailScreen() {
   }
 
   const isMember = profile.role === 'member'
+  const newClaimCode = async () => {
+    if (!profile) return
+    const { data, error } = await supabase.rpc('regenerate_claim_code', { p_profile: profile.id })
+    if (error) { Toast.show({ type: 'error', text1: 'Nie udało się', text2: error.message }); return }
+    setProfile(prev => prev ? { ...prev, claim_code: data as string } : prev)
+    Toast.show({ type: 'success', text1: 'Nowy kod osobisty' })
+  }
+
   const toggleHelper = async () => {
     if (!profile) return
     const next = !profile.is_helper
@@ -472,8 +482,24 @@ export default function MemberDetailScreen() {
         </View>
       </Modal>
 
+      {/* Ministrant bez konta: kod osobisty do założenia konta */}
+      {isMember && profile.managed && (
+        <View style={{ marginHorizontal: 16, marginTop: 12 }}>
+          <Card style={{ gap: 6 }}>
+            <AppText variant="bodyStrong">Ministrant bez konta</AppText>
+            <AppText variant="small" muted>Jest w grafiku, na tablecie i w punktach. Konto może założyć z kodem osobistym — przejmie całą historię.</AppText>
+            <AppText style={{ fontSize: 22, letterSpacing: 2, fontFamily: 'Manrope_800ExtraBold', color: c.primary }} selectable>
+              {profile.claim_code ? `${profile.claim_code.slice(0, 4)}-${profile.claim_code.slice(4)}` : '—'}
+            </AppText>
+            <Pressable accessibilityRole="button" onPress={newClaimCode}>
+              <AppText variant="small" color={c.primary}>Nowy kod (stary przestanie działać)</AppText>
+            </Pressable>
+          </Card>
+        </View>
+      )}
+
       {/* Pomocnik opiekuna: grafik, obecność, zgłoszenia */}
-      {isMember && (
+      {isMember && !profile.managed && (
         <View style={{ marginHorizontal: 16, marginTop: 12 }}>
           <Card style={{ gap: 6 }}>
             <Pressable accessibilityRole="switch" accessibilityState={{ checked: !!profile.is_helper }} onPress={toggleHelper}
