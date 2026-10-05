@@ -158,7 +158,7 @@ const GROUP_ROUTES: Record<NavRole, { base: string; paths: string[] }> = {
 }
 
 /** Ekrany panelu opiekuna dostępne dla pomocnika. */
-export const HELPER_PATHS = ['/schedules', '/schedule-detail', '/schedule-form', '/schedule-series', '/schedule-day', '/auto-schedule', '/absence-requests', '/kiosk']
+export const HELPER_PATHS = ['/schedules', '/schedule-detail', '/schedule-form', '/schedule-series', '/schedule-day', '/recurring-assignments', '/auto-schedule', '/absence-requests', '/kiosk']
 export const helperAllowed = (pathname: string) => HELPER_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
 
 export function equivalentRoute(role: NavRole, pathname: string): string {
