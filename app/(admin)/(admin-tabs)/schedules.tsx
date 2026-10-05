@@ -239,6 +239,7 @@ export default function SchedulesTab() {
             })}
           </ScrollView>
         )}
+        <PrintScheduleSheet visible={printOpen} onClose={() => setPrintOpen(false)} />
       </View>
     )
   }
