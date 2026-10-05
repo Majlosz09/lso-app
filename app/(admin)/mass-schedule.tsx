@@ -15,6 +15,7 @@ import {
 import { RozkladEditor, ServiceModeLegend, WEEK_ORDER } from '../../components/admin/RozkladEditor'
 import { RozkladChange, RozkladPolicy, RozkladPreviewSheet } from '../../components/admin/RozkladPreviewSheet'
 import { DatePickerModal } from '../../components/DatePickerModal'
+import { churchLabel, useChurches } from '../../hooks/useChurches'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { AppText, Button, Card, Chip, Icon, Segmented, Sheet, TextField } from '../../components/ui'
 
@@ -37,6 +38,8 @@ type PeriodForm = {
   copy_dow: number | null
   /** podpowiedź z gotowego szablonu */
   hint?: string
+  /** kościoły, których dotyczy zmiana ([] = automatycznie) */
+  church_ids: string[]
 }
 /** Święta: pozycje bez dnia tygodnia — trzymamy je pod jednym kluczem */
 const FEAST_DOW = 0
@@ -104,6 +107,7 @@ export default function MassScheduleScreen() {
   const [form, setForm] = useState<PeriodForm | null>(null)
   const [datePick, setDatePick] = useState<'from' | 'to' | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const { churches, multi: multiChurch } = useChurches()
   const [anchorPick, setAnchorPick] = useState<'season_from' | 'season_to' | 'feasts' | null>(null)
   // daty świąt w tym i przyszłym roku (z bazy — te same co w rozkładzie)
   const [anchors, setAnchors] = useState<Record<number, Record<string, string>>>({})
@@ -219,6 +223,7 @@ export default function MassScheduleScreen() {
         days: p.days_of_week, entries: toDraft(periodEntries.filter(e => e.period_id === p.id)),
         rule: p.rule ?? 'dates', feasts: p.feasts ?? [], season_from: p.season_from ?? 'advent_start', season_to: p.season_to ?? 'dec23',
         season_from_offset: p.season_from_offset ?? 0, season_to_offset: p.season_to_offset ?? 0, copy_dow: p.copy_dow ?? null,
+        church_ids: p.church_ids ?? [],
       })
       return
     }
@@ -227,6 +232,7 @@ export default function MassScheduleScreen() {
       id: null, name: ps.name, date_from: ps.from, date_to: ps.to, repeat_yearly: ps.yearly, days: ps.days,
       entries: draftFromTemplates(templates, ps.days),
       rule: 'dates', feasts: [], season_from: 'advent_start', season_to: 'dec23', season_from_offset: 0, season_to_offset: 0, copy_dow: null,
+      church_ids: [],
     })
   }
   /** Gotowa zmiana roku liturgicznego (daty liczą się co roku same). */
@@ -241,7 +247,7 @@ export default function MassScheduleScreen() {
     setForm({
       id: null, name: ps.name, date_from: today, date_to: today, repeat_yearly: true, days, entries,
       rule: ps.rule, feasts: ps.feasts ?? [], season_from: ps.season_from ?? 'advent_start', season_to: ps.season_to ?? 'dec23',
-      season_from_offset: 0, season_to_offset: 0, copy_dow: ps.copy_dow ?? null, hint: ps.hint,
+      season_from_offset: 0, season_to_offset: 0, copy_dow: ps.copy_dow ?? null, hint: ps.hint, church_ids: [],
     })
   }
   const setFormDays = (days: number[]) => {
@@ -262,7 +268,10 @@ export default function MassScheduleScreen() {
     if (!form.name.trim()) { Toast.show({ type: 'error', text1: 'Podaj nazwę zmiany' }); return }
     if (form.rule === 'dates' && form.date_to < form.date_from) { Toast.show({ type: 'error', text1: 'Data końca jest przed początkiem' }); return }
     if (form.rule === 'feasts' && form.feasts.length === 0) { Toast.show({ type: 'error', text1: 'Wybierz co najmniej jedno święto' }); return }
-    const common = { name: form.name.trim(), rule: form.rule, days_of_week: form.rule === 'feasts' ? [0, 1, 2, 3, 4, 5, 6] : form.days }
+    const common = {
+      name: form.name.trim(), rule: form.rule, days_of_week: form.rule === 'feasts' ? [0, 1, 2, 3, 4, 5, 6] : form.days,
+      church_ids: form.church_ids.length ? form.church_ids : null,
+    }
     const period = form.rule === 'dates'
       ? { ...common, date_from: form.date_from, date_to: form.date_to, repeat_yearly: form.repeat_yearly }
       : form.rule === 'season'
@@ -379,6 +388,23 @@ export default function MassScheduleScreen() {
                     ? 'W te święta poniższe godziny ZASTĘPUJĄ stały rozkład. Brak godzin = brak Mszy.'
                     : 'W te dni poniższy układ ZASTĘPUJE stały rozkład. Pusty dzień = brak Mszy (odwołane).')}
             </AppText>
+            {multiChurch && (
+              <>
+                <AppText variant="small" muted>Dotyczy kościołów:</AppText>
+                <View style={styles.chips}>
+                  <Chip label="Automatycznie" selected={form.church_ids.length === 0} onPress={() => setForm({ ...form, church_ids: [] })} />
+                  {churches.map(ch => (
+                    <Chip key={ch.id} icon="church" label={churchLabel(ch)} selected={form.church_ids.includes(ch.id)}
+                      onPress={() => setForm({ ...form, church_ids: form.church_ids.includes(ch.id) ? form.church_ids.filter(x => x !== ch.id) : [...form.church_ids, ch.id] })} />
+                  ))}
+                </View>
+                {form.church_ids.length === 0 && (
+                  <AppText variant="small" muted>
+                    Automatycznie: kościoły, które mają godziny poniżej. Bez godzin (odwołanie) albo „jak w niedzielę” — wszystkie kościoły.
+                  </AppText>
+                )}
+              </>
+            )}
             {!isFeasts && (
               <Button compact variant="ghost" icon="restore" label="Wypełnij stałym rozkładem"
                 onPress={() => setForm({ ...form, entries: draftFromTemplates(templates, form.days) })} />

@@ -60,6 +60,8 @@ export type MassPeriod = {
   season_to_offset?: number
   /** „jak w niedzielę”: w te dni stały rozkład wskazanego dnia tygodnia (0 = niedziela) */
   copy_dow?: number | null
+  /** kościoły, których dotyczy (null = automatycznie: te z godzin okresu, a bez godzin / „jak w niedzielę” — wszystkie) */
+  church_ids?: string[] | null
 }
 
 /** Święta i kotwice roku liturgicznego — te same klucze co public.liturgical_anchor(). */

@@ -48,6 +48,27 @@ try {
   r = await admin.sb.rpc('delete_church', { p_id: chapel })
   ok(/rozkładzie/.test(r.error?.message ?? ''), 'kaplicy z rozkładu nie da się usunąć')
 
+  // Zmiany okresowe a kościoły
+  const at = async () => ((await admin.sb.rpc('mass_slots', { p_parish: parish, p_from: DAY, p_to: DAY })).data ?? [])
+    .map(s => `${s.slot_time.slice(0, 5)}${s.church_id === chapel ? 'K' : ''}`).sort().join(',')
+  const periodIds = []
+  const savePeriod = async (period, entries) => {
+    const x = await admin.sb.rpc('save_rozklad', { p_target: 'period', p_period: { name: 'TEST ' + period.name, rule: 'dates', date_from: DAY, date_to: DAY, repeat_yearly: false, days_of_week: [2], ...period }, p_entries: entries, p_policy: 'keep', p_dry_run: false })
+    if (x.data?.period_id) periodIds.push(x.data.period_id)
+    return x
+  }
+  r = await savePeriod({ name: 'tylko kościół' }, [{ id: null, day_of_week: 2, time: '19:00', label: null, category: 'msza', service_mode: 'signup', church_id: main.id }])
+  ok(!r.error && await at() === '18:00K,19:00', 'zmiana z godzinami tylko w kościele nie rusza kaplicy ' + (r.error?.message ?? await at()))
+  await admin.sb.rpc('save_rozklad', { p_target: 'delete_period', p_period_id: periodIds.pop(), p_policy: 'keep', p_dry_run: false })
+
+  r = await savePeriod({ name: 'odwołanie' }, [])
+  ok(!r.error && await at() === '', 'pusta zmiana odwołuje Msze we wszystkich kościołach')
+  await admin.sb.rpc('save_rozklad', { p_target: 'delete_period', p_period_id: periodIds.pop(), p_policy: 'keep', p_dry_run: false })
+
+  r = await savePeriod({ name: 'odwołanie w kaplicy', church_ids: [chapel] }, [])
+  ok(!r.error && await at() === '18:00', 'odwołanie tylko w kaplicy (wskazany kościół) ' + (r.error?.message ?? await at()))
+  await admin.sb.rpc('save_rozklad', { p_target: 'delete_period', p_period_id: periodIds.pop(), p_policy: 'keep', p_dry_run: false })
+
   // GPS kościoła głównego = GPS parafii (aplikacja 1.1)
   await admin.sb.from('churches').update({ lat: 50.5, lng: 19.5 }).eq('id', main.id)
   const p = (await admin.sb.from('parishes').select('lat, lng').eq('id', parish).single()).data
