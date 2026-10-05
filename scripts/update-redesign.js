@@ -13,6 +13,8 @@ for (const line of fs.readFileSync(path.join(root, '.env.development.local'), 'u
   const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/)
   if (m) env[m[1]] = m[2]
 }
+// + reszta zmiennych profilu redesign (np. EXPO_PUBLIC_WEB_URL do linków udostępniania)
+Object.assign(env, require(path.join(root, 'eas.json')).build.redesign.env)
 if (!env.EXPO_PUBLIC_SUPABASE_URL || env.EXPO_PUBLIC_SUPABASE_URL.includes('kvqjaoprxxiemynyihfs')) {
   console.error('STOP: brak bazy dev w .env.development.local — nie publikuję.')
   process.exit(1)
