@@ -74,7 +74,7 @@ export function PrintScheduleSheet({ visible, onClose }: { visible: boolean; onC
       const html = buildPrintHtml({ parish: parish.name, title, days, services, qrSvg, publicUrl: url })
 
       if (Platform.OS === 'web') {
-        const bar = '<div class="no-print" style="position:sticky;top:0;background:#0B2E5C;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;margin:-12mm -12mm 12px"><span style="color:#fff;font-weight:600">Podgląd wydruku</span><button onclick="window.print()" style="background:#fff;color:#0B2E5C;border:none;padding:7px 16px;border-radius:6px;font-weight:700;cursor:pointer">🖨 Drukuj / Zapisz PDF</button></div><style>@media print{.no-print{display:none!important}}</style>'
+        const bar = '<div class="no-print" style="position:sticky;top:0;background:#0B2E5C;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;margin:0 0 12px;border-radius:8px"><span style="color:#fff;font-weight:600">Podgląd wydruku</span><button onclick="window.print()" style="background:#fff;color:#0B2E5C;border:none;padding:7px 16px;border-radius:6px;font-weight:700;cursor:pointer">🖨 Drukuj / Zapisz PDF</button></div><style>@media print{.no-print{display:none!important}}</style>'
         win!.document.open()
         win!.document.write(html.replace('<body>', '<body>' + bar))
         win!.document.close()
