@@ -55,6 +55,7 @@ export default function AdminLayout() {
       <Stack.Screen name="import-members" options={{ title: 'Dodaj ministrantów' }} />
       <Stack.Screen name="promotions" options={{ title: 'Gotowi do awansu' }} />
       <Stack.Screen name="challenges" options={{ title: 'Wyzwania sezonowe' }} />
+      <Stack.Screen name="monthly-report" options={{ title: 'Raport miesięczny' }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="point-rules" options={{ title: 'Reguły punktowania' }} />
       <Stack.Screen name="schedule-series" options={{ title: 'Nowy cykl służb' }} />

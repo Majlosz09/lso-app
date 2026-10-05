@@ -81,6 +81,8 @@ export function notificationHref(n: AppNotification, role: 'member' | 'parent' |
   if (role === 'admin') {
     if (n.type === 'excuse_request') return '/(admin)/absence-requests'
     if (n.type === 'attendance_report') return '/(admin)/absence-requests?tab=reports'
+    if (n.type === 'monthly_report') return `/(admin)/monthly-report${n.data?.month ? `?month=${n.data.month}` : ''}`
+    if (n.type === 'promotion') return '/(admin)/promotions'
     if (n.type === 'member_pending') return '/(admin)/(admin-tabs)/members'
     return '/(admin)/(admin-tabs)'
   }
@@ -109,4 +111,8 @@ export const NOTIFICATION_ICON: Record<string, string> = {
   schedule_change: 'calendar-clock',
   attendance_report: 'account-check',
   attendance_report_decision: 'account-check',
+  monthly_report: 'file-chart',
+  promotion: 'arrow-up-bold-circle',
+  challenge_done: 'trophy',
+  assignment_batch: 'calendar-multiple-check',
 }

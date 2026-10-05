@@ -105,6 +105,7 @@ export default function AdminHome() {
         ['star-circle', 'Przyznaj punkty', '/(admin)/award-points'],
         ['bullhorn', 'Nowe ogłoszenie', '/(admin)/(admin-tabs)/announcements'],
         ['chart-bar', 'Statystyki', '/(admin)/statistics'],
+        ['file-chart', 'Raport miesięczny', '/(admin)/monthly-report'],
       ].map(([icon, label, href]) => (
         <Card key={label} style={styles.quick} onPress={() => go(href)}>
           <Icon name={icon} size={24} color={c.goldInk} />

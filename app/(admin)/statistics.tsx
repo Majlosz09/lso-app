@@ -162,6 +162,7 @@ export default function StatisticsScreen() {
           <View style={styles.deskHead}>
             <View style={styles.flex}>{big(c.text)}</View>
             <View style={styles.deskSeg}>{periodSeg}</View>
+            <Button label="Raport miesięczny" icon="file-chart" variant="secondary" compact onPress={() => router.push('/(admin)/monthly-report' as any)} />
             <Button label="Eksportuj raport" icon="download" compact onPress={() => setExportVisible(true)} />
           </View>
         ) : (
