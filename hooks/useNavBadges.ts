@@ -17,7 +17,7 @@ export function useNavBadges(role: NavRole, enabled = true): NavBadges {
     refetchInterval: 60_000,
     queryFn: async (): Promise<NavBadges> => {
       const chatReq = supabase.rpc('get_chat_channels_with_meta')
-      if (role !== 'admin') {
+      if (role !== 'admin' && role !== 'helper') {
         const { data: ch } = await chatReq
         return { chat: sumUnread(ch) }
       }

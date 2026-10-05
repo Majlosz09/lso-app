@@ -2,8 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
   ActivityIndicator, TouchableOpacity, Modal, Alert, TextInput,
-  Pressable,
-} from 'react-native'
+  Pressable, Switch } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -19,7 +18,7 @@ import { getLiturgicalDay } from '../../lib/liturgy'
 import { localDateStr } from '../../lib/dates'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { StatusBar } from 'expo-status-bar'
-import { AppText, Avatar, Icon } from '../../components/ui'
+import { AppText, Avatar, Icon, Card } from '../../components/ui'
 import { AvatarImage } from '../../components/AvatarImage'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 
@@ -31,6 +30,7 @@ type MemberProfile = {
   rocznik: number | null
   avatar_url: string | null
   rank_id: string | null
+  is_helper?: boolean
   parent_id: string | null
 }
 
@@ -116,7 +116,7 @@ export default function MemberDetailScreen() {
     const today = new Date().toISOString().split('T')[0]
 
     const queries: PromiseLike<any>[] = [
-      supabase.from('profiles').select('id, full_name, role, phone, rocznik, avatar_url, rank_id, parent_id').eq('id', id).single(),
+      supabase.from('profiles').select('id, full_name, role, phone, rocznik, avatar_url, rank_id, parent_id, is_helper').eq('id', id).single(),
       supabase.from('schedule_assignments')
         .select('id, status, schedule:schedules(id, title, date, time)')
         .eq('profile_id', id)
@@ -327,6 +327,15 @@ export default function MemberDetailScreen() {
   }
 
   const isMember = profile.role === 'member'
+  const toggleHelper = async () => {
+    if (!profile) return
+    const next = !profile.is_helper
+    const { error } = await supabase.from('profiles').update({ is_helper: next }).eq('id', profile.id)
+    if (error) { Toast.show({ type: 'error', text1: 'Nie zapisano', text2: error.message }); return }
+    setProfile(prev => prev ? { ...prev, is_helper: next } : prev)
+    Toast.show({ type: 'success', text1: next ? 'Wyznaczono pomocnika opiekuna' : 'Odebrano uprawnienia pomocnika' })
+  }
+
   const memberRankObj = ranksList.find(r => r.id === profile.rank_id) ?? null
 
   const heroChip = (label: string, icon: string, onPress?: () => void, muted?: boolean) => (
@@ -462,6 +471,22 @@ export default function MemberDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Pomocnik opiekuna: grafik, obecność, zgłoszenia */}
+      {isMember && (
+        <View style={{ marginHorizontal: 16, marginTop: 12 }}>
+          <Card style={{ gap: 6 }}>
+            <Pressable accessibilityRole="switch" accessibilityState={{ checked: !!profile.is_helper }} onPress={toggleHelper}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <AppText variant="bodyStrong">Pomocnik opiekuna</AppText>
+                <AppText variant="small" muted>Może układać grafik, zaznaczać obecność (także na tablecie) i rozpatrywać zgłoszenia. Bez dostępu do członków, ustawień i punktów.</AppText>
+              </View>
+              <Switch value={!!profile.is_helper} onValueChange={toggleHelper} trackColor={{ true: c.primary, false: c.inputBorder }} thumbColor="#FFFFFF" />
+            </Pressable>
+          </Card>
+        </View>
+      )}
 
       {/* Funkcje liturgiczne (lektor, ceremoniarz…) */}
       {isMember && <View style={{ marginHorizontal: 16, marginTop: 12 }}><MemberFunctionsCard profileId={profile.id} editable /></View>}

@@ -1,6 +1,6 @@
 // Nawigacja redesignu v2: menu sidebaru (web ≥ 1024 px) i tytuły topbaru per rola.
 
-export type NavRole = 'member' | 'admin' | 'parent'
+export type NavRole = 'member' | 'admin' | 'parent' | 'helper'
 export type BadgeKey = 'chat' | 'pending' | 'excuses' | 'announcements'
 
 export type NavItem = {
@@ -33,6 +33,12 @@ export const NAV: Record<NavRole, NavItem[]> = {
     { key: 'chat', label: 'Czat', icon: 'forum', href: '/(admin)/(admin-tabs)/chat', paths: ['/chat', '/chat-reports'], badge: 'chat' },
     { key: 'settings', label: 'Ustawienia parafii', icon: 'cog', href: '/(admin)/parish-settings', paths: ['/parish-settings', '/mass-schedule', '/churches', '/functions', '/point-rules', '/rank-management', '/wiedza-admin'] },
   ],
+  helper: [
+    { key: 'schedules', label: 'Grafik', icon: 'calendar-month', href: '/(admin)/(admin-tabs)/schedules', paths: ['/schedules', '/schedule-detail', '/schedule-form', '/schedule-series', '/schedule-day', '/recurring-assignments', '/auto-schedule'] },
+    { key: 'excuses', label: 'Zgłoszenia', icon: 'calendar-remove', href: '/(admin)/absence-requests', paths: ['/absence-requests'], badge: 'excuses' },
+    { key: 'kiosk', label: 'Tryb zakrystii', icon: 'tablet', href: '/(admin)/kiosk', paths: ['/kiosk'] },
+    { key: 'back', label: 'Moja służba', icon: 'arrow-left', href: '/(tabs)', paths: [] },
+  ],
   parent: [
     { key: 'home', label: 'Dom', icon: 'home', href: '/(parent)/(parent-tabs)', paths: ['/'] },
     { key: 'schedule', label: 'Dyżury dzieci', icon: 'calendar-month', href: '/(parent)/(parent-tabs)/schedule', paths: ['/schedule'] },
@@ -45,18 +51,24 @@ export const NAV: Record<NavRole, NavItem[]> = {
 export const PROFILE_HREF: Record<NavRole, string> = {
   member: '/(tabs)/profile',
   admin: '/(admin)/(admin-tabs)/profile',
+  helper: '/(tabs)/profile',
   parent: '/(parent)/(parent-tabs)/profile',
 }
 
 export const ROLE_LABEL: Record<NavRole, string> = {
   member: 'Ministrant',
   admin: 'Opiekun LSO',
+  helper: 'Pomocnik opiekuna',
   parent: 'Rodzic',
 }
 
-/** Rola nawigacji: admin = opiekun (także ministrant z prawami admina w panelu). */
-export function navRoleFor(profile: { role?: string | null } | null | undefined, inAdminArea: boolean): NavRole {
+/** Rola nawigacji: admin = opiekun (także ministrant z prawami admina w panelu); helper = pomocnik w panelu. */
+export function navRoleFor(
+  profile: { role?: string | null; is_admin?: boolean | null; is_helper?: boolean | null } | null | undefined,
+  inAdminArea: boolean,
+): NavRole {
   if (profile?.role === 'parent') return 'parent'
+  if (inAdminArea && profile?.role === 'member' && !profile.is_admin && profile.is_helper) return 'helper'
   if (profile?.role === 'admin' || inAdminArea) return 'admin'
   return 'member'
 }
@@ -105,6 +117,7 @@ const EXTRA_TITLES: Record<string, string> = {
 const HOME_TITLE: Record<NavRole, string> = {
   member: 'Pulpit',
   admin: 'Pulpit opiekuna',
+  helper: 'Grafik',
   parent: 'Dom',
 }
 
@@ -138,7 +151,15 @@ const GROUP_ROUTES: Record<NavRole, { base: string; paths: string[] }> = {
     base: '/(admin)/(admin-tabs)',
     paths: ['/schedules', '/members', '/points', '/chat', '/announcements', '/profile'],
   },
+  helper: {
+    base: '/(admin)/(admin-tabs)/schedules',
+    paths: [],
+  },
 }
+
+/** Ekrany panelu opiekuna dostępne dla pomocnika. */
+export const HELPER_PATHS = ['/schedules', '/schedule-detail', '/schedule-form', '/schedule-series', '/schedule-day', '/auto-schedule', '/absence-requests', '/kiosk']
+export const helperAllowed = (pathname: string) => HELPER_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
 
 export function equivalentRoute(role: NavRole, pathname: string): string {
   const g = GROUP_ROUTES[role]

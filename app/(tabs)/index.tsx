@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
+import { HelperCard } from '../../components/layout/HelperCard'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { headerPalette, sans, serif, VESTMENT_DOT, VESTMENT_NAMES, VestmentColor } from '../../lib/theme'
@@ -279,6 +280,7 @@ export default function HomeScreen() {
     return (
       <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={styles.desktop}>
         <View style={styles.desktopLeft}>
+          <HelperCard />
           <SwapInbox onChanged={refresh} />
           {nextCard(true)}
           {church}
@@ -321,6 +323,7 @@ export default function HomeScreen() {
 
         <View style={styles.body}>
           <View style={styles.overlap}>{nextCard(false)}</View>
+          <HelperCard />
           <SwapInbox onChanged={refresh} />
           {church}
           <View style={styles.shortcuts}>

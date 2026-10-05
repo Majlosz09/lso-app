@@ -82,6 +82,8 @@ export interface Profile {
   parent_id: string | null
   is_active: boolean
   is_admin: boolean
+  /** pomocnik opiekuna: grafik, obecność, zgłoszenia (bez członków i ustawień) */
+  is_helper?: boolean
   rocznik: number | null
   rank_id: string | null
   parish_id: string | null
