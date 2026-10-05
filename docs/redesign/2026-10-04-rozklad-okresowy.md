@@ -60,3 +60,11 @@ Migracja `20261005000000_rozklad_liturgiczny.sql`: baza liczy Wielkanoc i świę
 „jak w niedzielę” (`copy_dow`). Smoke: `node scripts/rozklad-liturgia-smoke-dev.mjs` (daty z bazy = kalendarz
 aplikacji 2026–2060). Przy wdrożeniu na produkcję: istniejącym parafiom zaproponować (albo dodać) okres
 „Uroczystości nakazane (porządek niedzielny)” — nowe parafie dostają go w kreatorze.
+
+## Kilka kościołów w parafii (2026-10-05)
+
+Migracje `20261005010000_churches.sql`, `20261005020000_period_churches.sql`. Tabela `churches` (główny = GPS parafii,
+synchronizowany w obie strony dla aplikacji 1.1), `church_id` na rozkładzie, okresach, służbach, zgłoszeniach.
+Służba = data + godzina + rodzaj + kościół. Zmiana okresowa dotyczy kościołów, które ma w godzinach (albo `church_ids`);
+bez godzin / „jak w niedzielę” — wszystkich. Smoke: `node scripts/churches-smoke-dev.mjs` (14 OK).
+Produkcja: migracja tworzy kościół główny każdej parafii z jej GPS; aplikacja 1.1 działa jak dotąd (wszystko = kościół główny).
