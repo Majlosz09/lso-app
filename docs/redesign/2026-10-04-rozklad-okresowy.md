@@ -68,3 +68,10 @@ synchronizowany w obie strony dla aplikacji 1.1), `church_id` na rozkładzie, ok
 Służba = data + godzina + rodzaj + kościół. Zmiana okresowa dotyczy kościołów, które ma w godzinach (albo `church_ids`);
 bez godzin / „jak w niedzielę” — wszystkich. Smoke: `node scripts/churches-smoke-dev.mjs` (14 OK).
 Produkcja: migracja tworzy kościół główny każdej parafii z jej GPS; aplikacja 1.1 działa jak dotąd (wszystko = kościół główny).
+
+## Dzieci bez telefonu (2026-10-05)
+
+Migracja `20261005030000_kids_without_phones.sql`: `sign_up_for_slot` / `report_attendance` z `p_for_child`
+(tylko dziecko połączone z kontem rodzica), `unsign_child`, metoda obecności `kiosk`.
+Ekrany: rodzic — karta „Dziecko bez telefonu?” w Dyżurach dzieci (zapis raz / co tydzień, wypis, zgłoszenie obecności);
+opiekun — Ustawienia parafii → Tryb zakrystii (tablet, wyjście hasłem opiekuna). Smoke: `node scripts/kids-smoke-dev.mjs` (10 OK).
