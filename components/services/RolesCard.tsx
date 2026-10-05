@@ -6,6 +6,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans } from '../../lib/theme'
 import { AppText, Avatar, Button, Card, Chip, Icon, ListRow, Segmented, Sheet, TextField } from '../ui'
+import { useFunctions } from '../../hooks/useFunctions'
 
 /** Najczęstsze funkcje liturgiczne do szybkiego dodania. */
 export const PRESET_ROLES = ['Ceremoniarz', 'Lektor', 'Akolita', 'Krucyferariusz', 'Ceroferariusz', 'Turyferariusz', 'Nawikulariusz', 'Ministrant']
@@ -69,8 +70,10 @@ export function MemberRolesCard({ scheduleId, canChoose, onChanged }: { schedule
   const { colors: c } = useTheme()
   const me = useAuthStore(s => s.profile?.id)
   const { mode, slots, available, reload } = useRoles(scheduleId)
+  const { requiredFor, has } = useFunctions()
   const [busy, setBusy] = useState<string | null>(null)
   if (!available || !mode || slots.length === 0) return null
+  const lacks = (s: Slot) => { const fn = requiredFor(s.name); return !!fn && !!me && !has(me, fn.id) }
 
   const mine = slots.find(s => s.holder?.profileId === me)
   const act = async (slot: Slot, claim: boolean) => {
@@ -92,6 +95,7 @@ export function MemberRolesCard({ scheduleId, canChoose, onChanged }: { schedule
         const isMine = s.holder?.profileId === me
         const right = mode === 'self' && canChoose ? (
           isMine ? <Button label="Zwolnij" variant="ghost" compact loading={busy === s.id} onPress={() => act(s, false)} />
+            : !s.holder && lacks(s) ? <AppText variant="small" muted>wymaga funkcji</AppText>
             : !s.holder ? <Button label={mine ? 'Zmień na tę' : 'Zajmij'} variant="secondary" compact loading={busy === s.id} onPress={() => act(s, true)} />
               : undefined
         ) : isMine ? <Icon name="account-check" size={20} color={c.success} filled /> : undefined
@@ -114,6 +118,8 @@ export function AdminRolesCard({ scheduleId, onChanged }: { scheduleId: string; 
   const [pickFor, setPickFor] = useState<Slot | null>(null)
   const [members, setMembers] = useState<{ id: string; full_name: string }[]>([])
   const [query, setQuery] = useState('')
+  const { functions, requiredFor, has } = useFunctions()
+  const quickRoles = functions.length ? [...functions.map(f => f.name), 'Ministrant'] : PRESET_ROLES
 
   if (loading || !available) return null
 
@@ -153,7 +159,11 @@ export function AdminRolesCard({ scheduleId, onChanged }: { scheduleId: string; 
   }
 
   const holderSlot = new Map(slots.filter(s => s.holder).map(s => [s.holder!.profileId, s.name]))
-  const filtered = members.filter(m => !query.trim() || m.full_name.toLowerCase().includes(query.trim().toLowerCase()))
+  const needFn = pickFor ? requiredFor(pickFor.name) : null
+  const filtered = members
+    .filter(m => !query.trim() || m.full_name.toLowerCase().includes(query.trim().toLowerCase()))
+    // z wymaganą funkcją najpierw
+    .sort((a, b) => (needFn ? Number(has(b.id, needFn.id)) - Number(has(a.id, needFn.id)) : 0))
 
   return (
     <>
@@ -209,7 +219,7 @@ export function AdminRolesCard({ scheduleId, onChanged }: { scheduleId: string; 
         </Card>
         <AppText variant="label" muted>Dodaj rolę</AppText>
         <View style={styles.chips}>
-          {PRESET_ROLES.map(r => <Chip key={r} label={r} icon="plus" onPress={() => setDraft(d => [...d, r])} />)}
+          {quickRoles.map(r => <Chip key={r} label={r} icon="plus" onPress={() => setDraft(d => [...d, r])} />)}
         </View>
         <View style={styles.customRow}>
           <TextField placeholder="Inna rola, np. Psałterzysta" value={custom} onChangeText={setCustom} style={styles.flex} />
@@ -233,7 +243,7 @@ export function AdminRolesCard({ scheduleId, onChanged }: { scheduleId: string; 
                 key={m.id}
                 first={i === 0 && !pickFor?.holder}
                 title={m.full_name}
-                subtitle={holderSlot.get(m.id) ? `Teraz: ${holderSlot.get(m.id)}` : undefined}
+                subtitle={[holderSlot.get(m.id) ? `Teraz: ${holderSlot.get(m.id)}` : '', needFn && !has(m.id, needFn.id) ? `bez funkcji „${needFn.name}”` : ''].filter(Boolean).join(' · ') || undefined}
                 left={<Avatar name={m.full_name} size={34} color={c.primary} textColor={c.gold} />}
                 selected={pickFor?.holder?.profileId === m.id}
                 onPress={() => assign(m.id)}

@@ -17,6 +17,7 @@ const { data: sch, error: se } = await admin.sb.from('schedules')
   .insert({ parish_id: prof.parish_id, title: 'TEST N17 Uroczystość', date: in3, time: '11:00', category: 'msza', created_by: admin.uid })
   .select('id').single()
 if (se) throw se
+const granted = []
 const slots = async () => (await admin.sb.from('schedule_role_slots').select('id, name, position').eq('schedule_id', sch.id).order('position')).data ?? []
 const holder = async (slotId) => (await admin.sb.from('schedule_assignments').select('profile_id, role, status').eq('slot_id', slotId).maybeSingle()).data
 
@@ -37,6 +38,11 @@ try {
   ok(!r.error && h?.profile_id === a.uid && h.role === 'Ceremoniarz' && h.status === 'assigned', 'opiekun przydziela Kubę jako Ceremoniarza (przydział utworzony)')
 
   r = await admin.sb.rpc('set_schedule_roles', { p_schedule_id: sch.id, p_roles: ['Ceremoniarz', 'Lektor', 'Akolita'], p_mode: 'self' })
+  // funkcje liturgiczne: bez funkcji „Lektor” nie da się zająć roli Lektora
+  r = await b.sb.rpc('claim_role_slot', { p_slot_id: s[1].id })
+  ok(/funkcją/.test(r.error?.message ?? ''), 'bez funkcji Lektor Filip nie zajmie roli Lektora')
+  const fns = (await admin.sb.from('parish_functions').select('id, name').eq('parish_id', prof.parish_id).in('name', ['Lektor', 'Akolita'])).data ?? []
+  for (const fn of fns) granted.push((await admin.sb.from('member_functions').insert({ profile_id: b.uid, function_id: fn.id, parish_id: prof.parish_id }).select('function_id').single()).data?.function_id)
   r = await b.sb.rpc('claim_role_slot', { p_slot_id: s[0].id })
   ok(!!r.error, 'zajętej roli nie da się przejąć')
   r = await b.sb.rpc('claim_role_slot', { p_slot_id: s[1].id })
@@ -57,6 +63,7 @@ try {
   const all = (await admin.sb.from('schedule_assignments').select('role, slot_id').eq('schedule_id', sch.id)).data ?? []
   ok(!r.error && (await slots()).length === 0 && all.every(x => x.slot_id === null && x.role === 'ministrant') && all.length === 2, 'wyłączenie ról: obsada zostaje jako ministranci')
 } finally {
+  for (const id of granted.filter(Boolean)) await admin.sb.from('member_functions').delete().eq('profile_id', b.uid).eq('function_id', id)
   await admin.sb.from('schedules').delete().eq('id', sch.id)
   await a.sb.from('notifications').delete().eq('profile_id', a.uid).eq('type', 'assignment').like('body', 'TEST N17%')
   console.log('usunięto testową Mszę')

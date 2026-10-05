@@ -9,6 +9,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
+import { MemberFunctionsCard } from '../../components/admin/MemberFunctionsCard'
 import { STATUS_COLORS, STATUS_LABELS } from '../../lib/status'
 import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
@@ -461,6 +462,9 @@ export default function MemberDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Funkcje liturgiczne (lektor, ceremoniarz…) */}
+      {isMember && <View style={{ marginHorizontal: 16, marginTop: 12 }}><MemberFunctionsCard profileId={profile.id} editable /></View>}
 
       {/* Statystyki — tylko dla ministrancóin */}
       {isMember && (

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import * as ImagePicker from 'expo-image-picker'
 import { supabase } from '../../lib/supabase'
+import { MemberFunctionsCard } from '../../components/admin/MemberFunctionsCard'
 import { computeAndSyncBadges } from '../../lib/badges'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
@@ -437,6 +438,7 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
   const formation = mode === 'member' && (
     <Card style={styles.formation}>
       {allRanks.length > 0 && <FormationSection ranks={allRanks} currentRankId={profile?.rank_id ?? null} c={c} />}
+      {!!profile?.id && <MemberFunctionsCard profileId={profile.id} bare />}
       <AppText variant="eyebrow" color={c.goldInk}>Wyróżnienia</AppText>
       <BadgeGrid badges={badges} emptyText="Nie masz jeszcze wyróżnień." />
       <Pressable onPress={() => router.push('/(tabs)/badge-catalog')} accessibilityRole="link">
