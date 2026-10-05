@@ -20,9 +20,9 @@ DECLARE
 BEGIN
   -- liczby miesiąca i poprzedniego (ta sama definicja)
   SELECT jsonb_object_agg(k, v) INTO stats FROM (
-    SELECT 'services' k, count(*)::numeric v FROM schedules s WHERE s.parish_id = p_parish AND s.date BETWEEN v_from AND v_to AND s.service_mode <> 'none'
+    SELECT 'services' k, count(*)::numeric v FROM schedules s WHERE s.parish_id = p_parish AND s.date BETWEEN v_from AND v_to AND s.service_mode <> 'none' AND s.category <> 'zbiorka'
     UNION ALL
-    SELECT 'staffed', count(*) FROM schedules s WHERE s.parish_id = p_parish AND s.date BETWEEN v_from AND v_to AND s.service_mode <> 'none'
+    SELECT 'staffed', count(*) FROM schedules s WHERE s.parish_id = p_parish AND s.date BETWEEN v_from AND v_to AND s.service_mode <> 'none' AND s.category <> 'zbiorka'
       AND (EXISTS (SELECT 1 FROM schedule_assignments a WHERE a.schedule_id = s.id AND a.status NOT IN ('absent', 'excused', 'confirmed', 'swapped'))
            OR EXISTS (SELECT 1 FROM attendance at WHERE at.schedule_id = s.id))
     UNION ALL
@@ -47,7 +47,7 @@ BEGIN
   SELECT jsonb_object_agg(k, v) INTO prev FROM (
     SELECT 'attendance' k, count(*)::numeric v FROM attendance a JOIN schedules s ON s.id = a.schedule_id WHERE s.parish_id = p_parish AND s.date BETWEEN p_from AND p_to
     UNION ALL
-    SELECT 'services', count(*) FROM schedules s WHERE s.parish_id = p_parish AND s.date BETWEEN p_from AND p_to AND s.service_mode <> 'none'
+    SELECT 'services', count(*) FROM schedules s WHERE s.parish_id = p_parish AND s.date BETWEEN p_from AND p_to AND s.service_mode <> 'none' AND s.category <> 'zbiorka'
     UNION ALL
     SELECT 'active_members', count(DISTINCT a.profile_id) FROM attendance a JOIN schedules s ON s.id = a.schedule_id WHERE s.parish_id = p_parish AND s.date BETWEEN p_from AND p_to
     UNION ALL
@@ -85,7 +85,7 @@ BEGIN
     'unstaffed', coalesce((
       SELECT jsonb_agg(jsonb_build_object('date', s.date, 'time', to_char(s."time", 'HH24:MI'), 'title', s.title) ORDER BY s.date, s."time")
         FROM (SELECT * FROM schedules s WHERE s.parish_id = p_parish AND s.date BETWEEN v_from AND least(v_to, v_today - 1)
-                AND s.service_mode <> 'none'
+                AND s.service_mode <> 'none' AND s.category <> 'zbiorka'
                 AND NOT EXISTS (SELECT 1 FROM schedule_assignments a WHERE a.schedule_id = s.id AND a.status NOT IN ('excused', 'confirmed', 'swapped'))
                 AND NOT EXISTS (SELECT 1 FROM attendance at WHERE at.schedule_id = s.id)
               ORDER BY s.date, s."time" LIMIT 30) s), '[]'::jsonb),

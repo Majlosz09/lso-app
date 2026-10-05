@@ -47,7 +47,7 @@ export function useAdminDashboard() {
       supabase.from('schedule_assignments')
         .select('id, profile:profiles(full_name), schedule:schedules!inner(parish_id)')
         .eq('status', 'excused').eq('schedule.parish_id', parishId),
-      supabase.from('schedules').select('id, date, time, title, service_mode, schedule_assignments(status)')
+      supabase.from('schedules').select('id, date, time, title, category, service_mode, schedule_assignments(status)')
         .eq('parish_id', parishId).gte('date', from).lte('date', to).order('date').order('time'),
       supabase.from('schedule_assignments').select('status, schedule:schedules!inner(parish_id, date)')
         .eq('schedule.parish_id', parishId).gte('schedule.date', since30).lt('schedule.date', today),
@@ -57,12 +57,12 @@ export function useAdminDashboard() {
     ])
 
     const svc = ((services.data ?? []) as any[]).map(s => ({
-      id: s.id, date: s.date, time: (s.time ?? '').slice(0, 5), title: s.title, mode: s.service_mode,
+      id: s.id, date: s.date, time: (s.time ?? '').slice(0, 5), title: s.title, mode: s.service_mode, category: s.category,
       people: (s.schedule_assignments ?? []).filter((a: any) => ACTIVE(a.status)).length,
     }))
     const next7 = svc.filter(s => s.date >= today && s.date <= addDays(today, 7))
     // „bez obsady” tylko tam, gdzie liczymy obecność (tryb none = Msza bez ministrantów)
-    const unstaffed = next7.filter(s => s.people === 0 && s.mode !== 'none')
+    const unstaffed = next7.filter(s => s.people === 0 && s.mode !== 'none' && s.category !== 'zbiorka')
     const firstName = (n?: string) => (n ?? '').split(' ')[0]
     const excuseRows = (excuses.data ?? []) as any[]
     const pendingRows = (Array.isArray(pending.data) ? pending.data : []) as any[]
