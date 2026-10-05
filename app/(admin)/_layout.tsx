@@ -47,6 +47,7 @@ export default function AdminLayout() {
       <Stack.Screen name="mass-schedule" options={{ title: 'Rozkład Mszy' }} />
       <Stack.Screen name="churches" options={{ title: 'Kościoły i kaplice' }} />
       <Stack.Screen name="kiosk" options={{ headerShown: false, gestureEnabled: false }} />
+      <Stack.Screen name="auto-schedule" options={{ title: 'Ułóż grafik' }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="point-rules" options={{ title: 'Reguły punktowania' }} />
       <Stack.Screen name="schedule-series" options={{ title: 'Nowy cykl służb' }} />

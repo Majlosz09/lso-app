@@ -24,7 +24,7 @@ export const NAV: Record<NavRole, NavItem[]> = {
   ],
   admin: [
     { key: 'home', label: 'Pulpit', icon: 'view-dashboard', href: '/(admin)/(admin-tabs)', paths: ['/'] },
-    { key: 'schedules', label: 'Grafik', icon: 'calendar-month', href: '/(admin)/(admin-tabs)/schedules', paths: ['/schedules', '/schedule-detail', '/schedule-form', '/schedule-series', '/schedule-day', '/recurring-assignments'] },
+    { key: 'schedules', label: 'Grafik', icon: 'calendar-month', href: '/(admin)/(admin-tabs)/schedules', paths: ['/schedules', '/schedule-detail', '/schedule-form', '/schedule-series', '/schedule-day', '/recurring-assignments', '/auto-schedule'] },
     { key: 'members', label: 'Członkowie', icon: 'account-group', href: '/(admin)/(admin-tabs)/members', paths: ['/members', '/member-detail', '/rank-assignment'], badge: 'pending' },
     { key: 'excuses', label: 'Zgłoszenia', icon: 'calendar-remove', href: '/(admin)/absence-requests', paths: ['/absence-requests'], badge: 'excuses' },
     { key: 'points', label: 'Punkty', icon: 'trophy', href: '/(admin)/(admin-tabs)/points', paths: ['/points', '/award-points', '/badge-management'] },
@@ -92,6 +92,7 @@ const EXTRA_TITLES: Record<string, string> = {
   '/mass-schedule': 'Rozkład Mszy',
   '/churches': 'Kościoły i kaplice',
   '/kiosk': 'Tryb zakrystii',
+  '/auto-schedule': 'Ułóż grafik',
   '/point-rules': 'Reguły punktów',
   '/wiedza-admin': 'Wiedza parafii',
   '/chat-reports': 'Zgłoszenia z czatu',

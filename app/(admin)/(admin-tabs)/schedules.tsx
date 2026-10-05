@@ -145,6 +145,8 @@ export default function SchedulesTab() {
 
   const addSheet = (
     <Sheet visible={addOpen} onClose={() => setAddOpen(false)} title="Dodaj służbę">
+      <ChoiceCard icon="auto-fix" title="Ułóż grafik za mnie" subtitle="Sprawiedliwa propozycja obsady na tydzień albo miesiąc"
+        onPress={() => { setAddOpen(false); router.push('/(admin)/auto-schedule' as any) }} />
       <ChoiceCard icon="calendar-plus" title="Jednorazowa służba" subtitle="Jeden termin: dzień, godzina, rodzaj"
         onPress={() => { setAddOpen(false); router.push('/(admin)/schedule-form') }} />
       <ChoiceCard icon="calendar-multiple" title="Cykl służb" subtitle="Seria terminów, np. roraty albo różaniec"
@@ -173,6 +175,7 @@ export default function SchedulesTab() {
         <View style={styles.deskBar}>
           {weekNav(false)}
           <AppText variant="small" muted style={styles.flex}>{`${staffedCount} z ${allSlots.length} służb obsadzonych`}</AppText>
+          <Button label="Ułóż grafik" icon="auto-fix" variant="secondary" compact onPress={() => router.push('/(admin)/auto-schedule' as any)} />
           <Button label="Stałe dyżury" icon="calendar-sync" variant="secondary" compact onPress={() => router.push('/(admin)/recurring-assignments')} />
           <Button label="Cykl służb" icon="calendar-multiple" variant="secondary" compact onPress={() => router.push('/(admin)/schedule-series')} />
           <Button label="Dodaj służbę" icon="plus" compact onPress={() => router.push('/(admin)/schedule-form')} />
