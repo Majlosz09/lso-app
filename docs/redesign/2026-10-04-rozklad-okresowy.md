@@ -81,3 +81,11 @@ opiekun — Ustawienia parafii → Tryb zakrystii (tablet, wyjście hasłem opie
 `lib/autoSchedule.ts` (+ testy) liczy propozycję w aplikacji; migracja `20261005040000_auto_schedule.sql`:
 `apply_auto_schedule` (jedno zbiorcze powiadomienie `assignment_batch` na osobę), push „Nowy dyżur” tylko gdy
 przydziela ktoś inny (wcześniej stały zapis „co tydzień” wysyłał push za każdy tydzień). Smoke: `node scripts/auto-schedule-smoke-dev.mjs`.
+
+## Funkcje liturgiczne i pomocnik opiekuna (2026-10-05)
+
+`20261005050000_liturgical_functions.sql`: `parish_functions` (domyślny zestaw), `member_functions`; rola na Mszy
+nazwana jak funkcja wymaga funkcji przy samodzielnym wyborze. `20261005060000_helper_role.sql`: `profiles.is_helper`,
+`can_manage_services()` podmienione w 11 regułach RLS i 10 funkcjach (blok DO na bieżących definicjach — przy wdrożeniu
+uruchomić PO wszystkich wcześniejszych migracjach). Smoke: `roles-smoke-dev` (12), `helper-smoke-dev` (13), `security-smoke-dev` (32).
+Demo: filip@lso-demo.test jest pomocnikiem.
