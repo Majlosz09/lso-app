@@ -75,3 +75,9 @@ Migracja `20261005030000_kids_without_phones.sql`: `sign_up_for_slot` / `report_
 (tylko dziecko połączone z kontem rodzica), `unsign_child`, metoda obecności `kiosk`.
 Ekrany: rodzic — karta „Dziecko bez telefonu?” w Dyżurach dzieci (zapis raz / co tydzień, wypis, zgłoszenie obecności);
 opiekun — Ustawienia parafii → Tryb zakrystii (tablet, wyjście hasłem opiekuna). Smoke: `node scripts/kids-smoke-dev.mjs` (10 OK).
+
+## Ułóż grafik za mnie (2026-10-05)
+
+`lib/autoSchedule.ts` (+ testy) liczy propozycję w aplikacji; migracja `20261005040000_auto_schedule.sql`:
+`apply_auto_schedule` (jedno zbiorcze powiadomienie `assignment_batch` na osobę), push „Nowy dyżur” tylko gdy
+przydziela ktoś inny (wcześniej stały zapis „co tydzień” wysyłał push za każdy tydzień). Smoke: `node scripts/auto-schedule-smoke-dev.mjs`.
