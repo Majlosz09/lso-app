@@ -37,6 +37,12 @@ export function PrintScheduleSheet({ visible, onClose }: { visible: boolean; onC
   const print = async () => {
     if (!parish?.id) return
     setBusy(true)
+    // web: okno trzeba otworzyć od razu w reakcji na kliknięcie — po pobraniu danych przeglądarka by je zablokowała
+    const win = Platform.OS === 'web' ? window.open('', '_blank') : null
+    if (Platform.OS === 'web') {
+      if (!win) { setBusy(false); Toast.show({ type: 'error', text1: 'Przeglądarka zablokowała okno', text2: 'Zezwól na wyskakujące okna dla tej strony.' }); return }
+      win.document.write('<p style="font-family:Arial;padding:24px;color:#555">Przygotowuję wydruk…</p>')
+    }
     try {
       const { from, to, title } = range(r)
       const [sch, ch] = await Promise.all([
@@ -68,17 +74,17 @@ export function PrintScheduleSheet({ visible, onClose }: { visible: boolean; onC
       const html = buildPrintHtml({ parish: parish.name, title, days, services, qrSvg, publicUrl: url })
 
       if (Platform.OS === 'web') {
-        const win = window.open('', '_blank')
-        if (!win) { Toast.show({ type: 'error', text1: 'Przeglądarka zablokowała okno', text2: 'Zezwól na wyskakujące okna.' }); return }
         const bar = '<div class="no-print" style="position:sticky;top:0;background:#0B2E5C;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;margin:-12mm -12mm 12px"><span style="color:#fff;font-weight:600">Podgląd wydruku</span><button onclick="window.print()" style="background:#fff;color:#0B2E5C;border:none;padding:7px 16px;border-radius:6px;font-weight:700;cursor:pointer">🖨 Drukuj / Zapisz PDF</button></div><style>@media print{.no-print{display:none!important}}</style>'
-        win.document.write(html.replace('<body>', '<body>' + bar))
-        win.document.close()
+        win!.document.open()
+        win!.document.write(html.replace('<body>', '<body>' + bar))
+        win!.document.close()
       } else {
         const { uri } = await Print.printToFileAsync({ html })
         await shareFile(uri)
       }
       onClose()
     } catch (e: any) {
+      win?.close()
       Toast.show({ type: 'error', text1: 'Nie udało się przygotować wydruku', text2: e?.message })
     } finally {
       setBusy(false)
