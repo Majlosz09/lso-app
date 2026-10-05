@@ -89,3 +89,11 @@ nazwana jak funkcja wymaga funkcji przy samodzielnym wyborze. `20261005060000_he
 `can_manage_services()` podmienione w 11 regułach RLS i 10 funkcjach (blok DO na bieżących definicjach — przy wdrożeniu
 uruchomić PO wszystkich wcześniejszych migracjach). Smoke: `roles-smoke-dev` (12), `helper-smoke-dev` (13), `security-smoke-dev` (32).
 Demo: filip@lso-demo.test jest pomocnikiem.
+
+## Wydruk, link dla rodziców, kalendarz w telefonie (2026-10-05)
+
+`20261005070000_public_schedule_calendar.sql`: `parishes.public_token` + `public_schedule()` (anon, imię + inicjał),
+`profiles.calendar_token` + `calendar_feed(token)` zwracające `text/calendar` (domena `"*/*"` — PostgREST oddaje plik przy
+każdym Accept; zawijanie linii RFC 5545). Link do kalendarza: `<SUPABASE_URL>/rest/v1/rpc/calendar_feed?token=…&apikey=<anon>`.
+Strona `/g/[token]` (bez logowania), wydruk `lib/printSchedule.ts`. Na produkcji: `EXPO_PUBLIC_WEB_URL` domyślnie app.lsoapp.com
+(strona /g musi być wdrożona w webie produkcyjnym razem z resztą). Smoke: `public-calendar-smoke-dev` (13 OK).
