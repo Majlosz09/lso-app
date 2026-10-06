@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   pad: { padding: 14 },
   body: { padding: 16, gap: 14, paddingBottom: 32 },
   search: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 48, borderRadius: 14, paddingHorizontal: 14, borderWidth: 1 },
-  searchInput: { flex: 1, height: '100%', fontSize: 15, ...sans(600), outlineStyle: 'none' } as any,
+  searchInput: { flex: 1, minWidth: 0, height: '100%', fontSize: 15, ...sans(600), outlineStyle: 'none' } as any,
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12, cursor: 'pointer' } as any,
   catHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },

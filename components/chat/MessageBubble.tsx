@@ -153,7 +153,7 @@ function MessageBubbleComponent({
         style={[
           styles.actionBarContainer,
           isOwn ? styles.actionBarOwnSide : styles.actionBarOtherSide,
-          isActionBarVisible ? { opacity: 1 } : { opacity: 0, width: 0 },
+          isActionBarVisible ? { opacity: 1 } : { opacity: 0, width: 0, overflow: 'hidden' },
         ]}
       >
         {/* Emoji reaction button */}
