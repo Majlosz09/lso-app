@@ -105,6 +105,9 @@ case "$MODE" in
     done
     echo "Kopia: $dir"
     ;;
+  counts)
+    q "select (select count(*) from profiles) profiles, (select count(*) from schedules) schedules, (select count(*) from schedule_assignments) assignments, (select count(*) from points) points, (select count(*) from attendance) attendance, (select count(*) from mass_templates) mass_templates, (select count(*) from parishes) parishes, (select count(*) from chat_messages) chat, (select count(*) from member_badges) badges, (select count(*) from churches) churches"
+    ;;
   migrate)
     if ! applied "EXISTS (SELECT 1 FROM pg_extension WHERE extname='pg_cron')"; then
       echo "STOP: brak rozszerzenia pg_cron. Włącz: Supabase → Database → Extensions → pg_cron, potem uruchom ponownie."
@@ -138,5 +141,5 @@ case "$MODE" in
     q "select count(*) filter (where system_ranks_enabled) as parafie_z_rangami_systemowymi, count(*) as parafie from parishes"
     q "select count(*) as kosciol_glowny_brak from parishes p where not exists (select 1 from churches c where c.parish_id=p.id and c.is_main)"
     ;;
-  *) echo "Użycie: bash scripts/release-prod-sql.sh check|backup|migrate|verify"; exit 1 ;;
+  *) echo "Użycie: bash scripts/release-prod-sql.sh check|backup|migrate|verify|counts"; exit 1 ;;
 esac
