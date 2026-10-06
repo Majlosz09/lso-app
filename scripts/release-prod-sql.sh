@@ -95,6 +95,16 @@ case "$MODE" in
     echo; echo "Rozszerzenia (wymagane: pg_cron do raportu miesięcznego):"
     q "select extname from pg_extension where extname in ('pg_cron','pg_net') order by 1"
     ;;
+  backup)
+    # kopia danych wszystkich tabel public do JSON (lokalnie, katalog w .gitignore)
+    dir="backups/prod-$(date +%Y%m%d-%H%M%S)"; mkdir -p "$dir"
+    tables=$(q "select string_agg(tablename, ' ' order by tablename) as t from pg_tables where schemaname = 'public'" | grep -o '"t": "[^"]*' | sed 's/"t": "//')
+    for t in $tables; do
+      q "select count(*) as n, coalesce(json_agg(x), '[]'::json) as rows from public.\"$t\" x" > "$dir/$t.json" 2>&1 || echo "  ✖ $t"
+      echo "  $t: $(grep -o '"n": [0-9]*' "$dir/$t.json" | head -1)"
+    done
+    echo "Kopia: $dir"
+    ;;
   migrate)
     if ! applied "EXISTS (SELECT 1 FROM pg_extension WHERE extname='pg_cron')"; then
       echo "STOP: brak rozszerzenia pg_cron. Włącz: Supabase → Database → Extensions → pg_cron, potem uruchom ponownie."
@@ -128,5 +138,5 @@ case "$MODE" in
     q "select count(*) filter (where system_ranks_enabled) as parafie_z_rangami_systemowymi, count(*) as parafie from parishes"
     q "select count(*) as kosciol_glowny_brak from parishes p where not exists (select 1 from churches c where c.parish_id=p.id and c.is_main)"
     ;;
-  *) echo "Użycie: bash scripts/release-prod-sql.sh check|migrate|verify"; exit 1 ;;
+  *) echo "Użycie: bash scripts/release-prod-sql.sh check|backup|migrate|verify"; exit 1 ;;
 esac

@@ -60,3 +60,4 @@ supabase/dev/*.csv
 # paczka designu (lokalnie, 9 MB zrzutów)
 design_handoff_lso_redesign/
 dist-dev/
+backups/
