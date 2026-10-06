@@ -15,6 +15,11 @@ DEV_REF="phwoxylvcazcnaifcqab"
 MODE="${1:-check}"
 cd "$(dirname "$0")/.."
 if [ -f .env.supabase.local ]; then set -a; . ./.env.supabase.local; set +a; fi
+# Produkcja jest na innym koncie Supabase niż LSO-dev: osobny token SUPABASE_PROD_ACCESS_TOKEN w .env.supabase.local
+DEV_TOKEN="${SUPABASE_ACCESS_TOKEN:-}"
+if [ -z "${SUPABASE_PROD_ACCESS_TOKEN:-}" ]; then
+  echo "Brak SUPABASE_PROD_ACCESS_TOKEN w .env.supabase.local (token z konta, na którym jest projekt LSO)."; exit 1
+fi
 LOG="release-1.2.0-prod.log"
 
 # plik migracji → wyrażenie SQL zwracające true, gdy migracja jest już w bazie
@@ -70,14 +75,15 @@ applied() {  # $1 = wyrażenie SQL → 0 gdy prawda
 }
 back_to_dev() {
   echo "→ Przełączam Supabase CLI z powrotem na LSO-dev"
-  npx supabase link --project-ref "$DEV_REF" >/dev/null 2>&1 || echo "  (przełącz ręcznie: bash scripts/dev-sql.sh --link)"
+  SUPABASE_ACCESS_TOKEN="$DEV_TOKEN" npx supabase link --project-ref "$DEV_REF" >/dev/null 2>&1 || echo "  (przełącz ręcznie: bash scripts/dev-sql.sh --link)"
 }
 
 banner
 read -r -p "Wpisz PRODUKCJA, aby kontynuować: " ans
 [ "$ans" = "PRODUKCJA" ] || { echo "Przerwano."; exit 1; }
-npx supabase link --project-ref "$PROD_REF"
 trap back_to_dev EXIT
+export SUPABASE_ACCESS_TOKEN="$SUPABASE_PROD_ACCESS_TOKEN"
+npx supabase link --project-ref "$PROD_REF"
 
 case "$MODE" in
   check)
