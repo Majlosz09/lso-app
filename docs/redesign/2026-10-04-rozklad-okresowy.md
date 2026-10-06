@@ -147,3 +147,14 @@ Smoke: `offline-checkin-smoke-dev` (6 OK) + test w przeglądarce (offline → on
   Smoke: `point-categories-smoke-dev` (15 OK, razem z rangami).
 - Przewodnik: `lib/tour.ts` (kroki per rola), `stores/tourStore.ts`, `components/tour/*` (`tourRef(id)` / `<TourTarget>`).
   Start przy pierwszym logowaniu (`onboarding_completed = false`) i z Profilu → Instruktaż aplikacji. `OnboardingModal` usunięty.
+
+## Responsywność i klawiatura (2026-10-06)
+
+- Przegląd automatyczny: 65 ekranów × 11 szerokości (320–1920 px), wykrywanie elementów wychodzących poza ekran/kontener.
+- Sidebar: 1024–1279 px zwija się do kolumny ikon z podpisami (`SIDEBAR_FULL_MIN_WIDTH`). Paski narzędzi grafiku/statystyk
+  zawijają się; siatka tygodnia ma minimalną szerokość kolumny i przewija się w poziomie. Pola tekstowe w wierszach: `minWidth: 0`.
+- Klawiatura (Android edge-to-edge nie zmniejsza okna): `components/ui/KeyboardScrollView` (miejsce pod treścią + przewinięcie
+  do aktywnego pola) w ekranach z polami; `Sheet` z `KeyboardAvoidingView behavior="padding"` na obu systemach;
+  `ModalKeyboardAvoider` w modalach z polami; dolne pole w Rangach w KAV z offsetem nagłówka.
+  Niesprawdzone na fizycznym urządzeniu (brak emulatora) — do potwierdzenia na telefonie.
+- Naprawione: profil ministranta z rankingu („Nie znaleziono profilu” — niejednoznaczny embed `member_badges`).
