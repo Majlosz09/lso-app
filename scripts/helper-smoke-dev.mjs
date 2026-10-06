@@ -13,6 +13,9 @@ const admin = await login('opiekun'), filip = await login('filip'), kuba = await
 const parish = (await admin.sb.from('profiles').select('parish_id').eq('id', admin.uid).single()).data.parish_id
 const d = new Date(); d.setMonth(d.getMonth() + 9); const DAY = d.toISOString().slice(0, 10)
 let sch = null
+// stan wyjściowy (demo: Filip jest pomocnikiem) — test zaczyna od zwykłych ministrantów i na końcu przywraca stan
+const initial = (await admin.sb.from('profiles').select('id, is_helper').in('id', [filip.uid, kuba.uid])).data ?? []
+await admin.sb.from('profiles').update({ is_helper: false }).in('id', [filip.uid, kuba.uid])
 
 try {
   let r = await kuba.sb.from('profiles').update({ is_helper: true }).eq('id', kuba.uid)
@@ -53,5 +56,5 @@ try {
     await admin.sb.from('attendance').delete().eq('schedule_id', sch)
     await admin.sb.from('schedules').delete().eq('id', sch)
   }
-  await admin.sb.from('profiles').update({ is_helper: false }).in('id', [filip.uid, kuba.uid])
+  for (const p of initial) await admin.sb.from('profiles').update({ is_helper: !!p.is_helper }).eq('id', p.id)
 }
