@@ -1,61 +1,77 @@
-# Wydanie LSO App 1.2.0 (redesign v2, Expo SDK 57) — lista kroków
+# Wydanie LSO App 1.2.0 — instrukcja krok po kroku
 
-Gałąź z kompletem zmian: `redesign/sdk57` (zawiera `redesign/v2`). Wszystko przetestowane wyłącznie na LSO-dev / lso-app-dev.
+**Gałąź wydania: `release/1.2.0`** = redesign v2 + Expo SDK 57 + 7 zmian z `master` (blokowanie w czacie,
+Firebase/FCM, ikona iOS, numery buildów, teksty sklepów). Testy: jednostkowe 208/208, wszystkie testy dymne
+na LSO-dev (27 zestawów) przechodzą.
 
-## 0. Przed startem
-- [ ] Kopia zapasowa bazy PROD (Supabase → Database → Backups) tuż przed migracjami.
-- [ ] Sprawdzić na telefonie z buildem SDK 57 (nie tylko Expo Go): logowanie, grafik, potwierdzanie obecności (QR/GPS), push.
-- [ ] Rozszerzenie `pg_cron` włączone w projekcie PROD (raport miesięczny — migracja `20261005110000`).
+Kolejność: **baza → web → aplikacje w sklepach → master**. Wszystkie polecenia uruchamiasz w Git Bash
+w katalogu `lso-app`, na gałęzi `release/1.2.0` (`git checkout release/1.2.0`).
 
-## 1. Baza PROD — migracje w tej kolejności
-Wszystkie są idempotentne (IF NOT EXISTS / CREATE OR REPLACE), ale uruchamiać po kolei, każdą raz:
+---
 
-1. `20260930000000_attendance_methods.sql`
-2. `20261001000000_rejected_excuse_penalty.sql`
-3. `20261001010000_parent_child_absence.sql`
-4. `20261001020000_swap_requests.sql`
-5. `20261001030000_chat_settings.sql`
-6. `20261001040000_content_reads.sql`
-7. `20261001050000_notifications_center.sql`
-8. `20261001060000_daily_word.sql`
-9. `20261001070000_schedule_roles.sql`
-10. `20261004000000_rozklad_okresowy.sql`
-11. `20261004010000_attendance_reports.sql`
-12. `20261004020000_push_for_new_notifications.sql`
-13. `20261005000000_rozklad_liturgiczny.sql`
-14. `20261005010000_churches.sql`
-15. `20261005020000_period_churches.sql`
-16. `20261005030000_kids_without_phones.sql`
-17. `20261005040000_auto_schedule.sql`
-18. `20261005050000_liturgical_functions.sql`
-19. `20261005060000_helper_role.sql`
-20. `20261005070000_public_schedule_calendar.sql`
-21. `20261005080000_managed_members.sql`
-22. `20261005090000_formation_path.sql`
-23. `20261005100000_challenges.sql`
-24. `20261005110000_monthly_report.sql` (tworzy zadanie pg_cron `lso-monthly-report`)
-25. `20261005120000_offline_checkin.sql`
-26. `20261006000000_system_ranks_toggle.sql` (rangi systemowe zostają włączone parafiom, które ich już używają)
-27. `20261006010000_point_categories.sql`
-28. `20261006020000_formation_without_wiedza.sql`
+## Krok 1. GitHub (kopia gałęzi)
+```bash
+git push -u origin release/1.2.0
+```
 
-Nie uruchamiać na PROD skryptów `scripts/*-dev.*` (dane demo, testy) — mają blokadę na bazę dev.
+## Krok 2. Baza produkcyjna (Supabase, projekt LSO)
+1. **Kopia zapasowa**: Supabase → projekt LSO → Database → Backups (sprawdź, że jest świeża kopia z dziś).
+2. **Rozszerzenie pg_cron**: Database → Extensions → wyszukaj `pg_cron` → Enable (jeśli nie jest włączone).
+3. Sprawdzenie, czego brakuje (nic nie zmienia):
+   ```bash
+   bash scripts/release-prod-sql.sh check
+   ```
+   Wpisz `PRODUKCJA`. Spodziewane: stare migracje `[jest]`, nowe (od `20260930000100`) `[BRAKUJE]`.
+   Jeśli jakaś wrześniowa migracja (2026-09-27…09-30) też ma `[BRAKUJE]` — skrypt doda ją w kroku 4 (są w repo).
+4. Migracje (tylko brakujące, po kolei, stop na pierwszym błędzie, log w `release-1.2.0-prod.log`):
+   ```bash
+   bash scripts/release-prod-sql.sh migrate
+   ```
+   Przy błędzie: nic dalej się nie wykona — wyślij mi koniec `release-1.2.0-prod.log`. Ponowne uruchomienie pomija to, co już jest.
+5. Kontrola:
+   ```bash
+   bash scripts/release-prod-sql.sh verify
+   ```
+   Oczekiwane: „wszystkie 37 migracji są w bazie”, zadanie `lso-monthly-report`, `kosciol_glowny_brak = 0`.
+   (Tryb `verify` nie był uruchamiany na kopii testowej — gdyby się wyłożył, wystarczy ponownie `check`: wszystko `[jest]`.)
+6. Skrypt sam przełącza Supabase CLI z powrotem na LSO-dev.
+7. **Szybki test na obecnej aplikacji ze sklepu (1.1.0)** — ona dalej działa na nowej bazie, dopóki ludzie nie zaktualizują:
+   konto `@lso.test` → logowanie, grafik, zapis na Mszę, potwierdzenie obecności.
 
-Po migracjach: smoke ręczny na koncie testowym PROD (`@lso.test`): rozkład Mszy, zapis, obecność, zgłoszenie obecności, raport miesięczny.
+## Krok 3. Web — app.lsoapp.com
+```bash
+npm run export:web
+```
+Cloudflare → Workers & Pages → projekt **app.lsoapp.com** → Create deployment → wgraj zawartość `dist/`.
+Sprawdź na https://app.lsoapp.com: brak znacznika „DEV”, logowanie, okno „Co nowego?”, Rozkład Mszy u opiekuna.
 
-## 2. Aplikacje mobilne (nowe buildy — OTA nie wystarczy)
-- Wersja **1.2.0** = nowy runtime (SDK 57). Aktualizacja OTA nie trafi do instalacji 1.1.0 i nie może — natywny kod jest inny.
-- [ ] `eas build --profile production --platform all` → `eas submit` (App Store + Google Play).
-- [ ] Do czasu aktualizacji ze sklepu użytkownicy mają 1.1.0 na nowej bazie — sprawdzić, że stara wersja działa (logowanie, grafik, obecność). Zmiany w bazie są wstecznie zgodne (nowe parametry mają wartości domyślne).
-- Push w buildach działa normalnie; w Expo Go jest celowo wyłączony (`lib/pushSupport.ts`).
+## Krok 4. Aplikacje mobilne (nowe buildy — wersja 1.2.0, SDK 57)
+OTA (`update:production`) **nie** wchodzi w grę: nowy kod natywny, użytkownicy muszą pobrać aktualizację ze sklepu.
+```bash
+npx eas build --profile production --platform android
+npx eas build --profile production --platform ios      # wymaga logowania do Apple (interaktywnie)
+```
+- `autoIncrement` podbije `versionCode`/`buildNumber` w `app.json` — po buildzie zrób commit tej zmiany.
+- **Przed wysłaniem do recenzji zainstaluj build na telefonie** (Google Play: test wewnętrzny, iOS: TestFlight) i sprawdź:
+  aparat + kod QR, GPS, powiadomienie push (np. przyznanie punktów), klawiatura w formularzach, odstęp od górnej krawędzi.
+- Wysyłka: `npx eas submit --profile production --platform android` / `--platform ios` (albo ręcznie w konsolach).
+- Tekst „Co nowego” do sklepów — niżej.
 
-## 3. Web (app.lsoapp.com)
-- [ ] `npm run export:web` i wdrożenie jak dotychczas. Linki dla rodziców i kalendarz używają `https://app.lsoapp.com`
-  (domyślnie w `lib/shareLinks.ts`, gdy brak `EXPO_PUBLIC_WEB_URL`).
+## Krok 5. Zamknięcie
+```bash
+git checkout master
+git merge --no-ff release/1.2.0
+git push origin master
+```
+Potem daj znać — zaktualizuję notatki i wrócimy do pracy na `master`.
 
-## 4. Po wydaniu
-- Dotychczasowi użytkownicy przy pierwszym wejściu widzą „Co nowego?” (treść wg roli, `lib/releaseNotes.ts`) z przyciskiem
-  „Pokaż mi, co gdzie jest” → przewodnik. Nowi użytkownicy dostają od razu przewodnik.
+---
+
+## Co się zmienia dla użytkowników
+- Dotychczasowi użytkownicy przy pierwszym wejściu widzą „Co nowego?” (treść wg roli) z przyciskiem
+  „Pokaż mi, co gdzie jest” → przewodnik po ekranach. Nowi użytkownicy od razu dostają przewodnik.
+- Rangi systemowe: parafie, które już je nadały, mają je włączone; pozostałe — wyłączone (ksiądz włącza w Ustawieniach → Rangi).
+- Wiedza bez oznaczania „przeczytane”; wymaganie „przeczytane działy Wiedzy” w ścieżce formacji usunięte.
 - Następne wydanie z nowościami: zmienić `RELEASE_ID` i treść w `lib/releaseNotes.ts`.
 
 ## Tekst „Co nowego” do sklepów (App Store / Google Play)
