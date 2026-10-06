@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
+import { usePointCategories } from '../../hooks/usePointCategories'
 import { Profile, PointRule, ServiceType, SERVICE_TYPE_LABELS } from '../../types/database'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
@@ -35,6 +36,9 @@ export default function AwardPoints() {
   const [submitting, setSubmitting] = useState(false)
   const [loadingMembers, setLoadingMembers] = useState(true)
   const [confirmDialog, setConfirmDialog] = useState(false)
+  // własne kategorie parafii (np. Sprzątanie zakrystii +3)
+  const { manualCategories } = usePointCategories()
+  const [pointCategoryId, setPointCategoryId] = useState<string | null>(null)
 
   useEffect(() => {
     supabase
@@ -84,6 +88,7 @@ export default function AwardPoints() {
       profile_id: selected!.id,
       amount: amt,
       reason: reason.trim(),
+      point_category_id: manualCategories.some(c => c.id === pointCategoryId && c.name === reason.trim()) ? pointCategoryId : null,
       awarded_by: adminProfile?.id,
       parish_id: adminProfile?.parish_id,
     })
@@ -92,7 +97,7 @@ export default function AwardPoints() {
       Toast.show({ type: 'error', text1: 'Błąd', text2: 'Nie udało się przyznać punktów: ' + error.message })
     } else {
       Toast.show({ type: 'success', text1: `Przyznano ${sign}${amt} pkt`, text2: `dla ${selected!.full_name}` })
-      setSelected(null); setAmount(''); setReason('')
+      setSelected(null); setAmount(''); setReason(''); setPointCategoryId(null)
     }
   }
 
@@ -171,6 +176,23 @@ export default function AwardPoints() {
                       </Text>
                     </TouchableOpacity>
                   ))}
+                </View>
+              </>
+            )}
+            {manualCategories.length > 0 && (
+              <>
+                <Text style={styles.label}>Kategorie parafii</Text>
+                <View style={styles.rulesRow}>
+                  {manualCategories.map(cat => {
+                    const on = pointCategoryId === cat.id && reason === cat.name && amount === String(cat.points)
+                    return (
+                      <TouchableOpacity key={cat.id} style={[styles.ruleChip, on && styles.ruleChipActive]}
+                        onPress={() => { setAmount(String(cat.points)); setReason(cat.name); setPointCategoryId(cat.id) }}>
+                        <Text style={[styles.ruleChipLabel, on && styles.ruleChipLabelActive]}>{cat.name}</Text>
+                        <Text style={[styles.ruleChipPts, on && styles.ruleChipLabelActive]}>{cat.points} pkt</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
                 </View>
               </>
             )}

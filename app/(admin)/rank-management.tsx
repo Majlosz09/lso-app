@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator
+  TextInput, Alert, ActivityIndicator, Switch
 } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
@@ -11,11 +11,16 @@ import { RankRequirement, RankRequirementsSheet, requirementSummary } from '../.
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 
 type RankRow = { id: string; name: string; order: number; is_system: boolean; parish_id: string | null }
 
 export default function RankManagementScreen() {
-  const { profile } = useAuthStore()
+  const { profile, parish, fetchProfile } = useAuthStore()
+  // rangi systemowe (Kandydat…Ceremoniarz) — parafia sama decyduje, czy z nich korzysta
+  const systemOn = !!parish?.system_ranks_enabled
+  const [savingSystem, setSavingSystem] = useState(false)
+  const [toDelete, setToDelete] = useState<RankRow | null>(null)
   const insets = useSafeAreaInsets()
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
@@ -49,7 +54,17 @@ export default function RankManagementScreen() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchRanks() }, [])
+  useEffect(() => { fetchRanks() }, [systemOn])
+
+  const toggleSystem = async (v: boolean) => {
+    if (!parish) return
+    setSavingSystem(true)
+    const { error } = await supabase.from('parishes').update({ system_ranks_enabled: v }).eq('id', parish.id)
+    if (error) { setSavingSystem(false); Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    await fetchProfile()
+    setSavingSystem(false)
+    Toast.show({ type: 'success', text1: v ? 'Rangi systemowe włączone' : 'Rangi systemowe wyłączone', text2: v ? undefined : 'Nadane rangi wrócą po ponownym włączeniu.' })
+  }
 
   const handleAdd = async () => {
     if (!newName.trim()) return
@@ -99,17 +114,15 @@ export default function RankManagementScreen() {
     setEditingName('')
   }
 
-  const handleDelete = (rank: RankRow) => {
-    Alert.alert('Usuń rangę', `Usunąć rangę "${rank.name}"?`, [
-      { text: 'Anuluj', style: 'cancel' },
-      {
-        text: 'Usuń', style: 'destructive', onPress: async () => {
-          const { error } = await supabase.from('ranks').delete().eq('id', rank.id)
-          if (error) Alert.alert('Błąd', error.message)
-          else fetchRanks()
-        },
-      },
-    ])
+  // ConfirmDialog zamiast Alert.alert z przyciskami (na webie Alert z przyciskami nic nie robi)
+  const handleDelete = (rank: RankRow) => setToDelete(rank)
+  const confirmDelete = async () => {
+    const rank = toDelete
+    setToDelete(null)
+    if (!rank) return
+    const { error } = await supabase.from('ranks').delete().eq('id', rank.id)
+    if (error) Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
+    else fetchRanks()
   }
 
   if (loading) {
@@ -122,7 +135,22 @@ export default function RankManagementScreen() {
         data={ranks}
         keyExtractor={item => item.id}
         ListHeaderComponent={
-          <Text style={styles.sectionLabel}>Rangi ministranckie</Text>
+          <>
+            <View style={styles.systemCard}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.rankName}>Rangi systemowe</Text>
+                <Text style={styles.systemHint}>
+                  Gotowa ścieżka: Kandydat, Ministrant, Lektor Młodszy, Lektor Starszy, Ceremoniarz. Włącz, jeśli parafia z niej korzysta — albo dodaj poniżej własne rangi.
+                </Text>
+              </View>
+              <Switch value={systemOn} onValueChange={toggleSystem} disabled={savingSystem || !parish}
+                trackColor={{ true: c.primary, false: c.inputBorder }} thumbColor="#FFFFFF" />
+            </View>
+            <Text style={styles.sectionLabel}>Rangi ministranckie</Text>
+          </>
+        }
+        ListEmptyComponent={
+          <Text style={styles.systemHint}>Brak rang. Dodaj własną rangę poniżej albo włącz rangi systemowe.</Text>
         }
         renderItem={({ item }) => (
           <View style={styles.rankRow}>
@@ -175,6 +203,8 @@ export default function RankManagementScreen() {
         contentContainerStyle={[styles.listContent, { paddingBottom: Math.max(insets.bottom, 16) }]}
       />
 
+      <ConfirmDialog visible={!!toDelete} title="Usunąć rangę?" message={toDelete ? `„${toDelete.name}” zniknie z profili ministrantów, którzy ją mają.` : ''}
+        confirmText="Usuń" destructive onCancel={() => setToDelete(null)} onConfirm={confirmDelete} />
       <RankRequirementsSheet rank={reqFor} current={reqFor ? reqs[reqFor.id] : undefined} onClose={() => setReqFor(null)} onSaved={loadReqs} />
 
       <View style={styles.addRow}>
@@ -207,7 +237,9 @@ function createStyles(c: Colors) {
     container: { flex: 1, backgroundColor: c.bg },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-    sectionLabel: {
+    systemCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, backgroundColor: c.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border, marginBottom: 12 },
+  systemHint: { fontSize: 13, lineHeight: 18, color: c.subtext, fontFamily: 'Manrope_500Medium' },
+  sectionLabel: {
       fontSize: 12, color: c.textTertiary,
       textTransform: 'uppercase', letterSpacing: 0.8,
       paddingHorizontal: 16, paddingTop: 20, paddingBottom: 8,

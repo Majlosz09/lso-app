@@ -8,6 +8,7 @@ import { useTheme } from '../../lib/ThemeContext'
 import { sans } from '../../lib/theme'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { AppText, Button, Card, Icon } from '../../components/ui'
+import { PointCategoriesCard } from '../../components/points/PointCategoriesCard'
 
 const SERVICE_TYPES: ServiceType[] = ['msza_assigned', 'msza_extra', 'nabozenstwo', 'zbiorka']
 const SERVICE_ICONS: Record<ServiceType, string> = {
@@ -145,6 +146,8 @@ export default function PointRulesScreen() {
       )}
 
       <Button label="Zapisz reguły" onPress={handleSave} loading={saving} />
+
+      <PointCategoriesCard />
     </ScrollView>
   )
 }

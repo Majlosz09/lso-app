@@ -10,6 +10,8 @@ import {
 import { TimePickerModal } from '../TimePickerModal'
 import { AppText, Button, Card, Chip, Icon } from '../ui'
 import { churchLabel, useChurches } from '../../hooks/useChurches'
+import { usePointCategories } from '../../hooks/usePointCategories'
+import { PointCategoryChips } from '../points/PointCategoryChips'
 
 /** Poniedziałek pierwszy */
 export const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]
@@ -35,6 +37,7 @@ export function RozkladEditor({ entries, onChange, days = WEEK_ORDER, emptyDayTe
   const [picker, setPicker] = useState<{ key: string } | null>(null)
   const [bulkDays, setBulkDays] = useState<number[]>([])
   const { churches, multi, main } = useChurches()
+  const { serviceCategories } = usePointCategories()
   const [copyFrom, setCopyFrom] = useState<number | null>(null)
   const [bulkOpen, setBulkOpen] = useState(false)
   const pickedEntry = picker ? entries.find(e => e.key === picker.key) : null
@@ -148,6 +151,10 @@ export function RozkladEditor({ entries, onChange, days = WEEK_ORDER, emptyDayTe
                       onPress={() => update(e.key, { service_mode: m })} />
                   ))}
                 </View>
+                {e.service_mode !== 'none' && (
+                  <PointCategoryChips label={false} categories={serviceCategories} value={e.point_category_id}
+                    onChange={id => update(e.key, { point_category_id: id })} />
+                )}
                 {multi && (
                   <View style={styles.chips}>
                     <Icon name="church" size={16} color={c.subtext} />

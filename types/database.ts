@@ -47,6 +47,8 @@ export interface Parish {
   attendance_methods?: AttendanceMode[] | null
   attendance_primary?: AttendanceMode | null
   rejected_excuse_penalty?: number | null
+  /** rangi systemowe (Kandydat…Ceremoniarz) włączone w parafii */
+  system_ranks_enabled?: boolean
   parents_see_general?: boolean | null
   members_can_create_polls?: boolean | null
   allow_member_dm: boolean

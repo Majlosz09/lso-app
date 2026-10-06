@@ -8,6 +8,8 @@ import { useAuthStore } from '../../stores/authStore'
 import { ScheduleCategory, CATEGORY_CONFIG } from '../../types/database'
 import { SERVICE_MODE_INFO, ServiceMode } from '../../lib/massSchedule'
 import { churchLabel, useChurches } from '../../hooks/useChurches'
+import { usePointCategories } from '../../hooks/usePointCategories'
+import { PointCategoryChips } from '../../components/points/PointCategoryChips'
 import { DatePickerModal } from '../../components/DatePickerModal'
 import { TimePickerModal } from '../../components/TimePickerModal'
 import { useTheme } from '../../lib/ThemeContext'
@@ -44,6 +46,8 @@ export default function ScheduleForm() {
   const [slotTimes, setSlotTimes] = useState<string[]>([])
   const [mode, setMode] = useState<ServiceMode | null>(null)
   const { churches, main, multi } = useChurches()
+  const { serviceCategories } = usePointCategories()
+  const [pointCategoryId, setPointCategoryId] = useState<string | null>(null)
   const [churchId, setChurchId] = useState<string | null>(null)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
@@ -77,6 +81,7 @@ export default function ScheduleForm() {
       time: time + ':00',
       category,
       service_mode: effectiveMode,
+      point_category_id: effectiveMode === 'none' ? null : pointCategoryId,
       church_id: churchId ?? main?.id ?? null,
       location: '',
       gps_radius: 100,
@@ -107,6 +112,8 @@ export default function ScheduleForm() {
           ))}
         </View>
       </View>
+
+      <PointCategoryChips categories={serviceCategories} value={pointCategoryId} onChange={setPointCategoryId} />
 
       <View style={styles.group}>
         <AppText variant="label" muted>Dzień</AppText>

@@ -30,6 +30,8 @@ export type RozkladEntry = {
   service_mode: ServiceMode
   /** kościół / kaplica (brak = kościół główny) */
   church_id?: string | null
+  /** własna kategoria punktowania parafii (brak = reguły domyślne) */
+  point_category_id?: string | null
 }
 
 export type PeriodEntry = RozkladEntry & {
@@ -295,6 +297,7 @@ export function draftFromTemplates(templates: RozkladEntry[], days: number[]): D
       .map(t => ({
         id: null, key: draftKey(), day_of_week: t.day_of_week, time: hhmm(t.time), label: t.label,
         category: t.category, service_mode: t.service_mode, base_template_id: t.id, church_id: t.church_id ?? null,
+        point_category_id: t.point_category_id ?? null,
       })),
   )
 }

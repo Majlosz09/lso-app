@@ -11,6 +11,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { ScheduleCategory, CATEGORY_CONFIG, getCatColors } from '../../types/database'
+import { usePointCategories } from '../../hooks/usePointCategories'
+import { PointCategoryChips } from '../../components/points/PointCategoryChips'
 import { DatePickerModal } from '../../components/DatePickerModal'
 import { TimePickerModal } from '../../components/TimePickerModal'
 import { useTheme } from '../../lib/ThemeContext'
@@ -45,6 +47,8 @@ export default function ScheduleSeriesScreen() {
   const [selectedDays, setSelectedDays] = useState<number[]>([])
   const [times, setTimes] = useState<Record<number, string>>({})
   const [category, setCategory] = useState<ScheduleCategory>('msza')
+  const { serviceCategories } = usePointCategories()
+  const [pointCategoryId, setPointCategoryId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const [showFromPicker, setShowFromPicker] = useState(false)
@@ -123,6 +127,7 @@ export default function ScheduleSeriesScreen() {
       date,
       time: (times[dow] ?? '18:00') + ':00',
       category,
+      point_category_id: pointCategoryId,
       series_id: seriesId,
       group_id: null,
       location: '',
@@ -197,6 +202,12 @@ export default function ScheduleSeriesScreen() {
             )
           })}
         </View>
+
+        {serviceCategories.length > 0 && (
+          <View style={{ marginTop: 16 }}>
+            <PointCategoryChips categories={serviceCategories} value={pointCategoryId} onChange={setPointCategoryId} />
+          </View>
+        )}
 
         <Text style={styles.label}>Dni tygodnia *</Text>
         <View style={styles.dayChips}>
