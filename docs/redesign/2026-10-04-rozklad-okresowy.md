@@ -134,3 +134,16 @@ przyjmuje obecność wysłaną później, jeśli godzina meldowania mieści się
 `useServiceActions.doCheckIn` przekazuje metodę (manual/qr/gps) i przy błędzie sieci odkłada do kolejki; `useServices` pamięta
 ostatni grafik (`services-cache:v1:*`) i pokazuje go bez sieci; pasek `PendingCheckinsBanner` (Obecność, Dom) z „Wyślij teraz”.
 Smoke: `offline-checkin-smoke-dev` (6 OK) + test w przeglądarce (offline → online, obecność z godziną kliknięcia).
+
+## Rangi systemowe do włączenia, własne kategorie punktowania, przewodnik (2026-10-06)
+
+- `20261006000000_system_ranks_toggle.sql`: `parishes.system_ranks_enabled` (domyślnie **false**; migracja włącza go parafiom,
+  które już nadały komuś rangę systemową albo ustawiły do niej wymagania). `rank_available()` w RLS `ranks_select`,
+  `_formation_progress` i `import_members`. Przełącznik: Ustawienia parafii → Rangi.
+- `20261006010000_point_categories.sql`: `point_categories` (nazwa, punkty, ikona, `for_services`, `for_manual`);
+  `point_category_id` w `schedules`, `mass_templates`, `mass_period_entries`, `points`. Punkty za obecność:
+  kategoria służby → kategoria pozycji rozkładu (`mass_slots` ma nową kolumnę, liczone przy obecności) → `point_rules`.
+  UI: Reguły punktowania (karta „Własne kategorie parafii”), wybór „Punktacja” w służbie / cyklu / rozkładzie, gotowe powody w „Przyznaj punkty”.
+  Smoke: `point-categories-smoke-dev` (15 OK, razem z rangami).
+- Przewodnik: `lib/tour.ts` (kroki per rola), `stores/tourStore.ts`, `components/tour/*` (`tourRef(id)` / `<TourTarget>`).
+  Start przy pierwszym logowaniu (`onboarding_completed = false`) i z Profilu → Instruktaż aplikacji. `OnboardingModal` usunięty.
