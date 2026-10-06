@@ -338,7 +338,7 @@ export function useServiceActions(onChanged: () => void) {
 
 const styles = StyleSheet.create({
   qr: { flex: 1 },
-  qrOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 22, padding: 28 },
+  qrOverlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', gap: 22, padding: 28 },
   qrTitle: { fontSize: 34, lineHeight: 37, color: '#FFFFFF', textAlign: 'center' },
   qrFrame: { width: 250, height: 250, borderRadius: 28, borderWidth: 3 },
   qrHint: { ...sans(600), fontSize: 14, color: '#C9D3E3', textAlign: 'center' },

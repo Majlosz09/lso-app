@@ -5,7 +5,7 @@ import {
   Pressable, StyleSheet, TextInput, View, ActivityIndicator,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useHeaderHeight } from '@react-navigation/elements'
+import { useHeaderHeight } from 'expo-router/react-navigation'
 import { useNavigation } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'

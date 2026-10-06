@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Switch, KeyboardAvoidingView, Platform
 } from 'react-native'
-import { useHeaderHeight } from '@react-navigation/elements'
+import { useHeaderHeight } from 'expo-router/react-navigation'
 import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'

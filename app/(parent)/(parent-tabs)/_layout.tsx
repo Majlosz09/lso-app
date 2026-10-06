@@ -1,11 +1,12 @@
+import type { ColorValue } from 'react-native'
 import { Tabs } from 'expo-router'
 import { CustomTabBar } from '../../../components/CustomTabBar'
 import { Icon } from '../../../components/ui'
 import { HeaderAvatar, HeaderBack } from '../../../components/layout/HeaderAvatar'
 import { useNavHeaderOptions } from '../../../components/layout/navOptions'
 
-const tabIcon = (name: string) => ({ color, size, focused }: { color: string; size: number; focused: boolean }) =>
-  <Icon name={name} size={size} color={color} filled={focused} />
+const tabIcon = (name: string) => ({ color, size, focused }: { color: ColorValue; size: number; focused: boolean }) =>
+  <Icon name={name} size={size} color={color as string} filled={focused} />
 
 export default function ParentTabsLayout() {
   const headerOptions = useNavHeaderOptions()

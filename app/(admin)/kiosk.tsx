@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   tileDone: { opacity: 0.45 },
   tileName: { ...sans(800), fontSize: 15, color: '#FFFFFF', textAlign: 'center' },
   tileSub: { ...sans(600), fontSize: 12, color: GOLD_I },
-  doneOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(7,28,58,0.92)', alignItems: 'center', justifyContent: 'center', gap: 12 },
+  doneOverlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(7,28,58,0.92)', alignItems: 'center', justifyContent: 'center', gap: 12 },
   doneText: { ...sans(800), fontSize: 30, color: '#FFFFFF' },
   donePts: { ...sans(800), fontSize: 22, color: GOLD_I },
 })
