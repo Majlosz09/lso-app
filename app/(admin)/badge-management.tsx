@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Modal, FlatList,
@@ -357,7 +358,7 @@ export default function BadgeManagementScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
+      <KeyboardScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom + 72, 80) }]}
       >
@@ -394,7 +395,7 @@ export default function BadgeManagementScreen() {
               maxLength={4}
             />
             <TextInput
-              style={[styles.addInput, { flex: 1 }]}
+              style={[styles.addInput, { flex: 1, minWidth: 0 }]}
               placeholder="Nazwa odznaki..."
               placeholderTextColor={c.textTertiary}
               value={newName}
@@ -462,7 +463,7 @@ export default function BadgeManagementScreen() {
             </View>
           ))}
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
 
       {/* FAB */}
       <View style={[styles.fabWrap, { bottom: Math.max(insets.bottom + 16, 24) }]}>
@@ -482,7 +483,8 @@ export default function BadgeManagementScreen() {
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
+          enabled={Platform.OS !== 'web'}
         >
           <TouchableOpacity style={StyleSheet.absoluteFill} onPress={closeWizard} activeOpacity={1} />
           <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 16, 16) }]}>
@@ -582,7 +584,7 @@ function createStyles(c: Colors) {
       fontFamily: 'Manrope_500Medium',
     },
     addButton: {
-      width: 44, height: 44, borderRadius: 10,
+      flexShrink: 0, width: 44, height: 44, borderRadius: 10,
       backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center',
     },
 

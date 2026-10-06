@@ -9,6 +9,7 @@ import { shadow } from '../../lib/shadows'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { AppText } from './AppText'
 import { Icon } from './Icon'
+import { KeyboardScrollView } from './/KeyboardScrollView'
 
 type Props = {
   visible: boolean
@@ -40,7 +41,8 @@ export function Sheet({ visible, onClose, title, eyebrow, children, footer, test
       statusBarTranslucent
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
+        enabled={Platform.OS !== 'web'}
         style={[styles.root, isDesktop ? styles.rootCenter : styles.rootBottom]}
       >
         <Pressable
@@ -76,13 +78,13 @@ export function Sheet({ visible, onClose, title, eyebrow, children, footer, test
               </Pressable>
             </View>
           )}
-          <ScrollView
+          <KeyboardScrollView padForKeyboard={false}
             style={styles.flexShrink}
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
           >
             {children}
-          </ScrollView>
+          </KeyboardScrollView>
           {footer && <View style={styles.footer}>{footer}</View>}
         </View>
       </KeyboardAvoidingView>
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   rootBottom: { justifyContent: 'flex-end' },
   rootCenter: { justifyContent: 'center', alignItems: 'center', padding: 24 },
-  panel: { maxHeight: '85%' },
+  panel: { maxHeight: '85%', flexShrink: 1 },
   panelMobile: {
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,

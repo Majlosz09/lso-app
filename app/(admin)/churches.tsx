@@ -9,6 +9,7 @@ import { Church, churchLabel, useChurches } from '../../hooks/useChurches'
 import GpsLocationPicker from '../../components/GpsLocationPicker'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { AppText, Badge, Button, Card, Icon, TextField } from '../../components/ui'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 type Form = { id: string | null; is_main: boolean; name: string; short_name: string; lat: string; lng: string; radius: string }
 
@@ -65,7 +66,7 @@ export default function ChurchesScreen() {
   if (loading) return <View style={[styles.center, { backgroundColor: c.bg }]}><ActivityIndicator color={c.primary} /></View>
 
   return (
-    <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]} keyboardShouldPersistTaps="handled">
       {form ? (
         <Card large style={styles.card}>
           <AppText variant="eyebrow" color={c.goldInk}>{form.id ? (form.is_main ? 'Kościół parafialny' : 'Edycja') : 'Nowy kościół / kaplica'}</AppText>
@@ -116,7 +117,7 @@ export default function ChurchesScreen() {
         onCancel={() => setConfirmDelete(false)}
         onConfirm={remove}
       />
-    </ScrollView>
+    </KeyboardScrollView>
   )
 }
 

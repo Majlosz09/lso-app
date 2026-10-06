@@ -10,6 +10,7 @@ import { BoardRow, CHALLENGE_PRESETS, Challenge, ChallengePreset, challengeStatu
 import { DatePickerModal } from '../../components/DatePickerModal'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { AppText, Badge, Button, Card, Chip, Icon, Sheet, TextField } from '../../components/ui'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 type Form = { id: string | null; name: string; description: string; date_from: string; date_to: string; goal: string; bonus: string; filter: string; icon: string }
 const STATUS_LABEL = { active: 'trwa', upcoming: 'wkrótce', ended: 'zakończone' } as const
@@ -85,7 +86,7 @@ export default function ChallengesScreen() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]} keyboardShouldPersistTaps="handled">
       {form ? (
         <Card large style={styles.card}>
           <AppText variant="eyebrow" color={c.goldInk}>{form.id ? 'Edycja wyzwania' : 'Nowe wyzwanie'}</AppText>
@@ -163,7 +164,7 @@ export default function ChallengesScreen() {
       </Sheet>
       <ConfirmDialog visible={confirmDelete} title="Usunąć wyzwanie?" message="Przyznane premie zostaną (są już w punktach ministrantów)."
         confirmText="Usuń" destructive onCancel={() => setConfirmDelete(false)} onConfirm={remove} />
-    </ScrollView>
+    </KeyboardScrollView>
   )
 }
 

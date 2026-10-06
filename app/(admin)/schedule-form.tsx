@@ -17,6 +17,7 @@ import { addDays, dayShort, localDateStr, longDate, shortDate } from '../../lib/
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { DayStrip } from '../../components/services/DayStrip'
 import { AppText, Button, Card, Chip, ListRow, ScreenHeader, TextField } from '../../components/ui'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 const DEFAULT_TITLE: Record<ScheduleCategory, string> = {
   msza: 'Msza Święta',
@@ -187,9 +188,9 @@ export default function ScheduleForm() {
   )
 
   return (
-    <KeyboardAvoidingView style={[styles.flex, { backgroundColor: c.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={[styles.flex, { backgroundColor: c.bg }]} enabled={false}>
       <Stack.Screen options={{ headerShown: false, title: 'Nowa służba' }} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={isDesktop && styles.desktop}>
+      <KeyboardScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={isDesktop && styles.desktop}>
         {!isDesktop && (
           <ScreenHeader
             title="Nowa służba"
@@ -198,7 +199,7 @@ export default function ScheduleForm() {
           />
         )}
         {isDesktop ? <Card large style={styles.deskCard}>{form}{footer}</Card> : form}
-      </ScrollView>
+      </KeyboardScrollView>
       {!isDesktop && footer}
 
       <DatePickerModal visible={showDatePicker} value={date} onConfirm={setDate} onClose={() => setShowDatePicker(false)} />

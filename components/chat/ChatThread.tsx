@@ -425,14 +425,15 @@ const styles = StyleSheet.create({
   pollChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, cursor: 'pointer' } as any,
   readOnly: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderTopWidth: 1 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', paddingVertical: 10, paddingHorizontal: 12, borderTopWidth: 1, gap: 8 },
-  roundBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+  roundBtn: { flexShrink: 0, width: 44, height: 44, borderRadius: 22, borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+  // minWidth 0: pole na webie ma własną minimalną szerokość i wypycha „Wyślij” poza ekran 320 px
   input: {
-    flex: 1, borderRadius: 22, borderWidth: 1,
+    flex: 1, minWidth: 0, borderRadius: 22, borderWidth: 1,
     paddingHorizontal: 16, paddingTop: 11, paddingBottom: 11,
     fontSize: 15, maxHeight: 120, minHeight: 44, ...sans(500),
     outlineStyle: 'none',
   } as any,
-  sendBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  sendBtn: { flexShrink: 0, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   sendWide: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingHorizontal: 18, borderRadius: 22, cursor: 'pointer' } as any,
   sendText: { fontSize: 14 },
 })

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { Image, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans, serif, VESTMENT_DOT } from '../../lib/theme'
@@ -18,6 +18,9 @@ type Props = {
   badges: NavBadges
 }
 
+/** Poniżej tej szerokości menu jest wąską kolumną ikon z krótkimi podpisami (laptop, tablet poziomo). */
+export const SIDEBAR_FULL_MIN_WIDTH = 1280
+
 /** Boczne menu wersji webowej (≥ 1024 px). */
 export function Sidebar({ role, active, badges }: Props) {
   const router = useRouter()
@@ -25,17 +28,18 @@ export function Sidebar({ role, active, badges }: Props) {
   const { profile, parish, signOut } = useAuthStore()
   const liturgy = useLiturgyHeader()
   const [confirmLogout, setConfirmLogout] = useState(false)
+  const compact = useWindowDimensions().width < SIDEBAR_FULL_MIN_WIDTH
 
   return (
-    <View style={[styles.root, { backgroundColor: c.sidebar }]}>
-      <View style={styles.brand}>
+    <View style={[styles.root, compact && styles.rootCompact, { backgroundColor: c.sidebar }]}>
+      <View style={[styles.brand, compact && styles.brandCompact]}>
         <Image source={LOGO} style={styles.logo} />
-        <View style={styles.flex}>
+        {!compact && <View style={styles.flex}>
           <AppText style={styles.brandName}>LSO App</AppText>
           <AppText style={[styles.parish, { color: c.sidebarMuted }]} numberOfLines={1}>
             {parish?.name ?? ''}
           </AppText>
-        </View>
+        </View>}
       </View>
 
       <ScrollView style={styles.flex} contentContainerStyle={styles.nav}>
@@ -47,20 +51,23 @@ export function Sidebar({ role, active, badges }: Props) {
               key={item.key}
               ref={tourRef(`nav:${item.key}`)}
               accessibilityRole="link"
+              accessibilityLabel={item.label}
               accessibilityState={{ selected: isActive }}
               onPress={() => router.navigate(item.href as any)}
               style={({ hovered }: any) => [
                 styles.item,
+                compact && styles.itemCompact,
                 isActive && styles.itemActive,
                 hovered && !isActive && styles.itemHover,
               ]}
             >
               <Icon name={item.icon} size={20} color={isActive ? c.gold : c.sidebarMuted} filled={isActive} />
-              <AppText style={[styles.itemText, { color: isActive ? '#FFFFFF' : c.sidebarText }]}>
+              <AppText style={[compact ? styles.itemTextCompact : styles.itemText, { color: isActive ? '#FFFFFF' : c.sidebarText }]}
+                numberOfLines={compact ? 2 : undefined}>
                 {item.label}
               </AppText>
               {count > 0 && (
-                <View style={[styles.badge, { backgroundColor: c.gold }]}>
+                <View style={[styles.badge, compact && styles.badgeCompact, { backgroundColor: c.gold }]}>
                   <AppText style={styles.badgeText}>{count > 99 ? '99+' : count}</AppText>
                 </View>
               )}
@@ -69,7 +76,7 @@ export function Sidebar({ role, active, badges }: Props) {
         })}
       </ScrollView>
 
-      <View style={styles.dayCard}>
+      {!compact && <View style={styles.dayCard}>
         <View style={styles.dayRow}>
           <View style={[styles.dot, { backgroundColor: VESTMENT_DOT[liturgy.color] }]} />
           <AppText variant="eyebrow" color={c.gold} style={styles.dayEyebrow} numberOfLines={1}>
@@ -77,21 +84,21 @@ export function Sidebar({ role, active, badges }: Props) {
           </AppText>
         </View>
         <AppText style={styles.dayName} numberOfLines={2}>{liturgy.entry.name}</AppText>
-      </View>
+      </View>}
 
-      <View style={styles.user}>
+      <View style={[styles.user, compact && styles.userCompact]}>
         <Pressable
           ref={tourRef('profile')}
           accessibilityRole="link"
           accessibilityLabel="Profil"
           onPress={() => router.navigate(PROFILE_HREF[role] as any)}
-          style={styles.userMain}
+          style={[styles.userMain, compact && { flex: 0 }]}
         >
           <Avatar name={profile?.full_name} avatarUrl={profile?.avatar_url} size={36} />
-          <View style={styles.flex}>
+          {!compact && <View style={styles.flex}>
             <AppText style={styles.userName} numberOfLines={1}>{profile?.full_name ?? ''}</AppText>
             <AppText style={[styles.userRole, { color: c.sidebarMuted }]}>{ROLE_LABEL[role]}</AppText>
-          </View>
+          </View>}
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -123,6 +130,12 @@ export function Sidebar({ role, active, badges }: Props) {
 
 const styles = StyleSheet.create({
   root: { width: 236, paddingVertical: 20, paddingHorizontal: 14, gap: 14 },
+  rootCompact: { width: 92, paddingHorizontal: 8 },
+  brandCompact: { justifyContent: 'center', paddingHorizontal: 0 },
+  itemCompact: { flexDirection: 'column', gap: 4, paddingHorizontal: 4, paddingVertical: 9 },
+  itemTextCompact: { ...sans(700), fontSize: 10, lineHeight: 12, textAlign: 'center' },
+  badgeCompact: { position: 'absolute', top: 4, right: 14, minWidth: 18, height: 18, paddingHorizontal: 4 },
+  userCompact: { flexDirection: 'column', gap: 10 },
   flex: { flex: 1, minWidth: 0 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 6, marginBottom: 8 },
   logo: { width: 34, height: 34, borderRadius: 9 },

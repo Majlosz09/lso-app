@@ -17,6 +17,7 @@ import GpsLocationPicker from '../../components/GpsLocationPicker'
 import { ChoiceCard } from '../../components/auth/formParts'
 import { AppText, Button, Card, Chip, ListRow, ScreenHeader, Sheet, TextField } from '../../components/ui'
 import { TourTarget } from '../../components/tour/TourTarget'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 function ToggleRow({ value, onChange, title, sub }: { value: boolean; onChange: (v: boolean) => void; title: string; sub: string }) {
   const { colors: c } = useTheme()
@@ -285,7 +286,7 @@ https://app.lsoapp.com` })
   return (
     <View style={[styles.flex, { backgroundColor: c.bg }]}>
       <Stack.Screen options={{ title: 'Ustawienia parafii', headerShown: false }} />
-      <ScrollView contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
+      <KeyboardScrollView contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
         {!isDesktop && (
           <ScreenHeader
             eyebrow={parish.name}
@@ -301,7 +302,7 @@ https://app.lsoapp.com` })
         ) : (
           <View style={styles.body}>{dataCard}{codeCard}<TourTarget id="settings:public"><PublicScheduleCard /></TourTarget>{attendanceCard}{chatCard}<TourTarget id="settings:config">{configCard}</TourTarget></View>
         )}
-      </ScrollView>
+      </KeyboardScrollView>
 
       <Sheet
         visible={confirmRegen}

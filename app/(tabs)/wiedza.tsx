@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native'
 import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
@@ -49,6 +49,8 @@ export function searchWiedza(entries: Entry[], q: string): Entry[] {
 export default function WiedzaScreen() {
   const router = useRouter()
   const isDesktop = useIsDesktop()
+  // wąski desktop (laptop / tablet poziomo): węższe listy, żeby tekst modlitwy miał miejsce
+  const narrow = useWindowDimensions().width < 1280
   const { colors: c } = useTheme()
   const { palette } = useLiturgyHeader()
   const parishId = useAuthStore(s => s.profile?.parish_id)
@@ -136,7 +138,7 @@ export default function WiedzaScreen() {
     const next = idx >= 0 ? catEntries[idx + 1] : undefined
     return (
       <View style={[styles.desktop, { backgroundColor: c.bg }]}>
-        <ScrollView style={styles.colCats} contentContainerStyle={styles.colInner}>
+        <ScrollView style={[styles.colCats, narrow && { width: 200 }]} contentContainerStyle={styles.colInner}>
           {search(false)}
           {query ? resultList(e => { setQuery(''); setCatId(e.categoryId); setItemId(e.id) }) : WIEDZA_DATA.map(w => {
             const active = w.id === cat.id
@@ -157,7 +159,7 @@ export default function WiedzaScreen() {
             )
           })}
         </ScrollView>
-        <ScrollView style={styles.colItems} contentContainerStyle={styles.colInner}>
+        <ScrollView style={[styles.colItems, narrow && { width: 210 }]} contentContainerStyle={styles.colInner}>
           <Card flush>
             {catEntries.map((e, i) => {
               const active = item?.id === e.id

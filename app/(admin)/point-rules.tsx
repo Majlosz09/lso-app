@@ -9,6 +9,7 @@ import { sans } from '../../lib/theme'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { AppText, Button, Card, Icon } from '../../components/ui'
 import { PointCategoriesCard } from '../../components/points/PointCategoriesCard'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 const SERVICE_TYPES: ServiceType[] = ['msza_assigned', 'msza_extra', 'nabozenstwo', 'zbiorka']
 const SERVICE_ICONS: Record<ServiceType, string> = {
@@ -111,7 +112,7 @@ export default function PointRulesScreen() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]}>
+    <KeyboardScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]}>
       <Card large style={styles.card}>
         <AppText variant="eyebrow" color={c.goldInk}>Punkty za służbę</AppText>
         <AppText variant="small" muted>
@@ -148,7 +149,7 @@ export default function PointRulesScreen() {
       <Button label="Zapisz reguły" onPress={handleSave} loading={saving} />
 
       <PointCategoriesCard />
-    </ScrollView>
+    </KeyboardScrollView>
   )
 }
 

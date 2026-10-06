@@ -8,6 +8,7 @@ import { useTheme } from '../../lib/ThemeContext'
 import { sans, serif } from '../../lib/theme'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { AppText, Icon } from '../ui'
+import { KeyboardScrollView } from '../ui/KeyboardScrollView'
 
 const LOGO = require('../../assets/images/icon.png')
 export const NAVY_DEEP = '#071C3A'
@@ -80,7 +81,7 @@ export function AuthLayout({
           </View>
           <AppText style={styles.brandFoot}>Bezpłatna aplikacja misyjna · lsoapp.com</AppText>
         </View>
-        <ScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={styles.formPane}>
+        <KeyboardScrollView style={{ flex: 1, backgroundColor: c.bg }} contentContainerStyle={styles.formPane}>
           <View style={styles.formCol}>
             {back}
             {titleNode(c.text, 44)}
@@ -88,7 +89,7 @@ export function AuthLayout({
             <View style={styles.formBody}>{children}</View>
             {footer && <View style={styles.footerDesktop}>{footer}</View>}
           </View>
-        </ScrollView>
+        </KeyboardScrollView>
       </View>
     )
   }
@@ -97,7 +98,7 @@ export function AuthLayout({
     return (
       <View style={[styles.flex, { backgroundColor: NAVY_DEEP }]}>
         <StatusBar style="light" />
-        <ScrollView
+        <KeyboardScrollView
           contentContainerStyle={[styles.heroScroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32 }]}
           keyboardShouldPersistTaps="handled"
         >
@@ -109,7 +110,7 @@ export function AuthLayout({
             {children}
           </View>
           {footer && <View style={styles.footer}>{footer}</View>}
-        </ScrollView>
+        </KeyboardScrollView>
       </View>
     )
   }
@@ -117,10 +118,10 @@ export function AuthLayout({
   return (
     <KeyboardAvoidingView
       style={[styles.flex, { backgroundColor: c.bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      enabled={false}
     >
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <View style={[styles.formHeader, { backgroundColor: NAVY_DEEP, paddingTop: insets.top + 6 }]}>
           {back}
           {titleNode('#FFFFFF', 38)}
@@ -130,7 +131,7 @@ export function AuthLayout({
           {children}
           {footer}
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
     </KeyboardAvoidingView>
   )
 }

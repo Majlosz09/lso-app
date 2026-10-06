@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { ModalKeyboardAvoider } from '../ui/ModalKeyboardAvoider'
 
 interface Props {
   visible: boolean
@@ -60,6 +61,7 @@ export function CreatePollModal({ visible, onClose, onSubmit }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+<ModalKeyboardAvoider>
       <View style={styles.overlay}>
         <View style={[styles.sheet, { backgroundColor: c.surface }]}>
           <View style={styles.header}>
@@ -119,7 +121,8 @@ export function CreatePollModal({ visible, onClose, onSubmit }: Props) {
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </ModalKeyboardAvoider>
+</Modal>
   )
 }
 

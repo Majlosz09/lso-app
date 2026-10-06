@@ -14,6 +14,7 @@ import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { TimePickerModal } from '../../components/TimePickerModal'
+import { ModalKeyboardAvoider } from '../../components/ui/ModalKeyboardAvoider'
 
 // Kolejność od poniedziałku; wartości jak w Postgres (0 = niedziela)
 const WEEK = [
@@ -250,6 +251,7 @@ export default function RecurringAssignmentsScreen() {
       </TouchableOpacity>
 
       <Modal visible={formOpen} transparent animationType="slide" onRequestClose={() => setFormOpen(false)}>
+<ModalKeyboardAvoider>
         <View style={styles.modalOverlay}>
           <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
             <View style={styles.sheetHeader}>
@@ -354,7 +356,8 @@ export default function RecurringAssignmentsScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </ModalKeyboardAvoider>
+</Modal>
 
       <TimePickerModal
         visible={timePickerOpen}

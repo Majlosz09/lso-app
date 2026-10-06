@@ -11,6 +11,7 @@ import { sans, serif } from '../../lib/theme'
 import { isCheckInWindowOpen, localDateStr } from '../../lib/dates'
 import { Service, useServices } from '../../hooks/useServices'
 import { AppText, Avatar, Button, Icon, Sheet, TextField } from '../../components/ui'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 const NAVY = '#071C3A'
 const MUTED = '#C9D3E3'
@@ -161,7 +162,7 @@ export default function KioskScreen() {
             placeholderTextColor="#8497B5"
             style={styles.search}
           />
-          <ScrollView contentContainerStyle={styles.grid}>
+          <KeyboardScrollView contentContainerStyle={styles.grid}>
             {list.map(m => {
               const isPresent = present.has(m.id)
               return (
@@ -174,7 +175,7 @@ export default function KioskScreen() {
                 </Pressable>
               )
             })}
-          </ScrollView>
+          </KeyboardScrollView>
         </>
       )}
 

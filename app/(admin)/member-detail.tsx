@@ -22,6 +22,8 @@ import { StatusBar } from 'expo-status-bar'
 import { AppText, Avatar, Icon, Card } from '../../components/ui'
 import { AvatarImage } from '../../components/AvatarImage'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
+import { ModalKeyboardAvoider } from '../../components/ui/ModalKeyboardAvoider'
 
 type MemberProfile = {
   id: string
@@ -362,7 +364,7 @@ export default function MemberDetailScreen() {
   )
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
+    <KeyboardScrollView style={styles.container} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
       <Stack.Screen options={{ headerShown: false, title: profile.full_name }} />
       <View style={[heroStyles.hero, { backgroundColor: pal.bg, paddingTop: isDesktop ? 22 : insets.top + 8 }, isDesktop && heroStyles.heroDesktop]}>
         <StatusBar style={pal.statusBar} />
@@ -398,6 +400,7 @@ export default function MemberDetailScreen() {
         animationType="slide"
         onRequestClose={() => setParentModalVisible(false)}
       >
+<ModalKeyboardAvoider>
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setParentModalVisible(false)} />
           <View style={styles.modalSheet}>
@@ -436,7 +439,8 @@ export default function MemberDetailScreen() {
             )}
           </View>
         </View>
-      </Modal>
+      </ModalKeyboardAvoider>
+</Modal>
 
       <Modal
         visible={rankModalVisible}
@@ -444,6 +448,7 @@ export default function MemberDetailScreen() {
         animationType="slide"
         onRequestClose={() => setRankModalVisible(false)}
       >
+<ModalKeyboardAvoider>
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setRankModalVisible(false)} />
           <View style={styles.modalSheet}>
@@ -481,7 +486,8 @@ export default function MemberDetailScreen() {
             ))}
           </View>
         </View>
-      </Modal>
+      </ModalKeyboardAvoider>
+</Modal>
 
       {/* Ministrant bez konta: kod osobisty do założenia konta */}
       {isMember && profile.managed && (
@@ -660,6 +666,7 @@ export default function MemberDetailScreen() {
         animationType="slide"
         onRequestClose={() => { setAwardSheetVisible(false); setSelectedBadgeDef(null); setAwardNote('') }}
       >
+<ModalKeyboardAvoider>
         <View style={styles.modalOverlay}>
           <TouchableOpacity
             style={{ flex: 1 }}
@@ -717,9 +724,10 @@ export default function MemberDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </ModalKeyboardAvoider>
+</Modal>
       </View>
-    </ScrollView>
+    </KeyboardScrollView>
   )
 }
 

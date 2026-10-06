@@ -10,6 +10,7 @@ import { sans, serif } from '../../../lib/theme'
 import { useIsDesktop } from '../../../hooks/useIsDesktop'
 import { announcementWhen } from '../../../components/announcements/AnnouncementsFeed'
 import { AppText, Badge, Button, Chip, Icon, ScreenHeader, Sheet, TextField } from '../../../components/ui'
+import { KeyboardScrollView } from '../../../components/ui/KeyboardScrollView'
 
 const FIXED_AUDIENCES = [
   { key: 'all', label: 'Wszyscy' },
@@ -124,7 +125,7 @@ export default function AnnouncementsTab() {
 
   return (
     <View style={[styles.flex, { backgroundColor: c.bg }]}>
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAnnouncements() }} />}>
+      <KeyboardScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAnnouncements() }} />}>
         {!isDesktop && (
           <ScreenHeader
             title="Ogłoszenia"
@@ -135,7 +136,7 @@ export default function AnnouncementsTab() {
           <Button label="Nowe ogłoszenie" icon="plus" style={isDesktop ? styles.deskBtn : undefined} onPress={() => setModalVisible(true)} />
           {list}
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
 
       <Sheet
         visible={modalVisible}

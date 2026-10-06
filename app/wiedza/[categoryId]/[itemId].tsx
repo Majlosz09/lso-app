@@ -43,7 +43,7 @@ export default function WiedzaItemScreen() {
       return <View style={styles.center}><ActivityIndicator color={c.primary} /></View>
     }
     if (!dbItem) {
-      return <View style={styles.center}><Text style={{ color: c.subtext }}>Nie znaleziono treści</Text></View>
+      return <View style={styles.center}><Stack.Screen options={{ title: 'Wiedza' }} /><Text style={{ color: c.subtext }}>Nie znaleziono treści</Text></View>
     }
     return (
       <>
@@ -66,7 +66,7 @@ export default function WiedzaItemScreen() {
   if (!found) {
     return (
       <View style={styles.center}>
-        <Text style={{ color: c.subtext }}>Nie znaleziono treści</Text>
+        <Stack.Screen options={{ title: 'Wiedza' }} /><Text style={{ color: c.subtext }}>Nie znaleziono treści</Text>
       </View>
     )
   }

@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { ModalKeyboardAvoider } from '../../components/ui/ModalKeyboardAvoider'
 
 type MemberRow = { id: string; full_name: string; rank_id: string | null; rank_name: string | null }
 type RankOption = { id: string; name: string; order: number; is_system: boolean; parish_id: string | null }
@@ -306,6 +307,7 @@ export default function RankAssignmentScreen() {
         animationType="slide"
         onRequestClose={() => setPickerTarget(null)}
       >
+<ModalKeyboardAvoider>
         <View style={styles.overlay}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setPickerTarget(null)} />
           <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
@@ -336,7 +338,8 @@ export default function RankAssignmentScreen() {
             ))}
           </View>
         </View>
-      </Modal>
+      </ModalKeyboardAvoider>
+</Modal>
     </View>
   )
 }

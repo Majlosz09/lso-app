@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import { ChatMessageWithSender } from '../../types/chat'
+import { ModalKeyboardAvoider } from '../ui/ModalKeyboardAvoider'
 
 const REASONS = ['Wulgarne lub obraźliwe', 'Nękanie / zastraszanie', 'Niestosowne wobec dziecka', 'Spam', 'Inne']
 
@@ -43,6 +44,7 @@ export function ReportMessageModal({ message, reporterId, onClose }: Props) {
 
   return (
     <Modal visible={!!message} transparent animationType="fade" onRequestClose={close}>
+<ModalKeyboardAvoider>
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           <Text style={styles.title}>Zgłoś wiadomość</Text>
@@ -71,7 +73,8 @@ export function ReportMessageModal({ message, reporterId, onClose }: Props) {
           </View>
         </View>
       </View>
-    </Modal>
+    </ModalKeyboardAvoider>
+</Modal>
   )
 }
 

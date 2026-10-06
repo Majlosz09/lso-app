@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Switch
+  TextInput, Alert, ActivityIndicator, Switch, KeyboardAvoidingView, Platform
 } from 'react-native'
+import { useHeaderHeight } from '@react-navigation/elements'
 import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -22,6 +23,9 @@ export default function RankManagementScreen() {
   const [savingSystem, setSavingSystem] = useState(false)
   const [toDelete, setToDelete] = useState<RankRow | null>(null)
   const insets = useSafeAreaInsets()
+  // pole „Nazwa nowej rangi” jest przyklejone na dole — podnosimy je nad klawiaturę (offset = nagłówek ekranu)
+  let headerHeight = 0
+  try { headerHeight = useHeaderHeight() } catch { /* bez nagłówka */ }
   const { colors: c } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
   const [ranks, setRanks] = useState<RankRow[]>([])
@@ -130,7 +134,7 @@ export default function RankManagementScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.container} behavior="padding" enabled={Platform.OS !== 'web'} keyboardVerticalOffset={headerHeight}>
       <FlatList
         data={ranks}
         keyExtractor={item => item.id}
@@ -228,7 +232,7 @@ export default function RankManagementScreen() {
           }
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   )
 }
 

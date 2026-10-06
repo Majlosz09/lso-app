@@ -182,7 +182,7 @@ export default function SchedulesTab() {
       <View style={[styles.flex, { backgroundColor: c.bg }]}>
         <View style={styles.deskBar}>
           {weekNav(false)}
-          <AppText variant="small" muted style={styles.flex}>{`${staffedCount} z ${allSlots.length} służb obsadzonych`}</AppText>
+          <AppText variant="small" muted style={styles.deskCount}>{`${staffedCount} z ${allSlots.length} służb obsadzonych`}</AppText>
           <TourTarget id="schedules:add" style={styles.deskActions}>
           <Button label="Drukuj" icon="printer" variant="secondary" compact onPress={() => setPrintOpen(true)} />
           <Button label="Ułóż grafik" icon="auto-fix" variant="secondary" compact onPress={() => router.push('/(admin)/auto-schedule' as any)} />
@@ -192,7 +192,10 @@ export default function SchedulesTab() {
           </TourTarget>
         </View>
         {loading ? <ActivityIndicator color={c.primary} style={styles.loader} /> : (
-          <ScrollView contentContainerStyle={styles.grid}>
+          <ScrollView>
+          {/* wąski desktop: kolumny dni nie ściskają się poniżej czytelnej szerokości — przewijanie w poziomie */}
+          <ScrollView horizontal contentContainerStyle={styles.gridScroll}>
+          <View style={styles.grid}>
             {grouped.map(({ date, slots }) => {
               const lit = getLiturgicalDay(date)
               const vest = (lit.color ?? 'GREEN') as VestmentColor
@@ -240,6 +243,8 @@ export default function SchedulesTab() {
                 </View>
               )
             })}
+          </View>
+          </ScrollView>
           </ScrollView>
         )}
         <PrintScheduleSheet visible={printOpen} onClose={() => setPrintOpen(false)} />
@@ -336,9 +341,11 @@ const styles = StyleSheet.create({
   mBar: { height: 5, borderRadius: 3, overflow: 'hidden' },
   mBarFill: { height: 5, borderRadius: 3 },
   noSvc: { borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 14, padding: 14, alignItems: 'center', gap: 8 },
-  deskBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 32, paddingTop: 24, paddingBottom: 14 },
-  grid: { flexDirection: 'row', gap: 10, paddingHorizontal: 32, paddingBottom: 32, alignItems: 'flex-start' },
-  gridCol: { flex: 1, minWidth: 0, gap: 8 },
+  deskBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 32, paddingTop: 24, paddingBottom: 14, flexWrap: 'wrap' },
+  deskCount: { flex: 1, minWidth: 150 },
+  gridScroll: { flexGrow: 1 },
+  grid: { flex: 1, flexDirection: 'row', gap: 10, paddingHorizontal: 32, paddingBottom: 32, alignItems: 'flex-start' },
+  gridCol: { flex: 1, minWidth: 116, gap: 8 },
   dayHead: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, gap: 2, cursor: 'pointer' } as any,
   dayHeadTitle: { ...sans(800), fontSize: 15 },
   dayHeadDate: { ...sans(600), fontSize: 12 },

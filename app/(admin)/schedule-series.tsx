@@ -17,6 +17,7 @@ import { DatePickerModal } from '../../components/DatePickerModal'
 import { TimePickerModal } from '../../components/TimePickerModal'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 const DAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So']
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -149,8 +150,8 @@ export default function ScheduleSeriesScreen() {
   const sortedSelected = [...selectedDays].sort((a, b) => a - b)
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={{ flex: 1 }} enabled={false}>
+      <KeyboardScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]} keyboardShouldPersistTaps="handled">
 
         <Text style={styles.label}>Tytuł *</Text>
         <TextInput
@@ -286,7 +287,7 @@ export default function ScheduleSeriesScreen() {
             )
           }
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardScrollView>
 
       <DatePickerModal
         visible={showFromPicker}

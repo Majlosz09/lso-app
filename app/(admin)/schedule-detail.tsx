@@ -17,6 +17,7 @@ import { AppText, Avatar, Button, Card, Chip, HeaderChip, Icon, ListRow, Sheet, 
 import { SERVICE_MODE_INFO, ServiceMode } from '../../lib/massSchedule'
 import { churchLabel, useChurches } from '../../hooks/useChurches'
 import { AdminRolesCard } from '../../components/services/RolesCard'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 type Assignment = {
   id: string
@@ -292,7 +293,7 @@ export default function ScheduleDetailScreen() {
     <>
       <Stack.Screen options={{ title: schedule.title, headerShown: false }} />
 
-      <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
+      <KeyboardScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
         <View style={[styles.head, { backgroundColor: pal.bg, paddingTop: isDesktop ? 22 : insets.top + 8 }, isDesktop && styles.headDesktop]}>
           <StatusBar style={pal.statusBar} />
           <View style={styles.headTop}>
@@ -417,7 +418,7 @@ export default function ScheduleDetailScreen() {
             Kółko przy osobie zaznacza obecność (z punktami wg reguł). Dotknij statusu, aby go zmienić.
           </AppText>
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
 
       {/* Status */}
       <Sheet

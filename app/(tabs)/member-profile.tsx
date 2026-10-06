@@ -51,7 +51,7 @@ export default function MemberProfileScreen() {
           .select(`
             id, full_name, avatar_url, rank_id,
             ranks(name),
-            member_badges(
+            member_badges!member_badges_profile_id_fkey(
               id, awarded_at, is_active,
               badge_definition:badge_definitions(id, name, icon, criteria_key)
             )

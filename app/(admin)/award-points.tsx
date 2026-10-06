@@ -14,6 +14,7 @@ import { usePointCategories } from '../../hooks/usePointCategories'
 import { Profile, PointRule, ServiceType, SERVICE_TYPE_LABELS } from '../../types/database'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 const ROLE_LABELS: Record<string, string> = {
   member: 'Ministrant',
@@ -102,8 +103,8 @@ export default function AwardPoints() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={{ flex: 1 }} enabled={false}>
+      <KeyboardScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]} keyboardShouldPersistTaps="handled">
 
         {selected ? (
           <View style={styles.selectedCard}>
@@ -229,7 +230,7 @@ export default function AwardPoints() {
             </TouchableOpacity>
           </>
         )}
-      </ScrollView>
+      </KeyboardScrollView>
     <ConfirmDialog
       visible={confirmDialog}
       title="Przyznaj punkty"

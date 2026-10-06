@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   loader: { marginTop: 40 },
   body: { padding: 16, gap: 14, paddingBottom: 32 },
   desktop: { padding: 28, paddingHorizontal: 32 },
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' },
   empty: { alignItems: 'center', gap: 8, padding: 30, borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 18 },
   grid: { gap: 12 },
   gridDesktop: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },

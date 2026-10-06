@@ -140,7 +140,7 @@ export default function ParentHome() {
           <AppText variant="eyebrow" color={c.goldInk}>Ogłoszenia dla rodziców</AppText>
           {unreadAnn > 0 && <Badge label={`${unreadAnn} ${pl(unreadAnn, ['nowe', 'nowe', 'nowych'])}`} tone="navy" />}
         </View>
-        <Pressable onPress={() => router.push('/(parent)/(parent-tabs)/announcements')}><AppText variant="label" color={c.primary}>Wszystkie →</AppText></Pressable>
+        <Pressable style={{ flexShrink: 0 }} onPress={() => router.push('/(parent)/(parent-tabs)/announcements')}><AppText variant="label" color={c.primary}>Wszystkie →</AppText></Pressable>
       </View>
       {anns.length === 0 ? <AppText muted style={styles.pad}>Brak ogłoszeń.</AppText> : anns.map(a => (
         <Pressable key={a.id} onPress={() => router.push('/(parent)/(parent-tabs)/announcements')} style={[styles.annRow, { borderTopColor: c.borderLight }]}>
@@ -233,7 +233,7 @@ export default function ParentHome() {
 }
 
 const styles = StyleSheet.create({
-  annTitle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  annTitle: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1, minWidth: 0 },
   flex: { flex: 1, minWidth: 0 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   pad: { padding: 14, gap: 4 },

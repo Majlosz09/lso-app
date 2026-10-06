@@ -18,6 +18,7 @@ import { DatePickerModal } from '../../components/DatePickerModal'
 import { churchLabel, useChurches } from '../../hooks/useChurches'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { AppText, Button, Card, Chip, Icon, Segmented, Sheet, TextField } from '../../components/ui'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 type Tab = 'base' | 'periods'
 type PeriodForm = {
@@ -298,7 +299,7 @@ export default function MassScheduleScreen() {
     })
     return (
       <View style={[styles.flex, { backgroundColor: c.bg }]}>
-        <ScrollView contentContainerStyle={body} keyboardShouldPersistTaps="handled">
+        <KeyboardScrollView contentContainerStyle={body} keyboardShouldPersistTaps="handled">
           <Card large style={styles.card}>
             <AppText variant="eyebrow" color={c.goldInk}>{form.id ? 'Edycja zmiany okresowej' : 'Nowa zmiana okresowa'}</AppText>
             {!!form.hint && <AppText variant="small" color={c.goldText}>{form.hint}</AppText>}
@@ -427,7 +428,7 @@ export default function MassScheduleScreen() {
           <Button label={form.id ? 'Zapisz zmianę' : 'Dodaj zmianę okresową'} icon="check" onPress={savePeriod} loading={saving && !pending} />
           {form.id && <Button label="Usuń zmianę okresową" variant="secondary" icon="delete" onPress={() => setConfirmDelete(true)} />}
           <Button label="Anuluj" variant="ghost" onPress={() => setForm(null)} />
-        </ScrollView>
+        </KeyboardScrollView>
 
         <DatePickerModal
           visible={!!datePick}
@@ -478,7 +479,7 @@ export default function MassScheduleScreen() {
 
   return (
     <View style={[styles.flex, { backgroundColor: c.bg }]}>
-      <ScrollView contentContainerStyle={body} keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView contentContainerStyle={body} keyboardShouldPersistTaps="handled">
         <Segmented<Tab>
           options={[{ value: 'base', label: 'Stały rozkład' }, { value: 'periods', label: `Zmiany okresowe${periods.length ? ` (${periods.length})` : ''}` }]}
           value={tab}
@@ -550,7 +551,7 @@ export default function MassScheduleScreen() {
             <Button label="Nowa zmiana okresowa" icon="plus" onPress={() => openPeriod(null)} />
           </>
         )}
-      </ScrollView>
+      </KeyboardScrollView>
 
       {tab === 'base' && baseDirty && (
         <View style={[styles.saveBar, { backgroundColor: c.surface, borderTopColor: c.border, paddingBottom: Math.max(insets.bottom, 12) }]}>

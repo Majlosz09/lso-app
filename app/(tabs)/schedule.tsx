@@ -168,8 +168,8 @@ const styles = StyleSheet.create({
   desktop: { flex: 1, flexDirection: 'row', gap: 24, paddingHorizontal: 32 },
   desktopList: { flex: 1.1 },
   desktopListInner: { paddingVertical: 28, gap: 16 },
-  desktopBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  desktopSeg: { width: 300 },
+  desktopBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
+  desktopSeg: { width: 300, maxWidth: '100%' },
   desktopPanel: { flex: 1 },
   desktopPanelInner: { paddingVertical: 28 },
 })

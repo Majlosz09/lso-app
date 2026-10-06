@@ -221,7 +221,7 @@ export default function WiedzaAdminScreen() {
 
       {/* Formularz dodaj/edytuj */}
       <Modal visible={formVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setFormVisible(false)}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" enabled={Platform.OS !== 'web'}>
           <View style={[styles.formModal, { paddingTop: insets.top + 16 }]}>
             <View style={styles.formHeader}>
               <TouchableOpacity onPress={() => setFormVisible(false)}>

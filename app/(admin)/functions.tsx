@@ -8,6 +8,7 @@ import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { ParishFunction, useFunctions } from '../../hooks/useFunctions'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { AppText, Button, Card, Icon, TextField } from '../../components/ui'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 type Form = { id: string | null; name: string; description: string }
 
@@ -48,7 +49,7 @@ export default function FunctionsScreen() {
   if (loading) return <View style={[styles.center, { backgroundColor: c.bg }]}><ActivityIndicator color={c.primary} /></View>
 
   return (
-    <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]} keyboardShouldPersistTaps="handled">
       {form ? (
         <Card large style={styles.card}>
           <AppText variant="eyebrow" color={c.goldInk}>{form.id ? 'Edycja funkcji' : 'Nowa funkcja'}</AppText>
@@ -90,7 +91,7 @@ export default function FunctionsScreen() {
         onCancel={() => setConfirmDelete(false)}
         onConfirm={remove}
       />
-    </ScrollView>
+    </KeyboardScrollView>
   )
 }
 

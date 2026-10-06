@@ -35,6 +35,7 @@ import {
 } from '../../components/ui'
 import { useWiedzaReads } from '../../hooks/useWiedzaReads'
 import { builtInKeys, countRead } from '../../lib/wiedza'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 const WIEDZA_KEYS = builtInKeys()
 
@@ -530,7 +531,7 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
 
   if (isDesktop) {
     return (
-      <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={styles.desktop}>
+      <KeyboardScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={styles.desktop}>
         <View style={styles.desktopLeft}>
           {hero}
           <Button label="Edytuj dane" icon="pencil" variant="secondary" onPress={() => setEditing(true)} />
@@ -545,12 +546,12 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
           {settings}
         </View>
         {modals}
-      </ScrollView>
+      </KeyboardScrollView>
     )
   }
 
   return (
-    <ScrollView style={{ backgroundColor: c.bg }}>
+    <KeyboardScrollView style={{ backgroundColor: c.bg }}>
       {hero}
       <View style={styles.body}>
         {pushCard}
@@ -562,7 +563,7 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
         {account}
       </View>
       {modals}
-    </ScrollView>
+    </KeyboardScrollView>
   )
 }
 

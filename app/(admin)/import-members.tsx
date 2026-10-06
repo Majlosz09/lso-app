@@ -12,6 +12,7 @@ import { claimCardsHtml, parseImport } from '../../lib/importMembers'
 import { appWebUrl } from '../../lib/shareLinks'
 import { shareFile } from '../../lib/export'
 import { AppText, Badge, Button, Card } from '../../components/ui'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 type Result = { full_name: string; status: 'created' | 'exists' | 'invalid'; claim_code?: string }
 
@@ -70,7 +71,7 @@ export default function ImportMembersScreen() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={[styles.body, isDesktop && styles.desktop]} keyboardShouldPersistTaps="handled">
       {results ? (
         <Card large style={styles.card}>
           <AppText variant="eyebrow" color={c.goldInk}>Zaimportowano</AppText>
@@ -142,7 +143,7 @@ export default function ImportMembersScreen() {
             disabled={!fresh.length} loading={busy} onPress={run} />
         </>
       )}
-    </ScrollView>
+    </KeyboardScrollView>
   )
 }
 

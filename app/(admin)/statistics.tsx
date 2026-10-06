@@ -160,7 +160,7 @@ export default function StatisticsScreen() {
       <ScrollView style={{ backgroundColor: c.bg }}>
         {isDesktop ? (
           <View style={styles.deskHead}>
-            <View style={styles.flex}>{big(c.text)}</View>
+            <View style={styles.deskBig}>{big(c.text)}</View>
             <View style={styles.deskSeg}>{periodSeg}</View>
             <Button label="Raport miesięczny" icon="file-chart" variant="secondary" compact onPress={() => router.push('/(admin)/monthly-report' as any)} />
             <Button label="Eksportuj raport" icon="download" compact onPress={() => setExportVisible(true)} />
@@ -194,8 +194,9 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   body: { padding: 16, gap: 14, paddingBottom: 32 },
   deskBody: { paddingHorizontal: 32, paddingTop: 0 },
-  deskHead: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 32, paddingTop: 24, paddingBottom: 18 },
-  deskSeg: { width: 380 },
+  deskHead: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 32, paddingTop: 24, paddingBottom: 18, flexWrap: 'wrap' },
+  deskBig: { flexGrow: 1, flexBasis: 260, minWidth: 220 },
+  deskSeg: { width: 380, maxWidth: '100%' },
   bigRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' },
   big: { fontSize: 64, lineHeight: 68, fontFamily: 'Manrope_500Medium' },
   bigSub: { flexShrink: 1 },

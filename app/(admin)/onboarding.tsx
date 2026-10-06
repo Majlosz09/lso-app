@@ -13,6 +13,7 @@ import { HOLY_DAYS, SERVICE_MODE_INFO, ServiceMode } from '../../lib/massSchedul
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import GpsLocationPicker from '../../components/GpsLocationPicker'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 const DAYS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So']
 const DAYS_FULL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']
@@ -185,7 +186,7 @@ export default function OnboardingScreen() {
   const groupedMasses = DAYS.map((_, i) => ({ day: i, items: masses.filter(m => m.day === i) })).filter(g => g.items.length > 0)
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} enabled={false}>
 
       {/* Progress bar — hidden on welcome and done screens */}
       {step > 0 && step < 4 && (
@@ -200,7 +201,7 @@ export default function OnboardingScreen() {
         </View>
       )}
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
         {/* KROK 0: Witaj */}
         {step === 0 && (
@@ -425,7 +426,7 @@ export default function OnboardingScreen() {
           </View>
         )}
 
-      </ScrollView>
+      </KeyboardScrollView>
 
       {/* Footer buttons */}
       <View style={styles.footer}>

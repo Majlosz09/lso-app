@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useTheme } from '../lib/ThemeContext'
 import { Colors } from '../lib/theme'
+import { ModalKeyboardAvoider } from './ui/ModalKeyboardAvoider'
 
 const CONFIRM_WORD = 'USUŃ'
 
@@ -42,6 +43,7 @@ export function DeleteAccountButton() {
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+<ModalKeyboardAvoider>
         <View style={styles.overlay}>
           <View style={styles.sheet}>
             <Text style={styles.title}>Usunąć konto?</Text>
@@ -76,7 +78,8 @@ export function DeleteAccountButton() {
             </View>
           </View>
         </View>
-      </Modal>
+      </ModalKeyboardAvoider>
+</Modal>
     </>
   )
 }
