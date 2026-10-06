@@ -10,7 +10,6 @@ import { useTheme } from '../../../lib/ThemeContext'
 import { Colors } from '../../../lib/theme'
 import { findItem } from '../../../lib/wiedza'
 import { supabase } from '../../../lib/supabase'
-import { useMarkWiedzaRead } from '../../../hooks/useWiedzaReads'
 
 type DbItem = { id: string; title: string; subtitle: string | null; content: string }
 
@@ -20,7 +19,6 @@ export default function WiedzaItemScreen() {
   const styles = useMemo(() => createStyles(c), [c])
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  useMarkWiedzaRead(categoryId, itemId)
 
   const isDbEntry = itemId?.startsWith('__db_')
   const dbEntryId = isDbEntry ? itemId.replace('__db_', '') : null

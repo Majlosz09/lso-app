@@ -40,7 +40,7 @@ export default function RankManagementScreen() {
   const [reqFor, setReqFor] = useState<{ id: string; name: string } | null>(null)
   const loadReqs = async () => {
     if (!profile?.parish_id) return
-    const { data } = await supabase.from('rank_requirements').select('rank_id, min_services, min_months, min_rate, wiedza_categories, note').eq('parish_id', profile.parish_id)
+    const { data } = await supabase.from('rank_requirements').select('rank_id, min_services, min_months, min_rate, note').eq('parish_id', profile.parish_id)
     setReqs(Object.fromEntries(((data ?? []) as RankRequirement[]).map(r => [r.rank_id, r])))
   }
   useEffect(() => { loadReqs() }, [profile?.parish_id])

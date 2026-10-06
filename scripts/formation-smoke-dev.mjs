@@ -32,11 +32,11 @@ try {
   r = await kuba.sb.from('rank_requirements').insert({ parish_id: parish, rank_id: nextRankId, min_services: 1 })
   ok(!!r.error, 'ministrant nie ustawi wymagań')
   r = await admin.sb.from('rank_requirements').upsert({ parish_id: parish, rank_id: nextRankId, min_services: 999, min_months: 0, min_rate: 0,
-    wiedza_categories: ['msza'], wiedza_keys: ['msza/test-haslo-1', 'msza/test-haslo-2'], note: 'Rozmowa z księdzem' })
+    note: 'Rozmowa z księdzem' })
   ok(!r.error, 'opiekun ustawia wymagania ' + (r.error?.message ?? ''))
   r = await kuba.sb.rpc('formation_progress', { p_profile: kuba.uid })
   const items = r.data?.items ?? []
-  ok(r.data?.configured && !r.data.ready && items.map(i => i.key).join() === 'services,wiedza' && r.data.note === 'Rozmowa z księdzem', 'postęp: służby + Wiedza, jeszcze nie gotowy')
+  ok(r.data?.configured && !r.data.ready && items.map(i => i.key).join() === 'services' && r.data.note === 'Rozmowa z księdzem', 'postęp: służby (bez Wiedzy), jeszcze nie gotowy')
   r = await admin.sb.rpc('formation_ready')
   ok(!r.error && !(r.data ?? []).some(x => x.id === kuba.uid), 'Kuby nie ma na liście gotowych')
 

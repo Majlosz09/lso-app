@@ -4,26 +4,23 @@ import Toast from 'react-native-toast-message'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
-import { WIEDZA_DATA, builtInKeys } from '../../lib/wiedza'
-import { AppText, Button, Chip, Sheet, TextField } from '../ui'
+import { AppText, Button, Sheet, TextField } from '../ui'
 
 export type RankRequirement = {
   rank_id: string
   min_services: number
   min_months: number
   min_rate: number
-  wiedza_categories: string[]
   note: string | null
 }
 
-/** Skrót wymagań do listy rang: „10 służb · 3 mies. · 80% · Wiedza: 2 działy”. */
+/** Skrót wymagań do listy rang: „10 służb · 3 mies. · 80% · notatka”. */
 export function requirementSummary(r: RankRequirement | undefined): string {
   if (!r) return 'bez wymagań'
   const parts = [
     r.min_services ? `${r.min_services} służb` : '',
     r.min_months ? `${r.min_months} mies.` : '',
     r.min_rate ? `${r.min_rate}% frekw.` : '',
-    r.wiedza_categories.length ? `Wiedza: ${r.wiedza_categories.length} dz.` : '',
     r.note ? 'notatka' : '',
   ].filter(Boolean)
   return parts.length ? parts.join(' · ') : 'bez wymagań'
@@ -43,7 +40,6 @@ export function RankRequirementsSheet({ rank, current, onClose, onSaved }: {
   const [services, setServices] = useState('0')
   const [months, setMonths] = useState('0')
   const [rate, setRate] = useState('0')
-  const [cats, setCats] = useState<string[]>([])
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -52,7 +48,6 @@ export function RankRequirementsSheet({ rank, current, onClose, onSaved }: {
     setServices(String(current?.min_services ?? 0))
     setMonths(String(current?.min_months ?? 0))
     setRate(String(current?.min_rate ?? 0))
-    setCats(current?.wiedza_categories ?? [])
     setNote(current?.note ?? '')
   }, [rank?.id])
 
@@ -64,7 +59,7 @@ export function RankRequirementsSheet({ rank, current, onClose, onSaved }: {
       : await supabase.from('rank_requirements').upsert({
           parish_id: parishId, rank_id: rank.id,
           min_services: num(services, 1000), min_months: num(months, 120), min_rate: num(rate, 100),
-          wiedza_categories: cats, wiedza_keys: cats.flatMap(id => builtInKeys(id)),
+          wiedza_categories: [], wiedza_keys: [],
           note: note.trim() || null, updated_at: new Date().toISOString(),
         })
     setSaving(false)
@@ -95,13 +90,6 @@ export function RankRequirementsSheet({ rank, current, onClose, onSaved }: {
         <TextField label="Miesięcy stażu" keyboardType="number-pad" value={months} onChangeText={setMonths} containerStyle={styles.flex} />
       </View>
       <TextField label="Frekwencja z ostatnich 3 miesięcy (%)" keyboardType="number-pad" value={rate} onChangeText={setRate} />
-      <AppText variant="label" muted>Przeczytane działy Wiedzy</AppText>
-      <View style={styles.chips}>
-        {WIEDZA_DATA.map(cat => (
-          <Chip key={cat.id} label={`${cat.title} (${builtInKeys(cat.id).length})`} selected={cats.includes(cat.id)}
-            onPress={() => setCats(v => (v.includes(cat.id) ? v.filter(x => x !== cat.id) : [...v, cat.id]))} />
-        ))}
-      </View>
       <TextField label="Notatka (np. kurs lektorski, rozmowa z księdzem)" value={note} onChangeText={setNote} maxLength={200} />
       <AppText variant="small" muted>0 = bez tego wymagania.</AppText>
     </Sheet>
@@ -111,5 +99,4 @@ export function RankRequirementsSheet({ rank, current, onClose, onSaved }: {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
   flex: { flex: 1 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
 })

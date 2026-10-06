@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { StyleSheet, View } from 'react-native'
 import { supabase } from '../lib/supabase'
 import { useTheme } from '../lib/ThemeContext'
 import { sans } from '../lib/theme'
-import { WIEDZA_DATA } from '../lib/wiedza'
 import { AppText, Card, Icon } from './ui'
 
 export type FormationItem = { key: string; label: string; have: number; need: number; met: boolean; unit?: string; categories?: string[] }
@@ -21,7 +19,6 @@ export type FormationProgress = {
 /** Postęp do następnego stopnia (formation_progress). Bez uprawnień albo bez ścieżki — nic nie pokazuje. */
 export function FormationProgressCard({ profileId, who = 'me', bare }: { profileId: string; who?: 'me' | 'child' | 'admin'; bare?: boolean }) {
   const { colors: c } = useTheme()
-  const router = useRouter()
   const [p, setP] = useState<FormationProgress | null>(null)
 
   useEffect(() => {
@@ -29,7 +26,6 @@ export function FormationProgressCard({ profileId, who = 'me', bare }: { profile
   }, [profileId])
 
   if (!p || (!p.configured && !p.top)) return null
-  const catTitle = (id: string) => WIEDZA_DATA.find(x => x.id === id)?.title ?? id
 
   const body = p.top ? (
     <View style={styles.row}>
@@ -54,13 +50,6 @@ export function FormationProgressCard({ profileId, who = 'me', bare }: { profile
             <View style={[styles.track, { backgroundColor: c.borderLight }]}>
               <View style={[styles.fill, { width: `${pct}%`, backgroundColor: it.met ? c.success : c.gold }]} />
             </View>
-            {it.key === 'wiedza' && !!it.categories?.length && (
-              <Pressable onPress={() => router.push('/(tabs)/wiedza' as any)} disabled={who !== 'me'}>
-                <AppText variant="small" color={who === 'me' ? c.primary : c.subtext}>
-                  {`Działy: ${it.categories.map(catTitle).join(', ')}${who === 'me' ? ' →' : ''}`}
-                </AppText>
-              </Pressable>
-            )}
           </View>
         )
       })}

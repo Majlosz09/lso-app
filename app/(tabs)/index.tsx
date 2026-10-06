@@ -27,10 +27,7 @@ import { DailyWordCard } from '../../components/services/DailyWordCard'
 import { NotificationBell } from '../../components/layout/NotificationBell'
 import { useSwapStore } from '../../stores/swapStore'
 import { useUnreadAnnouncements } from '../../hooks/useUnreadAnnouncements'
-import { useWiedzaReads } from '../../hooks/useWiedzaReads'
-import { builtInKeys, countRead } from '../../lib/wiedza'
 
-const WIEDZA_KEYS = builtInKeys()
 import { AppText, Avatar, Badge, Button, Card, HeaderChip, Icon, IconButton, SectionHeader } from '../../components/ui'
 import { TourTarget, tourRef } from '../../components/tour/TourTarget'
 import { topGap } from '../../lib/safeTop'
@@ -104,8 +101,6 @@ export default function HomeScreen() {
   const { next, later } = useNextService(services)
   const [refreshing, setRefreshing] = useState(false)
   const unreadAnn = useUnreadAnnouncements()
-  const { reads: wiedzaReads, available: readsOn } = useWiedzaReads()
-  const wiedzaRead = countRead(WIEDZA_KEYS, wiedzaReads)
 
   const firstName = (profile?.full_name ?? '').split(' ')[0]
   const dayServices = services.filter(s => s.date === day)
@@ -347,7 +342,7 @@ export default function HomeScreen() {
               <Icon name="book-open-variant" size={24} color={c.goldInk} />
               <AppText variant="bodyStrong">Wiedza</AppText>
               <AppText variant="small" muted numberOfLines={2}>
-                {readsOn && wiedzaRead > 0 ? `${wiedzaRead} z ${WIEDZA_KEYS.length} haseł przeczytanych` : 'Szaty, sprzęty, gesty'}
+                Modlitwy, szaty, gesty
               </AppText>
             </Card>
           </View>

@@ -11,8 +11,6 @@ import { Colors } from '../../lib/theme'
 import { findCategory } from '../../lib/wiedza'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
-import { useWiedzaReads } from '../../hooks/useWiedzaReads'
-import { wiedzaKey } from '../../lib/wiedza'
 
 type DbEntry = { id: string; section: string; title: string; subtitle: string | null; content: string }
 
@@ -23,7 +21,6 @@ export default function WiedzaCategoryScreen() {
   const router = useRouter()
   const { profile } = useAuthStore()
   const [dbEntries, setDbEntries] = useState<DbEntry[]>([])
-  const { reads, available } = useWiedzaReads()
 
   useEffect(() => {
     if (!profile?.parish_id) return
@@ -70,9 +67,6 @@ export default function WiedzaCategoryScreen() {
     })
   }
 
-  const keyOf = (item: any) => wiedzaKey(categoryId, item._isDb ? `__db_${item.id}` : item.id)
-  const allItems = sections.flatMap(s => s.data)
-  const readCount = allItems.filter(i => reads.has(keyOf(i))).length
 
   return (
     <>
@@ -82,9 +76,6 @@ export default function WiedzaCategoryScreen() {
         keyExtractor={item => item.id}
         style={{ backgroundColor: c.bg }}
         contentContainerStyle={styles.content}
-        ListHeaderComponent={available ? (
-          <Text style={styles.progress}>{`Przeczytane: ${readCount} z ${allItems.length}`}</Text>
-        ) : null}
         renderSectionHeader={({ section }) => (
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
@@ -115,9 +106,7 @@ export default function WiedzaCategoryScreen() {
                   <Text style={styles.itemSubtitle}>{item.subtitle}</Text>
                 )}
               </View>
-              {reads.has(keyOf(item))
-                ? <Ionicons name="checkmark-circle" size={18} color={c.success} />
-                : <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />}
+              <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />
             </TouchableOpacity>
           )
         }}

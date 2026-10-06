@@ -9,7 +9,6 @@ import { shadow } from '../../../lib/shadows'
 import { useTheme } from '../../../lib/ThemeContext'
 import { Colors } from '../../../lib/theme'
 import { getAllSlowniczekItems } from '../../../lib/wiedza'
-import { useMarkWiedzaRead } from '../../../hooks/useWiedzaReads'
 
 // Cached at module level — stable reference
 const ALL_ITEMS = getAllSlowniczekItems()
@@ -20,7 +19,6 @@ export default function SlowniczekItemScreen() {
   const styles = useMemo(() => createStyles(c), [c])
   const router = useRouter()
   const insets = useSafeAreaInsets()
-  useMarkWiedzaRead('slowniczek', itemId)
 
   const currentIndex = ALL_ITEMS.findIndex(i => i.id === itemId)
   const item = ALL_ITEMS[currentIndex]

@@ -6,7 +6,6 @@ import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans, serif } from '../../lib/theme'
 import { WIEDZA_DATA, WiedzaCategory, wiedzaKey } from '../../lib/wiedza'
-import { ensureReads, useReadsStore } from '../../stores/readsStore'
 import { pl } from '../../lib/dates'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
@@ -61,10 +60,6 @@ export default function WiedzaScreen() {
   const editParish = isStaff
     ? <Button compact variant="secondary" icon="pencil" label="Wpisy parafii" onPress={() => router.push('/(admin)/wiedza-admin' as any)} />
     : null
-  const reads = useReadsStore(s => s.wiedza)
-  const readsOn = useReadsStore(s => s.available)
-  const markRead = useReadsStore(s => s.markRead)
-  useEffect(() => { ensureReads(profileId) }, [profileId])
   const [db, setDb] = useState<DbEntry[]>([])
   const [query, setQuery] = useState('')
   const [catId, setCatId] = useState(WIEDZA_DATA[0]?.id)
@@ -80,20 +75,11 @@ export default function WiedzaScreen() {
   const entries = useMemo(() => flattenWiedza(db), [db])
   const results = useMemo(() => searchWiedza(entries, query), [entries, query])
   const countFor = (cat: WiedzaCategory) => entries.filter(e => e.categoryId === cat.id).length
-  const readFor = (cat: WiedzaCategory) => entries.filter(e => e.categoryId === cat.id && reads.has(e.key)).length
-  /** „12 haseł” albo (N8) „3 z 12 przeczytane” */
-  const countLabel = (cat: WiedzaCategory) => readsOn && readFor(cat) > 0
-    ? `${readFor(cat)} z ${countFor(cat)} przeczytane`
-    : `${countFor(cat)} ${pl(countFor(cat), ['hasło', 'hasła', 'haseł'])}`
-  const totalRead = entries.filter(e => reads.has(e.key)).length
+  const countLabel = (cat: WiedzaCategory) => `${countFor(cat)} ${pl(countFor(cat), ['hasło', 'hasła', 'haseł'])}`
 
-  // Web: wyświetlony artykuł = przeczytany
   const deskCat = WIEDZA_DATA.find(w => w.id === catId) ?? WIEDZA_DATA[0]
   const deskEntries = entries.filter(e => e.categoryId === deskCat.id)
   const deskItem = deskEntries.find(e => e.id === itemId) ?? deskEntries[0]
-  useEffect(() => {
-    if (isDesktop && deskItem && profileId) markRead(profileId, 'wiedza', deskItem.key)
-  }, [isDesktop, deskItem?.key, profileId, readsOn])
 
   const search = (onHeader: boolean) => (
     <View style={[styles.search, { backgroundColor: c.surface, borderColor: onHeader ? 'transparent' : c.inputBorder }]}>
@@ -182,7 +168,6 @@ export default function WiedzaScreen() {
                 >
                   {active && <View style={[styles.selBar, { backgroundColor: c.gold }]} />}
                   <AppText style={[styles.itemTitle, styles.flex, { color: c.text }, active && sans(800)]} numberOfLines={2}>{e.title}</AppText>
-                  {reads.has(e.key) && <Icon name="check-circle" size={16} color={c.success} filled />}
                 </Pressable>
               )
             })}
@@ -227,7 +212,7 @@ export default function WiedzaScreen() {
           <>
             <View style={styles.catHead}>
               <AppText variant="title">Kategorie</AppText>
-              <AppText variant="small" muted>{readsOn && totalRead > 0 ? `${totalRead} z ${entries.length} przeczytane` : `${entries.length} ${pl(entries.length, ['hasło', 'hasła', 'haseł'])}`}</AppText>
+              <AppText variant="small" muted>{`${entries.length} ${pl(entries.length, ['hasło', 'hasła', 'haseł'])}`}</AppText>
             </View>
             <View style={styles.grid}>
               {WIEDZA_DATA.map(w => (
