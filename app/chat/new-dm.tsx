@@ -148,7 +148,7 @@ function createStyles(c: Colors) {
       backgroundColor: c.primary + '18',
       justifyContent: 'center', alignItems: 'center',
     },
-    name: { fontSize: 15, color: c.text, fontWeight: '500' },
-    role: { fontSize: 12, color: c.subtext, marginTop: 2 },
+    name: { fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
+    role: { fontSize: 12, color: c.subtext, marginTop: 2, fontFamily: 'Manrope_500Medium' },
   })
 }

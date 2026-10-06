@@ -32,7 +32,7 @@ export function ConfirmDialog({
               <Text style={[styles.btnText, { color: c.subtext }]}>{cancelText}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.btn, { backgroundColor: destructive ? '#DC2626' : c.primary }]}
+              style={[styles.btn, { backgroundColor: destructive ? '#B3261E' : c.primary }]}
               onPress={onConfirm}
             >
               <Text style={[styles.btnText, { color: '#fff' }]}>{confirmText}</Text>
@@ -54,9 +54,9 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
   },
-  title: { fontSize: 17, fontWeight: '700' },
-  message: { fontSize: 14, lineHeight: 20, marginBottom: 8 },
+  title: { fontSize: 17, fontFamily: 'Manrope_700Bold' },
+  message: { fontSize: 14, lineHeight: 20, marginBottom: 8, fontFamily: 'Manrope_500Medium' },
   actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
   btn: { flex: 1, borderRadius: 10, paddingVertical: 13, alignItems: 'center' },
-  btnText: { fontSize: 15, fontWeight: '600' },
+  btnText: { fontSize: 15, fontFamily: 'Manrope_600SemiBold' },
 })

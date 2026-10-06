@@ -8,8 +8,8 @@ export type ScheduleCategory = 'msza' | 'nabozenstwo' | 'zbiorka'
 export type ServiceType = 'msza_assigned' | 'msza_extra' | 'nabozenstwo' | 'zbiorka'
 
 export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
-  msza_assigned: 'Msza Święta z dyżurem',
-  msza_extra:    'Msza Święta poza dyżurem',
+  msza_assigned: 'Msza Święta z dyżurem (zapisany)',
+  msza_extra:    'Msza Święta bez zapisu (dodatkowa)',
   nabozenstwo:   'Nabożeństwo',
   zbiorka:       'Zbiórka',
 }
@@ -17,9 +17,9 @@ export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
 export const CATEGORY_CONFIG: Record<ScheduleCategory, {
   label: string; color: string; bg: string; darkColor: string; darkBg: string
 }> = {
-  msza:        { label: 'Msza Święta',  color: '#1A237E', bg: '#E8EAF6', darkColor: '#7986CB', darkBg: '#1A237E55' },
-  nabozenstwo: { label: 'Nabożeństwo', color: '#0EA5E9', bg: '#F0F9FF', darkColor: '#38BDF8', darkBg: '#0EA5E925' },
-  zbiorka:     { label: 'Zbiórka',      color: '#10B981', bg: '#ECFDF5', darkColor: '#4ADE80', darkBg: '#10B98125' },
+  msza:        { label: 'Msza',         color: '#0B2E5C', bg: '#E6ECF4', darkColor: '#5B86C4', darkBg: '#5B86C433' },
+  nabozenstwo: { label: 'Nabożeństwo', color: '#0E7490', bg: '#E2F1F4', darkColor: '#2BA3BF', darkBg: '#2BA3BF30' },
+  zbiorka:     { label: 'Zbiórka',      color: '#2F7D4F', bg: '#E6F2EA', darkColor: '#5FB283', darkBg: '#5FB28330' },
 }
 
 export function getCatColors(category: ScheduleCategory, isDark: boolean) {
@@ -43,7 +43,17 @@ export interface Parish {
   lng: number | null
   gps_radius: number
   attendance_mode: AttendanceMode
+  /** Z1 (migracja 20260930000000) — przed migracją brak, wtedy liczymy z attendance_mode */
+  attendance_methods?: AttendanceMode[] | null
+  attendance_primary?: AttendanceMode | null
+  rejected_excuse_penalty?: number | null
+  /** rangi systemowe (Kandydat…Ceremoniarz) włączone w parafii */
+  system_ranks_enabled?: boolean
+  parents_see_general?: boolean | null
+  members_can_create_polls?: boolean | null
   allow_member_dm: boolean
+  /** link do grafiku bez logowania (null = wyłączony) */
+  public_token?: string | null
 }
 
 export interface PointRule {
@@ -76,6 +86,8 @@ export interface Profile {
   parent_id: string | null
   is_active: boolean
   is_admin: boolean
+  /** pomocnik opiekuna: grafik, obecność, zgłoszenia (bez członków i ustawień) */
+  is_helper?: boolean
   rocznik: number | null
   rank_id: string | null
   parish_id: string | null

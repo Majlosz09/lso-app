@@ -1,18 +1,41 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import Toast from 'react-native-toast-message'
+import * as SplashScreen from 'expo-splash-screen'
+import { preloadLiturgy } from '../lib/liturgy'
+import { usePushTapRouting } from '../hooks/usePushTapRouting'
+import { useCheckinQueueSync } from '../stores/checkinQueueStore'
+import { useFonts } from 'expo-font'
+import {
+  InstrumentSerif_400Regular,
+  InstrumentSerif_400Regular_Italic,
+} from '@expo-google-fonts/instrument-serif'
+import {
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+  Manrope_800ExtraBold,
+} from '@expo-google-fonts/manrope'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import * as Notifications from 'expo-notifications'
+import { getNotifications } from '../lib/pushSupport'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { ThemeProvider } from '../lib/ThemeContext'
-import { OnboardingModal } from '../components/OnboardingModal'
+import { TourOverlay } from '../components/tour/TourOverlay'
+import { useTour } from '../stores/tourStore'
+import { tourRoleFor } from '../lib/tour'
 import { EnvBanner } from '../components/EnvBanner'
 import { WhatsNewModal } from '../components/WhatsNewModal'
+import { ReleaseNotesModal } from '../components/ReleaseNotesModal'
+import { toastConfig } from '../components/ui/toastConfig'
+import { AppShell } from '../components/layout/AppShell'
 import '../lib/webAlert' // Alert.alert na webie (react-native-web go nie wyświetla)
 
-if (Platform.OS !== 'web') {
+// push wyłączony w Expo Go / na webie — moduł wtedy w ogóle się nie ładuje
+const Notifications = getNotifications()
+if (Notifications) {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
@@ -35,7 +58,38 @@ if (Platform.OS === 'web') {
 
 const queryClient = new QueryClient()
 
+SplashScreen.preventAutoHideAsync().catch(() => {})
+
 export default function RootLayout() {
+  // Fonty redesignu v2 — splash zostaje, dopóki się nie wczytają (albo nie padną)
+  const [fontsLoaded, fontError] = useFonts({
+    InstrumentSerif_400Regular,
+    InstrumentSerif_400Regular_Italic,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Manrope_800ExtraBold,
+  })
+  const fontsReady = fontsLoaded || !!fontError
+
+  // Kalendarz liturgiczny bieżącego roku (liczony na bieżąco) — maks. 2,5 s, potem start mimo wszystko
+  const [liturgyReady, setLiturgyReady] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setLiturgyReady(true), 2500)
+    preloadLiturgy().finally(() => { clearTimeout(t); setLiturgyReady(true) })
+    return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    if (fontsReady && liturgyReady) SplashScreen.hideAsync().catch(() => {})
+  }, [fontsReady, liturgyReady])
+
+  // Web: HTML jest renderowany statycznie — wstrzymanie renderu psuje hydratację (React #418),
+  // więc tam fonty po prostu podmieniają się po wczytaniu.
+  if (!fontsReady && Platform.OS !== 'web') return null
+  if (!liturgyReady) return null
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
@@ -48,8 +102,13 @@ export default function RootLayout() {
 function AuthGate() {
   const { session, profile, isLoading, setSession } = useAuthStore()
   const router = useRouter()
+  usePushTapRouting()
+  useCheckinQueueSync()
   const segments = useSegments()
-  const [showOnboarding, setShowOnboarding] = useState(false)
+  // interaktywny przewodnik przy pierwszym wejściu (profiles.onboarding_completed = false)
+  const tourActive = useTour(s => s.active)
+  const [releaseOpen, setReleaseOpen] = useState(false)
+  const tourShown = useRef<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -72,6 +131,8 @@ function AuthGate() {
     const inPending = segments[1] === 'pending'
     // strona z linku „Zmiana hasła” sama zarządza sesją odzyskiwania — bez przekierowań
     if (segments[1] === 'reset-password') return
+    // publiczny grafik (link od księdza) — bez logowania, bez przekierowań
+    if ((segments[0] as string) === 'g') return
     const isPending = !!profile?.parish_id && profile?.approved === false
 
     // bez sesji: ekrany wymagające konta (oczekiwanie, wybór parafii) → powitanie (np. po „Wyloguj”)
@@ -109,33 +170,37 @@ function AuthGate() {
   }, [session, isLoading, profile, segments])
 
   useEffect(() => {
-    if (profile && profile.parish_id && profile.approved !== false && profile.onboarding_completed === false) {
-      setShowOnboarding(true)
-    }
-  }, [profile?.id, profile?.onboarding_completed])
+    if (!profile || !profile.parish_id || profile.approved === false || profile.onboarding_completed !== false) return
+    if (segments[0] === '(auth)' || (segments[0] as string) === 'g' || tourShown.current === profile.id) return
+    tourShown.current = profile.id
+    const t = setTimeout(() => useTour.getState().start(tourRoleFor(profile)), 900)
+    return () => clearTimeout(t)
+  }, [profile?.id, profile?.onboarding_completed, segments[0]])
 
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)/welcome" />
-        <Stack.Screen name="(auth)/login" />
-        <Stack.Screen name="(auth)/register" />
-        <Stack.Screen name="(auth)/parish-setup" />
-        <Stack.Screen name="(auth)/pending" />
-        <Stack.Screen name="(auth)/reset-password" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(admin)" />
-        <Stack.Screen name="(parent)" />
-        <Stack.Screen name="wiedza" options={{ headerShown: false }} />
-      </Stack>
-      <Toast />
+      <AppShell>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)/welcome" />
+          <Stack.Screen name="(auth)/login" />
+          <Stack.Screen name="(auth)/register" />
+          <Stack.Screen name="(auth)/parish-setup" />
+          <Stack.Screen name="(auth)/pending" />
+          <Stack.Screen name="(auth)/reset-password" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(admin)" />
+          <Stack.Screen name="(parent)" />
+          <Stack.Screen name="wiedza" options={{ headerShown: false }} />
+          <Stack.Screen name="g/[token]" options={{ headerShown: false }} />
+        </Stack>
+      </AppShell>
+      <TourOverlay />
+      <Toast config={toastConfig} />
       <EnvBanner />
-      <OnboardingModal
-        visible={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-      />
       {/* „Co nowego” — nie w trakcie samouczka ani na ekranach logowania/rejestracji */}
-      <WhatsNewModal suppressed={showOnboarding || segments[0] === '(auth)'} />
+      {/* „Co nowego” w nowej wersji (raz, dotychczasowi użytkownicy) — przed jednorazowymi komunikatami z bazy */}
+      <ReleaseNotesModal suppressed={tourActive || segments[0] === '(auth)' || (segments[0] as string) === 'g'} onVisibleChange={setReleaseOpen} />
+      <WhatsNewModal suppressed={tourActive || releaseOpen || segments[0] === '(auth)'} />
     </>
   )
 }

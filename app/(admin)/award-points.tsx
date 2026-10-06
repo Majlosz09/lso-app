@@ -10,9 +10,11 @@ import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
+import { usePointCategories } from '../../hooks/usePointCategories'
 import { Profile, PointRule, ServiceType, SERVICE_TYPE_LABELS } from '../../types/database'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 
 const ROLE_LABELS: Record<string, string> = {
   member: 'Ministrant',
@@ -35,6 +37,9 @@ export default function AwardPoints() {
   const [submitting, setSubmitting] = useState(false)
   const [loadingMembers, setLoadingMembers] = useState(true)
   const [confirmDialog, setConfirmDialog] = useState(false)
+  // własne kategorie parafii (np. Sprzątanie zakrystii +3)
+  const { manualCategories } = usePointCategories()
+  const [pointCategoryId, setPointCategoryId] = useState<string | null>(null)
 
   useEffect(() => {
     supabase
@@ -84,6 +89,7 @@ export default function AwardPoints() {
       profile_id: selected!.id,
       amount: amt,
       reason: reason.trim(),
+      point_category_id: manualCategories.some(c => c.id === pointCategoryId && c.name === reason.trim()) ? pointCategoryId : null,
       awarded_by: adminProfile?.id,
       parish_id: adminProfile?.parish_id,
     })
@@ -92,13 +98,13 @@ export default function AwardPoints() {
       Toast.show({ type: 'error', text1: 'Błąd', text2: 'Nie udało się przyznać punktów: ' + error.message })
     } else {
       Toast.show({ type: 'success', text1: `Przyznano ${sign}${amt} pkt`, text2: `dla ${selected!.full_name}` })
-      setSelected(null); setAmount(''); setReason('')
+      setSelected(null); setAmount(''); setReason(''); setPointCategoryId(null)
     }
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={{ flex: 1 }} enabled={false}>
+      <KeyboardScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]} keyboardShouldPersistTaps="handled">
 
         {selected ? (
           <View style={styles.selectedCard}>
@@ -174,6 +180,23 @@ export default function AwardPoints() {
                 </View>
               </>
             )}
+            {manualCategories.length > 0 && (
+              <>
+                <Text style={styles.label}>Kategorie parafii</Text>
+                <View style={styles.rulesRow}>
+                  {manualCategories.map(cat => {
+                    const on = pointCategoryId === cat.id && reason === cat.name && amount === String(cat.points)
+                    return (
+                      <TouchableOpacity key={cat.id} style={[styles.ruleChip, on && styles.ruleChipActive]}
+                        onPress={() => { setAmount(String(cat.points)); setReason(cat.name); setPointCategoryId(cat.id) }}>
+                        <Text style={[styles.ruleChipLabel, on && styles.ruleChipLabelActive]}>{cat.name}</Text>
+                        <Text style={[styles.ruleChipPts, on && styles.ruleChipLabelActive]}>{cat.points} pkt</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              </>
+            )}
             <Text style={styles.label}>Liczba punktów *</Text>
             <TextInput
               style={styles.input}
@@ -207,7 +230,7 @@ export default function AwardPoints() {
             </TouchableOpacity>
           </>
         )}
-      </ScrollView>
+      </KeyboardScrollView>
     <ConfirmDialog
       visible={confirmDialog}
       title="Przyznaj punkty"
@@ -231,17 +254,17 @@ function createStyles(c: Colors) {
       borderWidth: 1, borderColor: c.primaryAlpha20, marginBottom: 8,
     },
     selectedInfo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    selectedName: { fontSize: 16, fontWeight: '600', color: c.text },
-    selectedRole: { fontSize: 13, color: c.subtext, marginTop: 1 },
+    selectedName: { fontSize: 16, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    selectedRole: { fontSize: 13, color: c.subtext, marginTop: 1, fontFamily: 'Manrope_500Medium' },
 
-    label: { fontSize: 13, fontWeight: '600', color: c.subtext, marginTop: 8 },
+    label: { fontSize: 13, color: c.subtext, marginTop: 8, fontFamily: 'Manrope_600SemiBold' },
 
     searchBox: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       backgroundColor: c.surface, borderRadius: 10, padding: 11,
       borderWidth: 1, borderColor: c.border, marginTop: 4,
     },
-    searchInput: { flex: 1, fontSize: 15, color: c.text },
+    searchInput: { flex: 1, fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
 
     memberList: {
       backgroundColor: c.surface, borderRadius: 10, marginTop: 8,
@@ -251,11 +274,12 @@ function createStyles(c: Colors) {
       flexDirection: 'row', alignItems: 'center', gap: 10,
       padding: 14, borderBottomWidth: 1, borderBottomColor: c.primarySurface,
     },
-    memberName: { flex: 1, fontSize: 15, color: c.text },
+    memberName: { flex: 1, fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
 
     input: {
       backgroundColor: c.surface, borderRadius: 10, padding: 13,
       fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
+      fontFamily: 'Manrope_500Medium',
     },
     inputMultiline: { minHeight: 80, textAlignVertical: 'top' },
 
@@ -264,7 +288,7 @@ function createStyles(c: Colors) {
       alignItems: 'center', marginTop: 16,
     },
     submitButtonDisabled: { opacity: 0.6 },
-    submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    submitButtonText: { color: '#fff', fontSize: 16, fontFamily: 'Manrope_600SemiBold' },
 
     rulesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
     ruleChip: {
@@ -273,8 +297,8 @@ function createStyles(c: Colors) {
       alignItems: 'center',
     },
     ruleChipActive: { backgroundColor: c.primary, borderColor: c.primary },
-    ruleChipLabel: { fontSize: 13, fontWeight: '600', color: c.subtext },
-    ruleChipPts: { fontSize: 11, color: c.textTertiary, marginTop: 1 },
+    ruleChipLabel: { fontSize: 13, color: c.subtext, fontFamily: 'Manrope_600SemiBold' },
+    ruleChipPts: { fontSize: 11, color: c.textTertiary, marginTop: 1, fontFamily: 'Manrope_500Medium' },
     ruleChipLabelActive: { color: '#fff' },
   })
 }

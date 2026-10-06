@@ -14,6 +14,7 @@ import { WIEDZA_DATA } from '../../lib/wiedza'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import { shadow } from '../../lib/shadows'
+import { topGap } from '../../lib/safeTop'
 
 type Entry = {
   id: string
@@ -221,8 +222,8 @@ export default function WiedzaAdminScreen() {
 
       {/* Formularz dodaj/edytuj */}
       <Modal visible={formVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setFormVisible(false)}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={[styles.formModal, { paddingTop: insets.top + 16 }]}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" enabled={Platform.OS !== 'web'}>
+          <View style={[styles.formModal, { paddingTop: topGap(insets.top, 16) }]}>
             <View style={styles.formHeader}>
               <TouchableOpacity onPress={() => setFormVisible(false)}>
                 <Text style={styles.formCancel}>Anuluj</Text>
@@ -312,8 +313,8 @@ function createStyles(c: Colors) {
       borderWidth: 1, borderColor: c.border,
     },
     filterChipActive: { backgroundColor: c.primary, borderColor: c.primary },
-    filterChipEmoji: { fontSize: 14 },
-    filterChipText: { fontSize: 13, fontWeight: '500', color: c.subtext },
+    filterChipEmoji: { fontSize: 14, fontFamily: 'Manrope_500Medium' },
+    filterChipText: { fontSize: 13, color: c.subtext, fontFamily: 'Manrope_500Medium' },
     filterChipTextActive: { color: '#fff' },
 
     infoBox: {
@@ -321,21 +322,21 @@ function createStyles(c: Colors) {
       backgroundColor: c.primaryAlpha08, borderRadius: 10,
       padding: 12, borderWidth: 1, borderColor: c.primaryAlpha20,
     },
-    infoText: { flex: 1, fontSize: 13, color: c.subtext, lineHeight: 18 },
+    infoText: { flex: 1, fontSize: 13, color: c.subtext, lineHeight: 18, fontFamily: 'Manrope_500Medium' },
 
     empty: { alignItems: 'center', gap: 8, paddingVertical: 48 },
-    emptyTitle: { fontSize: 16, fontWeight: '600', color: c.textTertiary },
-    emptySub: { fontSize: 13, color: c.iconMuted, textAlign: 'center', paddingHorizontal: 24 },
+    emptyTitle: { fontSize: 16, color: c.textTertiary, fontFamily: 'Manrope_600SemiBold' },
+    emptySub: { fontSize: 13, color: c.iconMuted, textAlign: 'center', paddingHorizontal: 24, fontFamily: 'Manrope_500Medium' },
 
     entryCard: {
       backgroundColor: c.surface, borderRadius: 12, padding: 14, gap: 6,
       ...shadow.xs,
     },
     entryMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
-    entryCat: { fontSize: 12, color: c.primary, fontWeight: '600' },
-    entryTitle: { fontSize: 15, fontWeight: '700', color: c.text },
-    entrySubtitle: { fontSize: 12, color: c.subtext, fontStyle: 'italic' },
-    entryContent: { fontSize: 13, color: c.textTertiary, lineHeight: 19 },
+    entryCat: { fontSize: 12, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
+    entryTitle: { fontSize: 15, color: c.text, fontFamily: 'Manrope_700Bold' },
+    entrySubtitle: { fontSize: 12, color: c.subtext, fontStyle: 'italic', fontFamily: 'Manrope_500Medium' },
+    entryContent: { fontSize: 13, color: c.textTertiary, lineHeight: 19, fontFamily: 'Manrope_500Medium' },
 
     fab: {
       position: 'absolute', right: 20,
@@ -350,16 +351,17 @@ function createStyles(c: Colors) {
       paddingHorizontal: 20, paddingBottom: 16,
       borderBottomWidth: 1, borderBottomColor: c.border,
     },
-    formTitle: { fontSize: 16, fontWeight: '700', color: c.text },
-    formCancel: { fontSize: 15, color: c.subtext },
-    formSave: { fontSize: 15, color: c.primary, fontWeight: '600' },
+    formTitle: { fontSize: 16, color: c.text, fontFamily: 'Manrope_700Bold' },
+    formCancel: { fontSize: 15, color: c.subtext, fontFamily: 'Manrope_500Medium' },
+    formSave: { fontSize: 15, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
     formContent: { padding: 20, gap: 4, paddingBottom: 40 },
 
-    fieldLabel: { fontSize: 13, fontWeight: '600', color: c.subtext, marginTop: 12, marginBottom: 6 },
+    fieldLabel: { fontSize: 13, color: c.subtext, marginTop: 12, marginBottom: 6, fontFamily: 'Manrope_600SemiBold' },
     fieldOptional: { fontWeight: '400', color: c.textTertiary },
     input: {
       backgroundColor: c.surface, borderRadius: 10, padding: 13,
       fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
+      fontFamily: 'Manrope_500Medium',
     },
     inputMultiline: { minHeight: 160, maxHeight: 300 },
   })

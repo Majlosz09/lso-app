@@ -1,26 +1,35 @@
 import { useEffect } from 'react'
 import { View, ActivityIndicator } from 'react-native'
-import { Stack, useRouter } from 'expo-router'
+import { Stack, usePathname, useRouter } from 'expo-router'
+import { equivalentRoute, helperAllowed, navRoleFor } from '../../lib/navigation'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
+import { useNavHeaderOptions } from '../../components/layout/navOptions'
 
 export default function AdminLayout() {
   const { profile, parish, isLoading } = useAuthStore()
   const router = useRouter()
+  const pathname = usePathname()
   const { colors } = useTheme()
+  const headerOptions = useNavHeaderOptions()
 
-  const hasAccess = profile?.role === 'admin' || (profile?.role === 'member' && profile?.is_admin)
+  const fullAccess = profile?.role === 'admin' || (profile?.role === 'member' && profile?.is_admin)
+  // pomocnik opiekuna: tylko grafik, zgłoszenia i tryb zakrystii
+  const helper = profile?.role === 'member' && !!profile?.is_helper && profile?.approved !== false
+  const hasAccess = fullAccess || (helper && helperAllowed(pathname))
 
   useEffect(() => {
-    if (!isLoading && !hasAccess) {
-      router.replace('/(tabs)')
+    // profil wczytuje się chwilę po sesji — bez niego nie oceniamy dostępu (odświeżenie podstrony na webie)
+    if (!isLoading && profile && !hasAccess) {
+      // także pomocnik: wspólne adresy webowe („/”, „/profile”, „/points”…) → jego własny ekran ministranta
+      router.replace(equivalentRoute(navRoleFor(profile, false), pathname) as any)
     }
-    if (!isLoading && hasAccess && parish && parish.setup_done === false) {
+    if (!isLoading && fullAccess && parish && parish.setup_done === false) {
       router.replace('/(admin)/onboarding')
     }
-  }, [profile, parish, isLoading])
+  }, [profile, parish, isLoading, pathname])
 
-  if (isLoading || !hasAccess) {
+  if (isLoading || !profile || !hasAccess) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -30,11 +39,7 @@ export default function AdminLayout() {
 
   return (
     <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.header },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '600' },
-      }}
+      screenOptions={headerOptions}
     >
       <Stack.Screen name="(admin-tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="schedule-detail" options={{ title: 'Szczegóły służby' }} />
@@ -44,6 +49,14 @@ export default function AdminLayout() {
       <Stack.Screen name="rank-management" options={{ title: 'Zarządzaj rangami' }} />
       <Stack.Screen name="parish-settings" options={{ title: 'Ustawienia parafii' }} />
       <Stack.Screen name="mass-schedule" options={{ title: 'Rozkład Mszy' }} />
+      <Stack.Screen name="churches" options={{ title: 'Kościoły i kaplice' }} />
+      <Stack.Screen name="kiosk" options={{ headerShown: false, gestureEnabled: false }} />
+      <Stack.Screen name="auto-schedule" options={{ title: 'Ułóż grafik' }} />
+      <Stack.Screen name="functions" options={{ title: 'Funkcje liturgiczne' }} />
+      <Stack.Screen name="import-members" options={{ title: 'Dodaj ministrantów' }} />
+      <Stack.Screen name="promotions" options={{ title: 'Gotowi do awansu' }} />
+      <Stack.Screen name="challenges" options={{ title: 'Wyzwania sezonowe' }} />
+      <Stack.Screen name="monthly-report" options={{ title: 'Raport miesięczny' }} />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen name="point-rules" options={{ title: 'Reguły punktowania' }} />
       <Stack.Screen name="schedule-series" options={{ title: 'Nowy cykl służb' }} />
@@ -52,6 +65,7 @@ export default function AdminLayout() {
       <Stack.Screen name="rank-assignment" options={{ title: 'Przydziel rangi' }} />
       <Stack.Screen name="recurring-assignments" options={{ title: 'Stałe dyżury' }} />
       <Stack.Screen name="chat-reports" options={{ title: 'Zgłoszenia z czatu' }} />
+      <Stack.Screen name="wiedza" options={{ headerShown: false }} />
     </Stack>
   )
 }

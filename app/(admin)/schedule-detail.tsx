@@ -1,21 +1,24 @@
-import { useEffect, useState, useMemo } from 'react'
-import {
-  View, Text, StyleSheet, ScrollView,
-  ActivityIndicator, TouchableOpacity, Alert,
-  Modal, TextInput, KeyboardAvoidingView, Platform
-} from 'react-native'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { StatusBar } from 'expo-status-bar'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { STATUS_COLORS, STATUS_LABELS } from '../../lib/status'
-import { getCatColors, ScheduleCategory } from '../../types/database'
-import { shadow } from '../../lib/shadows'
+import { CATEGORY_CONFIG, ScheduleCategory } from '../../types/database'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { headerPalette, sans, serif, VESTMENT_NAMES, VestmentColor } from '../../lib/theme'
+import { getLiturgicalDay } from '../../lib/liturgy'
+import { longDate, longDateCap } from '../../lib/dates'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { AppText, Avatar, Button, Card, Chip, HeaderChip, Icon, ListRow, Sheet, TextField } from '../../components/ui'
+import { SERVICE_MODE_INFO, ServiceMode } from '../../lib/massSchedule'
+import { churchLabel, useChurches } from '../../hooks/useChurches'
+import { AdminRolesCard } from '../../components/services/RolesCard'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
+import { topGap } from '../../lib/safeTop'
 
 type Assignment = {
   id: string
@@ -32,6 +35,8 @@ type ScheduleDetail = {
   date: string
   time: string
   category: ScheduleCategory
+  service_mode: ServiceMode
+  church_id: string | null
   notes: string | null
   series_id: string | null
   group: { name: string } | null
@@ -46,8 +51,10 @@ export default function ScheduleDetailScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { colors: c, isDark } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
+  const isDesktop = useIsDesktop()
+  const [confirmSeries, setConfirmSeries] = useState(false)
   const [schedule, setSchedule] = useState<ScheduleDetail | null>(null)
+  const { byId: churchById, multi: multiChurch } = useChurches()
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [attendanceIds, setAttendanceIds] = useState<Set<string>>(new Set())
@@ -65,12 +72,20 @@ export default function ScheduleDetailScreen() {
   const [draftIds, setDraftIds] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
 
+  const changeMode = async (m: ServiceMode) => {
+    if (!schedule || schedule.service_mode === m) return
+    const { error } = await supabase.from('schedules').update({ service_mode: m }).eq('id', schedule.id)
+    if (error) { Toast.show({ type: 'error', text1: 'Nie zapisano', text2: error.message }); return }
+    setSchedule({ ...schedule, service_mode: m })
+    Toast.show({ type: 'success', text1: SERVICE_MODE_INFO[m].label })
+  }
+
   const fetchSchedule = async () => {
     const [scheduleRes, attendanceRes] = await Promise.all([
       supabase
         .from('schedules')
         .select(`
-          id, title, date, time, category, notes, series_id,
+          id, title, date, time, category, service_mode, church_id, notes, series_id,
           group:groups(name),
           assignments:schedule_assignments(
             id, profile_id, role, status, absence_reason,
@@ -246,11 +261,11 @@ export default function ScheduleDetailScreen() {
   }
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
+    return <View style={[styles.center, { backgroundColor: c.bg }]}><ActivityIndicator size="large" color={c.primary} /></View>
   }
 
   if (!schedule) {
-    return <View style={styles.center}><Text style={{ color: c.subtext }}>Nie znaleziono służby</Text></View>
+    return <View style={[styles.center, { backgroundColor: c.bg }]}><AppText muted>Nie znaleziono służby</AppText></View>
   }
 
   const assignedIds = new Set(schedule.assignments.map(a => a.profile_id))
@@ -258,518 +273,311 @@ export default function ScheduleDetailScreen() {
     m => !assignedIds.has(m.id) && m.full_name.toLowerCase().includes(addSearch.toLowerCase())
   )
 
-  const dateStr = new Date(schedule.date + 'T12:00:00').toLocaleDateString('pl-PL', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
-
-  const cat = getCatColors(schedule.category, isDark)
+  const lit = getLiturgicalDay(schedule.date)
+  const vest = (lit.color ?? 'GREEN') as VestmentColor
+  const pal = headerPalette(vest, isDark)
+  const catCfg = CATEGORY_CONFIG[schedule.category] ?? CATEGORY_CONFIG.msza
   const presentCount = attendanceIds.size
   const totalCount = schedule.assignments.length
 
+  const openAttendanceList = async () => {
+    const { data } = await supabase
+      .from('profiles').select('id, full_name')
+      .eq('parish_id', adminProfile!.parish_id)
+      .eq('role', 'member').eq('is_active', true).order('full_name')
+    setAllMembers(data ?? [])
+    setDraftIds(new Set(attendanceIds))
+    setAttendanceSheetVisible(true)
+  }
+
   return (
     <>
-      <Stack.Screen options={{
-        title: schedule.title,
-        headerRight: () => (
-          deleting
-            ? <ActivityIndicator size="small" color="#fff" style={{ marginRight: 4 }} />
-            : <TouchableOpacity onPress={() => setDeleteSheetVisible(true)} hitSlop={12} style={{ marginRight: 4 }}>
-                <Ionicons name="trash-outline" size={22} color="#fff" />
-              </TouchableOpacity>
-        ),
-      }} />
+      <Stack.Screen options={{ title: schedule.title, headerShown: false }} />
 
-      <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-
-        {/* Info card */}
-        <View style={[styles.infoCard, { borderLeftWidth: 4, borderLeftColor: cat.color }]}>
-          <View style={styles.categoryBadge}>
-            <View style={[styles.categoryDot, { backgroundColor: cat.color }]} />
-            <Text style={[styles.categoryBadgeText, { color: cat.color }]}>{cat.label}</Text>
+      <KeyboardScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
+        <View style={[styles.head, { backgroundColor: pal.bg, paddingTop: isDesktop ? 22 : topGap(insets.top, 8) }, isDesktop && styles.headDesktop]}>
+          <StatusBar style={pal.statusBar} />
+          <View style={styles.headTop}>
+            {!isDesktop ? (
+              <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/(admin)/(admin-tabs)/schedules'))} style={styles.back} accessibilityRole="button">
+                <Icon name="chevron-left" size={22} color={pal.fg} />
+                <AppText style={[styles.backText, { color: pal.fg }]}>Wstecz</AppText>
+              </Pressable>
+            ) : <View />}
+            <Pressable
+              onPress={() => setDeleteSheetVisible(true)}
+              disabled={deleting}
+              accessibilityRole="button"
+              accessibilityLabel="Usuń służbę"
+              style={[styles.headIcon, { backgroundColor: pal.chip }]}
+            >
+              {deleting ? <ActivityIndicator size="small" color={pal.fg} /> : <Icon name="delete" size={20} color={pal.fg} />}
+            </Pressable>
           </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={15} color={c.subtext} />
-            <Text style={styles.infoText}>{dateStr}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="time-outline" size={15} color={c.subtext} />
-            <Text style={styles.infoText}>{schedule.time?.slice(0, 5)}</Text>
-          </View>
-          {schedule.notes && (
-            <View style={styles.infoRow}>
-              <Ionicons name="document-text-outline" size={15} color={c.subtext} />
-              <Text style={styles.infoText}>{schedule.notes}</Text>
-            </View>
-          )}
-          {schedule.series_id && (
-            <View style={[styles.infoRow, styles.seriesRow]}>
-              <Ionicons name="list-outline" size={15} color={c.primary} />
-              <Text style={styles.seriesText}>Część serii nabożeństw</Text>
-            </View>
-          )}
+          <AppText variant="eyebrow" color={pal.accent}>{`${catCfg.label} · ${VESTMENT_NAMES[vest]}`}</AppText>
+          <AppText style={[serif(), styles.title, { color: pal.fg }]}>{schedule.title}</AppText>
+          <AppText style={[styles.when, { color: pal.fg }]}>{`${longDateCap(schedule.date)} · ${schedule.time?.slice(0, 5)}${multiChurch && schedule.church_id && churchById[schedule.church_id] ? ` · ${churchLabel(churchById[schedule.church_id])}` : ''}`}</AppText>
+          <AppText style={[styles.lit, { color: pal.fg }]} numberOfLines={2}>{lit.name}</AppText>
+          {schedule.series_id && <HeaderChip label="Część cyklu służb" palette={pal} />}
         </View>
 
-        {/* Attendance summary */}
-        <View style={styles.attendanceCard}>
-          <View style={styles.attendanceStat}>
-            <Text style={styles.attendanceNum}>{totalCount}</Text>
-            <Text style={styles.attendanceLabel}>Zapisanych</Text>
-          </View>
-          <View style={styles.attendanceDivider} />
-          <View style={styles.attendanceStat}>
-            <Text style={[styles.attendanceNum, { color: '#16A34A' }]}>{presentCount}</Text>
-            <Text style={styles.attendanceLabel}>Obecnych</Text>
-          </View>
-          <View style={styles.attendanceDivider} />
-          <View style={styles.attendanceStat}>
-            <Text style={[styles.attendanceNum, { color: '#EA580C' }]}>{totalCount - presentCount}</Text>
-            <Text style={styles.attendanceLabel}>Nieobecnych</Text>
-          </View>
-        </View>
-
-        {schedule.category === 'zbiorka' && (
-          <TouchableOpacity
-            style={styles.attendanceBtn}
-            onPress={async () => {
-              const { data } = await supabase
-                .from('profiles').select('id, full_name')
-                .eq('parish_id', adminProfile!.parish_id)
-                .eq('role', 'member').eq('is_active', true).order('full_name')
-              setAllMembers(data ?? [])
-              setDraftIds(new Set(attendanceIds))
-              setAttendanceSheetVisible(true)
-            }}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="checkmark-done-outline" size={18} color="#fff" />
-            <Text style={styles.attendanceBtnText}>Zaznacz obecność</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Assignments section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Ministranci</Text>
-          <TouchableOpacity style={styles.addMemberBtn} onPress={openAddModal}>
-            <Ionicons name="person-add-outline" size={15} color={c.primary} />
-            <Text style={styles.addMemberText}>Dodaj</Text>
-          </TouchableOpacity>
-        </View>
-
-        {schedule.assignments.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="people-outline" size={44} color="#E5E7EB" />
-            <Text style={styles.emptyTitle}>Nikt się jeszcze nie zapisał</Text>
-            <Text style={styles.emptySubtitle}>Ministranci mogą się zapisać w aplikacji</Text>
-          </View>
-        ) : (
-          <View style={{ gap: 8 }}>
-            {schedule.assignments.map(a => (
-              <View key={a.id} style={styles.assignmentCard}>
-                <View style={styles.assigneeLeft}>
-                  <View style={styles.avatar}>
-                    <Ionicons name="person" size={18} color={c.primary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.assigneeName}>{a.profile.full_name}</Text>
-                    {a.profile.phone && <Text style={styles.assigneePhone}>{a.profile.phone}</Text>}
-                    {(a.status === 'excused' || a.status === 'confirmed') && a.absence_reason && (
-                      <View style={styles.absenceRow}>
-                        <Ionicons name="chatbubble-outline" size={11} color="#DC2626" />
-                        <Text style={styles.absenceText}>{a.absence_reason}</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-
-                <View style={styles.assigneeRight}>
-                  <TouchableOpacity onPress={() => setStatusModalAssignment(a)} disabled={updatingId === a.id}>
-                    <View style={[styles.statusPill, { backgroundColor: (STATUS_COLORS[a.status] ?? c.subtext) + '22' }]}>
-                      <Text style={[styles.statusText, { color: STATUS_COLORS[a.status] ?? c.subtext }]}>
-                        {STATUS_LABELS[a.status] ?? a.status}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                  <View style={styles.btnRow}>
-                    {togglingAttendance === a.profile_id ? (
-                      <ActivityIndicator size="small" color="#16A34A" />
-                    ) : (
-                      <TouchableOpacity onPress={() => handleToggleAttendance(a.profile_id)} hitSlop={8}>
-                        <Ionicons
-                          name={attendanceIds.has(a.profile_id) ? 'checkmark-circle' : 'ellipse-outline'}
-                          size={24}
-                          color={attendanceIds.has(a.profile_id) ? '#16A34A' : '#D1D5DB'}
-                        />
-                      </TouchableOpacity>
-                    )}
-                    {updatingId === a.id ? (
-                      <ActivityIndicator size="small" color={c.primary} />
-                    ) : (
-                      <TouchableOpacity onPress={() => handleRemove(a.id, a.profile.full_name)} hitSlop={8}>
-                        <Ionicons name="trash-outline" size={22} color="#DC2626" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              </View>
+        <View style={[styles.body, isDesktop && styles.bodyDesktop]}>
+          <View style={styles.stats}>
+            {[
+              [String(totalCount), 'zapisanych', c.text],
+              [String(presentCount), 'obecnych', c.success],
+              [String(totalCount - presentCount), 'nieobecnych', c.dangerStrong],
+            ].map(([v, l, col]) => (
+              <Card key={l} style={styles.stat}>
+                <AppText style={[styles.statValue, { color: col }]}>{v}</AppText>
+                <AppText variant="small" muted>{l}</AppText>
+              </Card>
             ))}
           </View>
-        )}
-      </ScrollView>
 
-      {/* Status modal */}
-      <Modal visible={!!statusModalAssignment} transparent animationType="slide" onRequestClose={() => setStatusModalAssignment(null)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setStatusModalAssignment(null)}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Zmień status</Text>
-                <Text style={styles.modalSubtitle}>{statusModalAssignment?.profile.full_name}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setStatusModalAssignment(null)} hitSlop={8}>
-                <Ionicons name="close" size={24} color={c.subtext} />
-              </TouchableOpacity>
+          {!!schedule.notes && (
+            <View style={[styles.note, { backgroundColor: c.goldSurface }]}>
+              <Icon name="information" size={20} color={c.goldInk} />
+              <AppText style={[styles.noteText, { color: c.goldText }]}>{schedule.notes}</AppText>
             </View>
-            {Object.entries(STATUS_LABELS).map(([key, label]) => (
-              <TouchableOpacity
-                key={key}
-                style={styles.statusOption}
-                onPress={async () => {
-                  if (statusModalAssignment && statusModalAssignment.status !== key) {
-                    await handleChangeStatus(statusModalAssignment.id, key)
-                  }
-                  setStatusModalAssignment(null)
-                }}
-              >
-                <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[key] }]} />
-                <Text style={[styles.statusOptionText, statusModalAssignment?.status === key && { fontWeight: '700', color: STATUS_COLORS[key] }]}>
-                  {label}
-                </Text>
-                {statusModalAssignment?.status === key && <Ionicons name="checkmark" size={18} color={STATUS_COLORS[key]} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
+          )}
 
-      {/* Add member modal */}
-      <Modal visible={addModalVisible} transparent animationType="slide" onRequestClose={() => setAddModalVisible(false)}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalSheet}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Dodaj ministranta</Text>
-                <TouchableOpacity onPress={() => setAddModalVisible(false)} hitSlop={8}>
-                  <Ionicons name="close" size={24} color={c.subtext} />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.searchBox}>
-                <Ionicons name="search-outline" size={16} color={c.textTertiary} />
-                <TextInput
-                  style={styles.searchInput} placeholder="Szukaj po imieniu..." placeholderTextColor={c.textTertiary}
-                  value={addSearch} onChangeText={setAddSearch} autoFocus
-                />
-              </View>
-              <ScrollView style={styles.memberList} keyboardShouldPersistTaps="handled">
-                {filteredMembers.length === 0 ? (
-                  <View style={{ padding: 20, alignItems: 'center' }}>
-                    <Text style={{ color: c.textTertiary }}>
-                      {allMembers.length === assignedIds.size ? 'Wszyscy ministranci są już zapisani' : 'Brak wyników'}
-                    </Text>
-                  </View>
-                ) : (
-                  filteredMembers.map(m => (
-                    <TouchableOpacity key={m.id} style={styles.memberRow} onPress={() => handleAdd(m)} disabled={adding}>
-                      <View style={styles.memberAvatar}>
-                        <Ionicons name="person" size={15} color={c.primary} />
-                      </View>
-                      <Text style={styles.memberName}>{m.full_name}</Text>
-                      {adding ? <ActivityIndicator size="small" color={c.primary} /> : <Ionicons name="add-circle-outline" size={20} color={c.primary} />}
-                    </TouchableOpacity>
-                  ))
-                )}
-              </ScrollView>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* Delete sheet */}
-      <Modal visible={deleteSheetVisible} transparent animationType="slide" onRequestClose={() => setDeleteSheetVisible(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDeleteSheetVisible(false)}>
-          <TouchableOpacity style={styles.deleteSheet} activeOpacity={1}>
-            <View style={styles.deleteSheetHandle} />
-            <Text style={styles.deleteSheetTitle}>{schedule?.title}</Text>
-            <Text style={styles.deleteSheetSub}>
-              {new Date((schedule?.date ?? '') + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })}
-              {'  ·  '}{schedule?.time?.slice(0, 5)}
-            </Text>
-
-            <TouchableOpacity style={styles.deleteOption} onPress={() => { setDeleteSheetVisible(false); doDeleteSchedule() }}>
-              <View style={styles.deleteOptionIcon}>
-                <Ionicons name="trash-outline" size={20} color="#DC2626" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.deleteOptionTitle}>Usuń tę służbę</Text>
-                <Text style={styles.deleteOptionSub}>Usuwa tylko ten jeden termin</Text>
-              </View>
-            </TouchableOpacity>
-
-            {schedule?.series_id && (
-              <TouchableOpacity
-                style={[styles.deleteOption, styles.deleteOptionSeriesCard]}
-                onPress={() => {
-                  setDeleteSheetVisible(false)
-                  Alert.alert(
-                    'Usuń całą serię',
-                    'Czy na pewno chcesz usunąć WSZYSTKIE terminy z tej serii? Tej operacji nie można cofnąć.',
-                    [
-                      { text: 'Anuluj', style: 'cancel' },
-                      { text: 'Usuń serię', style: 'destructive', onPress: doDeleteSeries },
-                    ]
-                  )
-                }}
-              >
-                <View style={[styles.deleteOptionIcon, { backgroundColor: '#c0392b18' }]}>
-                  <Ionicons name="trash" size={20} color="#c0392b" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.deleteOptionTitle, { color: '#c0392b' }]}>Usuń całą serię</Text>
-                  <Text style={styles.deleteOptionSub}>Usuwa wszystkie terminy z tej serii</Text>
-                </View>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity style={styles.deleteCancelBtn} onPress={() => setDeleteSheetVisible(false)}>
-              <Text style={styles.deleteCancelText}>Anuluj</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      <ConfirmDialog
-        visible={!!confirmAdd}
-        title="Dodaj do służby"
-        message={`Dodać ${confirmAdd?.full_name} do tej służby?`}
-        confirmText="Dodaj"
-        onConfirm={doAdd}
-        onCancel={() => setConfirmAdd(null)}
-      />
-      <ConfirmDialog
-        visible={!!confirmRemove}
-        title="Usuń zapis"
-        message={`Usunąć zapis ${confirmRemove?.name} z tej służby?`}
-        confirmText="Usuń"
-        destructive
-        onConfirm={doRemove}
-        onCancel={() => setConfirmRemove(null)}
-      />
-
-      {/* Attendance sheet */}
-      <Modal
-        visible={attendanceSheetVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => { if (!saving) setAttendanceSheetVisible(false) }}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => { if (!saving) setAttendanceSheetVisible(false) }}
-        >
-          <TouchableOpacity style={styles.attendanceSheet} activeOpacity={1}>
-            <View style={styles.deleteSheetHandle} />
-            <Text style={styles.modalTitle}>Lista obecności</Text>
-            <Text style={[styles.modalSubtitle, { marginBottom: 12 }]}>{schedule?.title}</Text>
-
-            <ScrollView style={styles.attendanceList} showsVerticalScrollIndicator={false}>
-              {allMembers.map((m, i) => (
-                <TouchableOpacity
-                  key={m.id}
-                  style={[
-                    styles.attendanceRow,
-                    i < allMembers.length - 1 && styles.rowBorder,
-                  ]}
-                  onPress={() => setDraftIds(prev => {
-                    const s = new Set(prev)
-                    if (s.has(m.id)) s.delete(m.id)
-                    else s.add(m.id)
-                    return s
-                  })}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.memberAvatar}>
-                    <Ionicons name="person" size={15} color={c.primary} />
-                  </View>
-                  <Text style={styles.memberName}>{m.full_name}</Text>
-                  <Ionicons
-                    name={draftIds.has(m.id) ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={26}
-                    color={draftIds.has(m.id) ? '#16A34A' : '#D1D5DB'}
-                  />
-                </TouchableOpacity>
+          <Card style={styles.modeCard}>
+            <AppText variant="eyebrow" color={c.goldInk}>Zapisy, obecność i punkty</AppText>
+            <View style={styles.modeChips}>
+              {(['signup', 'assigned', 'none'] as ServiceMode[]).map(m => (
+                <Chip key={m} label={SERVICE_MODE_INFO[m].short} selected={schedule.service_mode === m} onPress={() => changeMode(m)} />
               ))}
-            </ScrollView>
-
-            <View style={styles.attendanceFooter}>
-              <Text style={styles.attendanceCount}>
-                {draftIds.size} z {allMembers.length} obecnych
-              </Text>
-              <TouchableOpacity
-                style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-                onPress={handleSaveAttendance}
-                disabled={saving}
-                activeOpacity={0.8}
-              >
-                {saving
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={styles.saveBtnText}>Zapisz</Text>
-                }
-              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+            <AppText variant="small" muted>
+              {SERVICE_MODE_INFO[schedule.service_mode ?? 'signup'].hint + ' Dotyczy tylko tej służby — stały układ zmienisz w Rozkładzie Mszy.'}
+            </AppText>
+          </Card>
+
+          {schedule.category === 'zbiorka' && schedule.service_mode !== 'none' && (
+            <Button label="Lista obecności na zbiórce" icon="check-all" onPress={openAttendanceList} />
+          )}
+
+          {schedule.category === 'msza' && <AdminRolesCard scheduleId={schedule.id} onChanged={fetchSchedule} />}
+
+          <Card flush>
+            <View style={[styles.sectionHead, { borderBottomColor: c.borderLight }]}>
+              <AppText variant="eyebrow" color={c.goldInk} style={styles.flex}>Obsada</AppText>
+              <Button label="Przydziel" icon="account-plus" compact variant="secondary" onPress={openAddModal} />
+            </View>
+            {schedule.assignments.length === 0 ? (
+              <View style={styles.empty}>
+                <Icon name="account-group" size={36} color={c.iconMuted} />
+                <AppText variant="bodyStrong">Nikt się jeszcze nie zapisał</AppText>
+                <AppText variant="small" muted>Przydziel ministranta albo poczekaj, aż ktoś zapisze się w aplikacji.</AppText>
+              </View>
+            ) : schedule.assignments.map((a, i) => {
+              const present = attendanceIds.has(a.profile_id)
+              return (
+                <View key={a.id} style={[styles.person, i > 0 && { borderTopWidth: 1, borderTopColor: c.borderLight }]}>
+                  <Avatar name={a.profile.full_name} size={38} color={c.primary} textColor={c.gold} />
+                  <View style={styles.flex}>
+                    <AppText variant="bodyStrong">{a.profile.full_name}</AppText>
+                    {a.role && a.role !== 'ministrant' && <AppText variant="small" color={c.goldInk}>{a.role}</AppText>}
+                    {!!a.profile.phone && <AppText variant="small" muted>{a.profile.phone}</AppText>}
+                    {(a.status === 'excused' || a.status === 'confirmed') && !!a.absence_reason && (
+                      <AppText variant="small" color={c.dangerStrong}>{`Powód: ${a.absence_reason}`}</AppText>
+                    )}
+                  </View>
+                  <Pressable onPress={() => setStatusModalAssignment(a)} disabled={updatingId === a.id} accessibilityRole="button">
+                    <View style={[styles.statusPill, { backgroundColor: (STATUS_COLORS[a.status] ?? c.subtext) + '22' }]}>
+                      <AppText style={[styles.statusText, { color: STATUS_COLORS[a.status] ?? c.subtext }]}>
+                        {STATUS_LABELS[a.status] ?? a.status}
+                      </AppText>
+                    </View>
+                  </Pressable>
+                  {schedule.service_mode === 'none' && !present ? null : togglingAttendance === a.profile_id ? (
+                    <ActivityIndicator size="small" color={c.success} />
+                  ) : (
+                    <Pressable
+                      onPress={() => handleToggleAttendance(a.profile_id)}
+                      hitSlop={8}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: present }}
+                      accessibilityLabel={`Obecność: ${a.profile.full_name}`}
+                    >
+                      <Icon name={present ? 'check-circle' : 'checkbox-blank-circle-outline'} size={26} color={present ? c.success : c.iconMuted} filled />
+                    </Pressable>
+                  )}
+                  {updatingId === a.id ? (
+                    <ActivityIndicator size="small" color={c.primary} />
+                  ) : (
+                    <Pressable onPress={() => handleRemove(a.id, a.profile.full_name)} hitSlop={8} accessibilityLabel="Usuń zapis">
+                      <Icon name="close" size={22} color={c.dangerStrong} filled />
+                    </Pressable>
+                  )}
+                </View>
+              )
+            })}
+          </Card>
+          <AppText variant="small" muted style={styles.hint}>
+            Kółko przy osobie zaznacza obecność (z punktami wg reguł). Dotknij statusu, aby go zmienić.
+          </AppText>
+        </View>
+      </KeyboardScrollView>
+
+      {/* Status */}
+      <Sheet
+        visible={!!statusModalAssignment}
+        onClose={() => setStatusModalAssignment(null)}
+        eyebrow={statusModalAssignment?.profile.full_name}
+        title="Zmień status"
+      >
+        <Card flush>
+          {Object.entries(STATUS_LABELS).map(([key, label], i) => (
+            <ListRow
+              key={key}
+              first={i === 0}
+              title={label}
+              left={<View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[key] }]} />}
+              right={statusModalAssignment?.status === key ? <Icon name="check" size={20} color={c.primary} /> : undefined}
+              selected={statusModalAssignment?.status === key}
+              onPress={async () => {
+                if (statusModalAssignment && statusModalAssignment.status !== key) {
+                  await handleChangeStatus(statusModalAssignment.id, key)
+                }
+                setStatusModalAssignment(null)
+              }}
+            />
+          ))}
+        </Card>
+      </Sheet>
+
+      {/* Przydziel */}
+      <Sheet visible={addModalVisible} onClose={() => setAddModalVisible(false)} title="Przydziel ministranta" eyebrow={schedule.title}>
+        <TextField placeholder="Szukaj po imieniu…" value={addSearch} onChangeText={setAddSearch} autoFocus />
+        <Card flush>
+          {filteredMembers.length === 0 ? (
+            <AppText muted style={styles.pad}>
+              {allMembers.length === assignedIds.size ? 'Wszyscy ministranci są już zapisani.' : 'Brak wyników.'}
+            </AppText>
+          ) : filteredMembers.map((m, i) => (
+            <ListRow
+              key={m.id}
+              first={i === 0}
+              title={m.full_name}
+              left={<Avatar name={m.full_name} size={34} color={c.primary} textColor={c.gold} />}
+              right={adding ? <ActivityIndicator size="small" color={c.primary} /> : <Icon name="plus-circle" size={22} color={c.primary} filled />}
+              onPress={() => handleAdd(m)}
+            />
+          ))}
+        </Card>
+      </Sheet>
+
+      {/* Usuń */}
+      <Sheet
+        visible={deleteSheetVisible}
+        onClose={() => { setDeleteSheetVisible(false); setConfirmSeries(false) }}
+        eyebrow={`${longDate(schedule.date)} · ${schedule.time?.slice(0, 5)}`}
+        title={confirmSeries ? 'Usunąć cały cykl?' : `Usunąć: ${schedule.title}?`}
+        footer={confirmSeries ? (
+          <>
+            <Button label="Usuń wszystkie terminy" variant="danger" onPress={() => { setDeleteSheetVisible(false); setConfirmSeries(false); doDeleteSeries() }} />
+            <Button label="Anuluj" variant="secondary" onPress={() => setConfirmSeries(false)} />
+          </>
+        ) : undefined}
+      >
+        {confirmSeries ? (
+          <AppText muted>Znikną WSZYSTKIE terminy z tego cyklu razem z zapisami. Tej operacji nie można cofnąć.</AppText>
+        ) : (
+          <Card flush>
+            <ListRow first icon="delete" destructive title="Usuń tę służbę" subtitle="Tylko ten jeden termin" onPress={() => { setDeleteSheetVisible(false); doDeleteSchedule() }} />
+            {schedule.series_id && (
+              <ListRow icon="delete-sweep" destructive title="Usuń cały cykl" subtitle="Wszystkie terminy z tej serii" onPress={() => setConfirmSeries(true)} />
+            )}
+          </Card>
+        )}
+      </Sheet>
+
+      {/* Potwierdzenia dodania / usunięcia zapisu */}
+      <Sheet
+        visible={!!confirmAdd}
+        onClose={() => setConfirmAdd(null)}
+        title="Przydzielić?"
+        footer={<><Button label="Przydziel" onPress={doAdd} /><Button label="Anuluj" variant="secondary" onPress={() => setConfirmAdd(null)} /></>}
+      >
+        <AppText muted>{`${confirmAdd?.full_name} zostanie dopisany do tej służby.`}</AppText>
+      </Sheet>
+      <Sheet
+        visible={!!confirmRemove}
+        onClose={() => setConfirmRemove(null)}
+        title="Usunąć zapis?"
+        footer={<><Button label="Usuń" variant="danger" onPress={doRemove} /><Button label="Anuluj" variant="secondary" onPress={() => setConfirmRemove(null)} /></>}
+      >
+        <AppText muted>{`${confirmRemove?.name} zostanie wypisany z tej służby.`}</AppText>
+      </Sheet>
+
+      {/* Lista obecności (zbiórka) */}
+      <Sheet
+        visible={attendanceSheetVisible}
+        onClose={() => { if (!saving) setAttendanceSheetVisible(false) }}
+        eyebrow={schedule.title}
+        title="Lista obecności"
+        footer={
+          <>
+            <AppText variant="small" muted style={styles.center2}>{`${draftIds.size} z ${allMembers.length} obecnych`}</AppText>
+            <Button label="Zapisz listę" onPress={handleSaveAttendance} loading={saving} />
+          </>
+        }
+      >
+        <Card flush>
+          {allMembers.map((m, i) => {
+            const on = draftIds.has(m.id)
+            return (
+              <ListRow
+                key={m.id}
+                first={i === 0}
+                title={m.full_name}
+                left={<Avatar name={m.full_name} size={34} color={c.primary} textColor={c.gold} />}
+                right={<Icon name={on ? 'check-circle' : 'checkbox-blank-circle-outline'} size={26} color={on ? c.success : c.iconMuted} filled />}
+                onPress={() => setDraftIds(prev => {
+                  const s = new Set(prev)
+                  if (s.has(m.id)) s.delete(m.id)
+                  else s.add(m.id)
+                  return s
+                })}
+              />
+            )
+          })}
+        </Card>
+      </Sheet>
     </>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    content: { padding: 16, gap: 12 },
-
-    infoCard: {
-      backgroundColor: c.surface, borderRadius: 14, padding: 16, gap: 10,
-      ...shadow.md,
-    },
-    categoryBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-    categoryDot: { width: 8, height: 8, borderRadius: 4 },
-    categoryBadgeText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
-    infoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    infoText: { fontSize: 14, color: c.subtext, flex: 1, lineHeight: 20 },
-    seriesRow: { paddingTop: 6, marginTop: 4, borderTopWidth: 1, borderTopColor: c.primarySurface },
-    seriesText: { flex: 1, fontSize: 13, color: c.primary },
-
-    attendanceCard: {
-      backgroundColor: c.surface, borderRadius: 14, padding: 16,
-      flexDirection: 'row', alignItems: 'center',
-      ...shadow.md,
-    },
-    attendanceStat: { flex: 1, alignItems: 'center', gap: 2 },
-    attendanceNum: { fontSize: 26, fontWeight: '800', color: c.text },
-    attendanceLabel: { fontSize: 11, color: c.subtext },
-    attendanceDivider: { width: 1, height: 36, backgroundColor: c.primarySurface },
-
-    sectionHeader: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    },
-    sectionTitle: { fontSize: 15, fontWeight: '700', color: c.text },
-    addMemberBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 4,
-      backgroundColor: c.primaryAlpha08, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
-      borderWidth: 1, borderColor: c.primaryAlpha20,
-    },
-    addMemberText: { fontSize: 13, fontWeight: '600', color: c.primary },
-
-    empty: { alignItems: 'center', gap: 8, paddingVertical: 32 },
-    emptyTitle: { fontSize: 15, fontWeight: '600', color: c.textTertiary },
-    emptySubtitle: { fontSize: 13, color: c.iconMuted, textAlign: 'center' },
-
-    assignmentCard: {
-      backgroundColor: c.surface, borderRadius: 12, padding: 12,
-      flexDirection: 'row', alignItems: 'center', gap: 10,
-      ...shadow.xs,
-    },
-    assigneeLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-    avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center' },
-    assigneeName: { fontSize: 14, fontWeight: '600', color: c.text },
-    assigneePhone: { fontSize: 12, color: c.subtext, marginTop: 1 },
-    absenceRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 4, marginTop: 3 },
-    absenceText: { fontSize: 11, color: c.danger, fontStyle: 'italic', flex: 1 },
-    assigneeRight: { alignItems: 'flex-end', gap: 6 },
-    statusPill: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-    statusText: { fontSize: 11, fontWeight: '600' },
-    btnRow: { flexDirection: 'row', gap: 6 },
-
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-    modalSheet: { backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '75%' },
-    modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
-    modalTitle: { fontSize: 17, fontWeight: '700', color: c.text },
-    modalSubtitle: { fontSize: 13, color: c.subtext, marginTop: 2 },
-    statusOption: {
-      flexDirection: 'row', alignItems: 'center', gap: 12,
-      paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.primarySurface,
-    },
-    statusOptionText: { flex: 1, fontSize: 15, color: c.text },
-    statusDot: { width: 10, height: 10, borderRadius: 5 },
-    searchBox: {
-      flexDirection: 'row', alignItems: 'center', gap: 8,
-      backgroundColor: c.bg, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9, marginBottom: 10,
-    },
-    searchInput: { flex: 1, fontSize: 15, color: c.text },
-    memberList: { maxHeight: 340 },
-    memberRow: {
-      flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12,
-      borderBottomWidth: 1, borderBottomColor: c.primarySurface,
-    },
-    memberAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.primaryAlpha08, justifyContent: 'center', alignItems: 'center' },
-    memberName: { flex: 1, fontSize: 15, color: c.text, fontWeight: '500' },
-
-    deleteSheet: {
-      backgroundColor: c.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-      padding: 20, paddingBottom: 32, gap: 4,
-    },
-    deleteSheetHandle: {
-      width: 36, height: 4, borderRadius: 2, backgroundColor: c.border,
-      alignSelf: 'center', marginBottom: 16,
-    },
-    deleteSheetTitle: { fontSize: 17, fontWeight: '700', color: c.text, marginBottom: 2 },
-    deleteSheetSub: { fontSize: 13, color: c.subtext, marginBottom: 16 },
-    deleteOption: {
-      flexDirection: 'row', alignItems: 'center', gap: 14,
-      backgroundColor: c.danger + '08', borderRadius: 14, padding: 14, marginBottom: 8,
-    },
-    deleteOptionSeriesCard: { backgroundColor: c.danger + '08' },
-    deleteOptionIcon: {
-      width: 40, height: 40, borderRadius: 12,
-      backgroundColor: c.danger + '18', justifyContent: 'center', alignItems: 'center',
-    },
-    deleteOptionTitle: { fontSize: 15, fontWeight: '600', color: c.danger },
-    deleteOptionSub: { fontSize: 12, color: c.textTertiary, marginTop: 2 },
-    deleteCancelBtn: {
-      marginTop: 4, paddingVertical: 14, borderRadius: 14,
-      backgroundColor: c.bg, alignItems: 'center',
-    },
-    deleteCancelText: { fontSize: 15, fontWeight: '600', color: c.subtext },
-
-    attendanceBtn: {
-      backgroundColor: c.primary, borderRadius: 12, padding: 14,
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-      ...shadow.md,
-    },
-    attendanceBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-    attendanceSheet: {
-      backgroundColor: c.surface,
-      borderTopLeftRadius: 20, borderTopRightRadius: 20,
-      padding: 20, paddingBottom: 32, maxHeight: '80%',
-    },
-    attendanceList: { flexGrow: 0 },
-    attendanceRow: {
-      flexDirection: 'row', alignItems: 'center', gap: 12,
-      paddingVertical: 12,
-    },
-    rowBorder: { borderBottomWidth: 1, borderBottomColor: c.primarySurface },
-    attendanceFooter: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: c.primarySurface,
-    },
-    attendanceCount: { fontSize: 14, color: c.subtext },
-    saveBtn: {
-      backgroundColor: c.primary, borderRadius: 10,
-      paddingHorizontal: 24, paddingVertical: 12,
-      alignItems: 'center', justifyContent: 'center', minWidth: 80,
-    },
-    saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-  })
-}
+const styles = StyleSheet.create({
+  modeCard: { gap: 8 },
+  modeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  flex: { flex: 1, minWidth: 0 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  center2: { textAlign: 'center' },
+  pad: { padding: 14 },
+  head: { paddingHorizontal: 22, paddingBottom: 22, gap: 6 },
+  headDesktop: { marginHorizontal: 32, marginTop: 24, borderRadius: 22 },
+  headTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  back: { flexDirection: 'row', alignItems: 'center', marginLeft: -6 },
+  backText: { ...sans(700), fontSize: 13 },
+  headIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 34, lineHeight: 37 },
+  when: { ...sans(700), fontSize: 14 },
+  lit: { ...sans(500), fontSize: 13, opacity: 0.9 },
+  body: { padding: 16, gap: 14 },
+  bodyDesktop: { paddingHorizontal: 32, maxWidth: 900 },
+  stats: { flexDirection: 'row', gap: 10 },
+  stat: { flex: 1, alignItems: 'center', gap: 2 },
+  statValue: { ...sans(800), fontSize: 24, fontVariant: ['tabular-nums'] },
+  note: { flexDirection: 'row', gap: 10, padding: 14, borderRadius: 14, alignItems: 'flex-start' },
+  noteText: { ...sans(500), fontSize: 13, lineHeight: 19, flex: 1 },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1 },
+  empty: { alignItems: 'center', gap: 6, padding: 24 },
+  person: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
+  statusPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
+  statusText: { ...sans(700), fontSize: 11 },
+  statusDot: { width: 12, height: 12, borderRadius: 6 },
+  hint: { paddingHorizontal: 4 },
+})

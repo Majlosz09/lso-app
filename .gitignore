@@ -56,3 +56,8 @@ docs/security/parishes.csv
 docs/security/accounts.csv
 # eksport schematu z panelu (surowy CSV; wersja .sql jest w repo)
 supabase/dev/*.csv
+
+# paczka designu (lokalnie, 9 MB zrzutów)
+design_handoff_lso_redesign/
+dist-dev/
+backups/

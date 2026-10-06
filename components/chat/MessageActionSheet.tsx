@@ -124,6 +124,6 @@ function createStyles(c: Colors) {
       alignItems: 'center',
     },
     action: { paddingVertical: 14, paddingHorizontal: 20 },
-    actionText: { fontSize: 16 },
+    actionText: { fontSize: 16, fontFamily: 'Manrope_500Medium' },
   })
 }

@@ -1,0 +1,49 @@
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '../lib/supabase'
+import { useAuthStore } from '../stores/authStore'
+import type { BadgeKey, NavRole } from '../lib/navigation'
+import { useUnreadAnnouncements } from './useUnreadAnnouncements'
+
+export type NavBadges = Partial<Record<BadgeKey, number>>
+
+/** Liczniki w sidebarze: nieprzeczytany czat i ogłoszenia, oczekujące konta, prośby o usprawiedliwienie. */
+export function useNavBadges(role: NavRole, enabled = true): NavBadges {
+  const parishId = useAuthStore(s => s.profile?.parish_id)
+  const unreadAnn = useUnreadAnnouncements(enabled && role !== 'admin')
+
+  const { data } = useQuery({
+    queryKey: ['nav-badges', role, parishId],
+    enabled: enabled && !!parishId,
+    refetchInterval: 60_000,
+    queryFn: async (): Promise<NavBadges> => {
+      const chatReq = supabase.rpc('get_chat_channels_with_meta')
+      if (role !== 'admin' && role !== 'helper') {
+        const { data: ch } = await chatReq
+        return { chat: sumUnread(ch) }
+      }
+      const [{ data: ch }, { data: pending }, { count }, { count: reports }] = await Promise.all([
+        chatReq,
+        supabase.rpc('get_pending_members'),
+        supabase
+          .from('schedule_assignments')
+          .select('id, schedule:schedules!inner(parish_id)', { count: 'exact', head: true })
+          .eq('status', 'excused')
+          .eq('schedule.parish_id', parishId!),
+        supabase.from('attendance_reports').select('id', { count: 'exact', head: true })
+          .eq('parish_id', parishId!).eq('status', 'pending'),
+      ])
+      return {
+        chat: sumUnread(ch),
+        pending: Array.isArray(pending) ? pending.length : 0,
+        // usprawiedliwienia + zgłoszenia obecności (jeden ekran „Zgłoszenia”)
+        excuses: (count ?? 0) + (reports ?? 0),
+      }
+    },
+  })
+  return { ...(data ?? {}), ...(unreadAnn ? { announcements: unreadAnn } : {}) }
+}
+
+function sumUnread(rows: unknown): number {
+  if (!Array.isArray(rows)) return 0
+  return rows.reduce((sum, r: any) => sum + Number(r?.unread_count ?? 0), 0)
+}

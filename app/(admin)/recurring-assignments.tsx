@@ -14,6 +14,7 @@ import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { TimePickerModal } from '../../components/TimePickerModal'
+import { ModalKeyboardAvoider } from '../../components/ui/ModalKeyboardAvoider'
 
 // Kolejność od poniedziałku; wartości jak w Postgres (0 = niedziela)
 const WEEK = [
@@ -250,6 +251,7 @@ export default function RecurringAssignmentsScreen() {
       </TouchableOpacity>
 
       <Modal visible={formOpen} transparent animationType="slide" onRequestClose={() => setFormOpen(false)}>
+<ModalKeyboardAvoider>
         <View style={styles.modalOverlay}>
           <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
             <View style={styles.sheetHeader}>
@@ -354,7 +356,8 @@ export default function RecurringAssignmentsScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </ModalKeyboardAvoider>
+</Modal>
 
       <TimePickerModal
         visible={timePickerOpen}
@@ -381,54 +384,54 @@ function createStyles(c: Colors) {
     container: { flex: 1, backgroundColor: c.bg, ...(Platform.OS === 'web' && { minHeight: 0 }) },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: c.bg },
     content: { padding: 16, gap: 12 },
-    intro: { fontSize: 13, color: c.subtext, lineHeight: 19 },
+    intro: { fontSize: 13, color: c.subtext, lineHeight: 19, fontFamily: 'Manrope_500Medium' },
     empty: { alignItems: 'center', marginTop: 48, gap: 10 },
-    emptyText: { fontSize: 15, color: c.textTertiary },
+    emptyText: { fontSize: 15, color: c.textTertiary, fontFamily: 'Manrope_500Medium' },
     card: { backgroundColor: c.surface, borderRadius: 14, padding: 14, gap: 4, ...shadow.xs },
     cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-    cardTitle: { fontSize: 16, fontWeight: '700', color: c.text },
-    cardSub: { fontSize: 12, color: c.subtext, marginTop: 2 },
+    cardTitle: { fontSize: 16, color: c.text, fontFamily: 'Manrope_700Bold' },
+    cardSub: { fontSize: 12, color: c.subtext, marginTop: 2, fontFamily: 'Manrope_500Medium' },
     cancelAllBtn: {
       paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8,
       borderWidth: 1, borderColor: c.danger + '55',
     },
-    cancelAllText: { fontSize: 12, fontWeight: '700', color: c.danger },
+    cancelAllText: { fontSize: 12, color: c.danger, fontFamily: 'Manrope_700Bold' },
     ruleRow: {
       flexDirection: 'row', alignItems: 'center', gap: 10,
       paddingVertical: 9, borderTopWidth: 1, borderTopColor: c.border,
     },
-    ruleName: { fontSize: 14, fontWeight: '600', color: c.text },
-    ruleDates: { fontSize: 11, color: c.subtext, marginTop: 1 },
+    ruleName: { fontSize: 14, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    ruleDates: { fontSize: 11, color: c.subtext, marginTop: 1, fontFamily: 'Manrope_500Medium' },
     fab: {
       position: 'absolute', left: 16, right: 16,
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
       backgroundColor: c.primary, borderRadius: 12, paddingVertical: 14, ...shadow.md,
     },
-    fabText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+    fabText: { color: '#fff', fontSize: 15, fontFamily: 'Manrope_700Bold' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
     sheet: {
       backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
       padding: 20, gap: 12, maxHeight: '90%',
     },
     sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    sheetTitle: { fontSize: 18, fontWeight: '700', color: c.text },
-    label: { fontSize: 13, fontWeight: '700', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.4 },
-    hint: { fontSize: 12, color: c.textTertiary },
+    sheetTitle: { fontSize: 18, color: c.text, fontFamily: 'Manrope_700Bold' },
+    label: { fontSize: 13, color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.4, fontFamily: 'Manrope_700Bold' },
+    hint: { fontSize: 12, color: c.textTertiary, fontFamily: 'Manrope_500Medium' },
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     dayChip: { minWidth: 42, alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: c.primarySurface },
     chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: c.primarySurface },
     chipActive: { backgroundColor: c.primary },
-    chipText: { fontSize: 13, fontWeight: '600', color: c.subtext },
+    chipText: { fontSize: 13, color: c.subtext, fontFamily: 'Manrope_600SemiBold' },
     chipTextActive: { color: '#fff' },
     searchBox: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       backgroundColor: c.bg, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9,
     },
-    searchInput: { flex: 1, fontSize: 15, color: c.text },
+    searchInput: { flex: 1, fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
     memberList: { gap: 2 },
     memberRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
-    memberName: { fontSize: 15, color: c.text },
+    memberName: { fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
     saveBtn: { backgroundColor: c.primary, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
-    saveText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    saveText: { color: '#fff', fontSize: 16, fontFamily: 'Manrope_700Bold' },
   })
 }

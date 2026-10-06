@@ -46,9 +46,9 @@ function createStyles(c: Colors) {
     },
     bar: { width: 3, height: 32, borderRadius: 2 },
     content: { flex: 1 },
-    name: { fontSize: 12, fontWeight: '600' },
-    preview: { fontSize: 12 },
+    name: { fontSize: 12, fontFamily: 'Manrope_600SemiBold' },
+    preview: { fontSize: 12, fontFamily: 'Manrope_500Medium' },
     cancel: { padding: 4 },
-    cancelText: { fontSize: 18 },
+    cancelText: { fontSize: 18, fontFamily: 'Manrope_500Medium' },
   })
 }

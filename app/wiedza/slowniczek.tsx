@@ -117,7 +117,7 @@ function createStyles(c: Colors) {
       paddingHorizontal: 14, paddingVertical: 11,
       borderWidth: 1.5, borderColor: c.primaryAlpha20, ...shadow.xs,
     },
-    searchInput: { flex: 1, fontSize: 15, color: c.text },
+    searchInput: { flex: 1, fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
     tagsList: { flexGrow: 0, flexShrink: 0 },
     tagsRow: { paddingHorizontal: 16, paddingBottom: 12, gap: 8, alignItems: 'center' },
     tag: {
@@ -127,22 +127,22 @@ function createStyles(c: Colors) {
       alignSelf: 'flex-start',
     },
     tagActive: { backgroundColor: c.primary, borderColor: c.primary },
-    tagText: { fontSize: 13, fontWeight: '500', color: c.subtext },
+    tagText: { fontSize: 13, color: c.subtext, fontFamily: 'Manrope_500Medium' },
     tagTextActive: { color: c.white },
     list: { paddingHorizontal: 16, paddingBottom: 24 },
     item: {
       backgroundColor: c.surface, borderRadius: 12, padding: 14,
       flexDirection: 'row', alignItems: 'flex-start', gap: 10, ...shadow.xs,
     },
-    itemTitle: { fontSize: 15, fontWeight: '700', color: c.text },
-    itemSubtitle: { fontSize: 12, color: c.primary, marginTop: 1 },
-    itemPreview: { fontSize: 13, color: c.textTertiary, marginTop: 4, lineHeight: 18 },
+    itemTitle: { fontSize: 15, color: c.text, fontFamily: 'Manrope_700Bold' },
+    itemSubtitle: { fontSize: 12, color: c.primary, marginTop: 1, fontFamily: 'Manrope_500Medium' },
+    itemPreview: { fontSize: 13, color: c.textTertiary, marginTop: 4, lineHeight: 18, fontFamily: 'Manrope_500Medium' },
     tagBadge: {
       backgroundColor: c.primaryAlpha08, borderRadius: 8,
       paddingHorizontal: 8, paddingVertical: 4, marginTop: 2,
     },
-    tagBadgeText: { fontSize: 11, color: c.primary, fontWeight: '600' },
+    tagBadgeText: { fontSize: 11, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
     empty: { alignItems: 'center', marginTop: 60, gap: 10 },
-    emptyText: { color: c.textTertiary, fontSize: 15 },
+    emptyText: { color: c.textTertiary, fontSize: 15, fontFamily: 'Manrope_500Medium' },
   })
 }

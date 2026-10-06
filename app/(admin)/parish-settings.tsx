@@ -1,36 +1,44 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
-import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, ScrollView, Share, Modal, Platform,
-} from 'react-native'
-import { useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { useEffect, useMemo, useState } from 'react'
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, Share, StyleSheet, Switch, View } from 'react-native'
+import { Stack, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import QRCode from 'react-native-qrcode-svg'
 import { supabase } from '../../lib/supabase'
+import { PublicScheduleCard } from '../../components/admin/PublicScheduleCard'
 import { useAuthStore } from '../../stores/authStore'
-import { shadow } from '../../lib/shadows'
 import { buildParishQrValue } from '../../lib/checkin'
 import * as Clipboard from 'expo-clipboard'
 import Toast from 'react-native-toast-message'
-import type { AttendanceMode } from '../../types/database'
+import { ALL_METHODS, AttendanceMethod, legacyMode, METHOD_INFO, parishMethods, parishPrimary, toggleMethod } from '../../lib/attendance'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { sans } from '../../lib/theme'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
 import GpsLocationPicker from '../../components/GpsLocationPicker'
+import { ChoiceCard } from '../../components/auth/formParts'
+import { AppText, Button, Card, Chip, ListRow, ScreenHeader, Sheet, TextField } from '../../components/ui'
+import { TourTarget } from '../../components/tour/TourTarget'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
+
+function ToggleRow({ value, onChange, title, sub }: { value: boolean; onChange: (v: boolean) => void; title: string; sub: string }) {
+  const { colors: c } = useTheme()
+  return (
+    <Pressable accessibilityRole="switch" accessibilityState={{ checked: value }} onPress={() => onChange(!value)} style={styles.toggleRow}>
+      <View style={styles.flex}>
+        <AppText variant="bodyStrong">{title}</AppText>
+        <AppText variant="small" muted>{sub}</AppText>
+      </View>
+      <Switch value={value} onValueChange={onChange} trackColor={{ true: c.primary, false: c.inputBorder }} thumbColor="#FFFFFF" {...({ activeThumbColor: '#FFFFFF' } as any)} />
+    </Pressable>
+  )
+}
 
 export default function ParishSettingsScreen() {
   const { parish, fetchProfile } = useAuthStore()
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
-
-  const ATTENDANCE_OPTIONS: { mode: AttendanceMode; label: string; sub: string; icon: string; color: string }[] = useMemo(() => [
-    { mode: 'button', label: 'Przycisk',    sub: 'Zameldowanie jednym kliknięciem, bez weryfikacji', icon: 'hand-left-outline',   color: '#10B981' },
-    { mode: 'qr',     label: 'Kod QR',      sub: 'Ministrant skanuje kod QR wywiesony w zakrystii',  icon: 'qr-code-outline',     color: c.primary },
-    { mode: 'gps',    label: 'Lokalizacja', sub: 'Weryfikacja przez GPS — ministrant musi być blisko kościoła', icon: 'location-outline', color: '#EA580C' },
-    { mode: 'admin',  label: 'Tylko admin', sub: 'Ministranci nie meldują się sami — obecność zaznacza ksiądz lub admin w szczegółach służby', icon: 'shield-checkmark-outline', color: '#7C3AED' },
-  ], [c.primary])
+  const isDesktop = useIsDesktop()
+  const [confirmRegen, setConfirmRegen] = useState(false)
 
   const [name, setName] = useState(parish?.name ?? '')
   const [city, setCity] = useState(parish?.city ?? '')
@@ -38,34 +46,35 @@ export default function ParishSettingsScreen() {
   const [regenerating, setRegenerating] = useState(false)
   const [inviteCode, setInviteCode] = useState(parish?.invite_code ?? '')
 
-  const [attendanceMode, setAttendanceMode] = useState<AttendanceMode>(parish?.attendance_mode ?? 'button')
+  const [methods, setMethods] = useState<AttendanceMethod[]>(parishMethods(parish))
+  const [primary, setPrimary] = useState<AttendanceMethod>(parishPrimary(parish))
   const [lat, setLat] = useState(parish?.lat?.toString() ?? '')
   const [lng, setLng] = useState(parish?.lng?.toString() ?? '')
   const [gpsRadius, setGpsRadius] = useState(parish?.gps_radius?.toString() ?? '200')
   const [savingAttendance, setSavingAttendance] = useState(false)
   const [allowMemberDm, setAllowMemberDm] = useState(parish?.allow_member_dm ?? false)
   const [savingDm, setSavingDm] = useState(false)
+  // N13 — przed migracją 20261001030000 kolumn nie ma (undefined) → przełączniki ukryte
+  const [parentsGeneral, setParentsGeneral] = useState(parish?.parents_see_general ?? false)
+  const [memberPolls, setMemberPolls] = useState(parish?.members_can_create_polls ?? true)
+  const chatExtras = parish?.parents_see_general !== undefined
   const [qrModalVisible, setQrModalVisible] = useState(false)
 
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [toastMsg, setToastMsg] = useState<string | null>(null)
-
-  const showToast = (msg: string) => {
-    setToastMsg(msg)
-    if (toastTimer.current) clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToastMsg(null), 3000)
-  }
+  const showToast = (msg: string) => Toast.show({ type: 'success', text1: msg })
 
   useEffect(() => {
     if (parish) {
       setName(parish.name)
       setCity(parish.city ?? '')
       setInviteCode(parish.invite_code)
-      setAttendanceMode(parish.attendance_mode ?? 'button')
+      setMethods(parishMethods(parish))
+      setPrimary(parishPrimary(parish))
       setLat(parish.lat?.toString() ?? '')
       setLng(parish.lng?.toString() ?? '')
       setGpsRadius(parish.gps_radius?.toString() ?? '200')
       setAllowMemberDm(parish.allow_member_dm ?? false)
+      setParentsGeneral(parish.parents_see_general ?? false)
+      setMemberPolls(parish.members_can_create_polls ?? true)
     }
   }, [parish])
 
@@ -87,7 +96,7 @@ export default function ParishSettingsScreen() {
     const lngNum = lng.trim() ? parseFloat(lng.trim()) : null
     const radiusNum = parseInt(gpsRadius.trim()) || 200
 
-    if (attendanceMode === 'gps') {
+    if (methods.includes('gps')) {
       if (latNum === null || lngNum === null || isNaN(latNum) || isNaN(lngNum)) {
         Alert.alert('Błąd', 'Wpisz poprawne współrzędne kościoła (szerokość i długość geograficzną).')
         return
@@ -99,15 +108,15 @@ export default function ParishSettingsScreen() {
     }
 
     setSavingAttendance(true)
-    const { error } = await supabase
+    const base = { attendance_mode: legacyMode(methods, primary), lat: latNum, lng: lngNum, gps_radius: radiusNum }
+    let { error } = await supabase
       .from('parishes')
-      .update({
-        attendance_mode: attendanceMode,
-        lat: latNum,
-        lng: lngNum,
-        gps_radius: radiusNum,
-      })
+      .update({ ...base, attendance_methods: methods, attendance_primary: primary })
       .eq('id', parish?.id)
+    // baza bez migracji 20260930000000 — zapisz przynajmniej pojedynczy tryb
+    if (error && /attendance_(methods|primary)/.test(error.message)) {
+      ({ error } = await supabase.from('parishes').update(base).eq('id', parish?.id))
+    }
     setSavingAttendance(false)
     if (error) { Alert.alert('Błąd', error.message); return }
     try { await fetchProfile() } catch (e) { console.error('[save] fetchProfile error:', e) }
@@ -118,7 +127,9 @@ export default function ParishSettingsScreen() {
     setSavingDm(true)
     const { error } = await supabase
       .from('parishes')
-      .update({ allow_member_dm: allowMemberDm })
+      .update(chatExtras
+        ? { allow_member_dm: allowMemberDm, parents_see_general: parentsGeneral, members_can_create_polls: memberPolls }
+        : { allow_member_dm: allowMemberDm })
       .eq('id', parish?.id)
     setSavingDm(false)
     if (error) { Alert.alert('Błąd', error.message); return }
@@ -126,32 +137,21 @@ export default function ParishSettingsScreen() {
     showToast('Ustawienia czatu zostały zaktualizowane.')
   }
 
-  const handleRegenerate = () => {
-    Alert.alert(
-      'Regeneruj kod',
-      'Stary kod zaproszenia przestanie działać. Czy na pewno chcesz wygenerować nowy kod?',
-      [
-        { text: 'Anuluj', style: 'cancel' },
-        {
-          text: 'Regeneruj', style: 'destructive',
-          onPress: async () => {
-            setRegenerating(true)
-            const CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789' // bez mylących 0/O, 1/I/L — jak gen_invite_code() w bazie
-            const newCode = Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join('')
-            const { error } = await supabase
-              .from('parishes')
-              .update({ invite_code: newCode })
-              .eq('id', parish?.id)
-            setRegenerating(false)
-            if (error) { Alert.alert('Błąd', error.message); return }
-            setInviteCode(newCode)
-            useAuthStore.setState(state =>
-              state.parish ? { parish: { ...state.parish, invite_code: newCode } } : {}
-            )
-          },
-        },
-      ]
+  const doRegenerate = async () => {
+    setRegenerating(true)
+    const CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789' // bez mylących 0/O, 1/I/L — jak gen_invite_code() w bazie
+    const newCode = Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join('')
+    const { error } = await supabase
+      .from('parishes')
+      .update({ invite_code: newCode })
+      .eq('id', parish?.id)
+    setRegenerating(false)
+    if (error) { Alert.alert('Błąd', error.message); return }
+    setInviteCode(newCode)
+    useAuthStore.setState(state =>
+      state.parish ? { parish: { ...state.parish, invite_code: newCode } } : {}
     )
+    Toast.show({ type: 'success', text1: `Nowy kod: ${newCode}`, text2: 'Stary przestał działać.' })
   }
 
   // Kopiowanie do schowka (web + telefon); udostępnianie osobnym przyciskiem na telefonie
@@ -170,302 +170,175 @@ https://app.lsoapp.com` })
   }
 
   if (!parish) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
+    return <View style={[styles.center, { backgroundColor: c.bg }]}><ActivityIndicator size="large" color={c.primary} /></View>
   }
 
-  return (
-    <View style={{ flex: 1 }}>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]}
-      >
-        {/* Dane parafii */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dane parafii</Text>
-          <Text style={styles.label}>Nazwa parafii *</Text>
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Nazwa parafii" placeholderTextColor={c.textTertiary} />
-          <Text style={styles.label}>Miejscowość</Text>
-          <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="np. Warszawa" placeholderTextColor={c.textTertiary} />
-          <TouchableOpacity style={[styles.saveButton, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>
-            {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveButtonText}>Zapisz zmiany</Text>}
-          </TouchableOpacity>
-        </View>
+  const dataCard = (
+    <Card large style={styles.card}>
+      <AppText variant="eyebrow" color={c.goldInk}>Dane parafii</AppText>
+      <TextField label="Nazwa" value={name} onChangeText={setName} placeholder="Nazwa parafii" />
+      <TextField label="Miejscowość" value={city} onChangeText={setCity} placeholder="np. Warszawa" />
+      <Button label="Zapisz" compact style={styles.selfStart} onPress={handleSave} loading={saving} />
+    </Card>
+  )
 
-        {/* Weryfikacja obecności */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Weryfikacja obecności</Text>
-          <Text style={styles.sectionSub}>Wybierz jak ministranci będą potwierdzać swoją obecność na służbie.</Text>
+  const codeCard = (
+    <Card large style={styles.card}>
+      <AppText variant="eyebrow" color={c.goldInk}>Kod zaproszenia</AppText>
+      <AppText variant="small" muted>Podaj go ministrantom i rodzicom — dołączą nim do parafii (po Twoim zatwierdzeniu).</AppText>
+      <View style={styles.codeRow}>
+        <AppText selectable style={[styles.code, { color: c.text }]}>{inviteCode}</AppText>
+        <Button label="Kopiuj" icon="content-copy" variant="secondary" compact onPress={handleCopy} />
+        {Platform.OS !== 'web' && <Button label="Udostępnij" icon="share-variant" variant="secondary" compact onPress={handleShare} />}
+      </View>
+      <Button label="Wygeneruj nowy kod" icon="refresh" variant="ghost" compact style={styles.selfStart} onPress={() => setConfirmRegen(true)} loading={regenerating} />
+    </Card>
+  )
 
-          {ATTENDANCE_OPTIONS.map(opt => (
-            <TouchableOpacity
-              key={opt.mode}
-              style={[styles.modeRow, attendanceMode === opt.mode && { borderColor: opt.color, backgroundColor: opt.color + '0a' }]}
-              onPress={() => setAttendanceMode(opt.mode)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.modeIcon, { backgroundColor: opt.color + '18' }]}>
-                <Ionicons name={opt.icon as any} size={20} color={opt.color} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.modeLabel, attendanceMode === opt.mode && { color: opt.color }]}>{opt.label}</Text>
-                <Text style={styles.modeSub}>{opt.sub}</Text>
-              </View>
-              <View style={[styles.radioOuter, attendanceMode === opt.mode && { borderColor: opt.color }]}>
-                {attendanceMode === opt.mode && <View style={[styles.radioInner, { backgroundColor: opt.color }]} />}
-              </View>
-            </TouchableOpacity>
-          ))}
-
-          {/* GPS fields */}
-          {attendanceMode === 'gps' && (
-            <View style={styles.gpsBox}>
-              <Text style={styles.gpsBoxTitle}>Lokalizacja kościoła</Text>
-              <GpsLocationPicker
-                lat={lat}
-                lng={lng}
-                gpsRadius={gpsRadius}
-                onLatChange={setLat}
-                onLngChange={setLng}
-                onGpsRadiusChange={setGpsRadius}
-              />
-            </View>
-          )}
-
-          {/* QR display button */}
-          {attendanceMode === 'qr' && (
-            <TouchableOpacity style={styles.qrButton} onPress={() => setQrModalVisible(true)}>
-              <Ionicons name="qr-code-outline" size={18} color={c.primary} />
-              <Text style={styles.qrButtonText}>Pokaż kod QR do wydruku</Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            style={[styles.saveButton, savingAttendance && { opacity: 0.6 }]}
-            onPress={handleSaveAttendance}
-            disabled={savingAttendance}
-          >
-            {savingAttendance
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={styles.saveButtonText}>Zapisz ustawienia</Text>
-            }
-          </TouchableOpacity>
-        </View>
-
-        {/* Kod zaproszenia */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Kod zaproszenia</Text>
-          <Text style={styles.sectionSub}>Podaj ten kod ministrantom i rodzicom, aby mogli dołączyć do Twojej parafii.</Text>
-          <View style={styles.codeRow}>
-            <Text style={styles.codeText}>{inviteCode}</Text>
-            <TouchableOpacity style={styles.copyButton} onPress={handleCopy}>
-              <Ionicons name="copy-outline" size={20} color={c.primary} />
-              <Text style={styles.copyButtonText}>Kopiuj</Text>
-            </TouchableOpacity>
-            {Platform.OS !== 'web' && (
-              <TouchableOpacity style={styles.copyButton} onPress={handleShare}>
-                <Ionicons name="share-social-outline" size={20} color={c.primary} />
-                <Text style={styles.copyButtonText}>Udostępnij</Text>
-              </TouchableOpacity>
-            )}
+  const attendanceCard = (
+    <Card large style={styles.card}>
+      <AppText variant="eyebrow" color={c.goldInk}>Potwierdzanie obecności</AppText>
+      <AppText variant="small" muted>Zaznacz jedną lub kilka metod. Metoda główna otwiera się po „Potwierdź obecność”, pozostałe ministrant wybierze na ekranie obecności.</AppText>
+      {ALL_METHODS.map(m => (
+        <ChoiceCard
+          key={m}
+          icon={METHOD_INFO[m].icon}
+          title={methods.length > 1 && primary === m ? `${METHOD_INFO[m].label} · główna` : METHOD_INFO[m].label}
+          subtitle={METHOD_INFO[m].sub}
+          multi
+          selected={methods.includes(m)}
+          onPress={() => {
+            const r = toggleMethod(methods, primary, m)
+            if (r.error) { Toast.show({ type: 'error', text1: r.error }); return }
+            setMethods(r.methods); setPrimary(r.primary)
+          }}
+        />
+      ))}
+      {methods.length > 1 && (
+        <View style={styles.primaryBox}>
+          <AppText variant="label">Metoda główna</AppText>
+          <View style={styles.primaryChips}>
+            {methods.map(m => (
+              <Chip key={m} label={METHOD_INFO[m].label} icon={METHOD_INFO[m].icon} selected={primary === m} onPress={() => setPrimary(m)} />
+            ))}
           </View>
-          <TouchableOpacity style={[styles.regenButton, regenerating && { opacity: 0.6 }]} onPress={handleRegenerate} disabled={regenerating}>
-            {regenerating
-              ? <ActivityIndicator color="#DC2626" size="small" />
-              : <><Ionicons name="refresh-outline" size={16} color={c.danger} /><Text style={styles.regenButtonText}>Regeneruj kod</Text></>
-            }
-          </TouchableOpacity>
-        </View>
-
-        {/* Czat */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Czat</Text>
-          <Text style={styles.sectionSub}>
-            Zdecyduj czy ministranci mogą pisać prywatne wiadomości między sobą.
-            Admini zawsze mogą pisać z każdym.
-          </Text>
-          <TouchableOpacity
-            style={[styles.modeRow, allowMemberDm && { borderColor: c.primary, backgroundColor: c.primary + '0a' }]}
-            onPress={() => setAllowMemberDm(prev => !prev)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.modeIcon, { backgroundColor: c.primary + '18' }]}>
-              <Ionicons name="chatbubble-outline" size={20} color={c.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.modeLabel, allowMemberDm && { color: c.primary }]}>
-                Prywatne wiadomości między ministrantami
-              </Text>
-              <Text style={styles.modeSub}>
-                {allowMemberDm ? 'Włączone — ministranci mogą pisać między sobą' : 'Wyłączone — tylko admin może inicjować DM'}
-              </Text>
-            </View>
-            <View style={[styles.radioOuter, allowMemberDm && { borderColor: c.primary }]}>
-              {allowMemberDm && <View style={[styles.radioInner, { backgroundColor: c.primary }]} />}
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.saveButton, savingDm && { opacity: 0.6 }]}
-            onPress={handleSaveDm}
-            disabled={savingDm}
-          >
-            {savingDm
-              ? <ActivityIndicator color="#fff" size="small" />
-              : <Text style={styles.saveButtonText}>Zapisz ustawienia czatu</Text>
-            }
-          </TouchableOpacity>
-        </View>
-
-        {/* Konfiguracja */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Konfiguracja</Text>
-          <Text style={styles.sectionSub}>Zarządzaj rozkładem Mszy i regułami punktowania.</Text>
-          <TouchableOpacity style={styles.navRow} onPress={() => router.push('/(admin)/mass-schedule')}>
-            <View style={[styles.navIcon, { backgroundColor: '#8e44ad18' }]}>
-              <Ionicons name="time-outline" size={20} color="#8e44ad" />
-            </View>
-            <View style={styles.navInfo}>
-              <Text style={styles.navTitle}>Rozkład Mszy</Text>
-              <Text style={styles.navSub}>Tygodniowy plan godzin</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={c.iconMuted} />
-          </TouchableOpacity>
-          <View style={styles.divider} />
-          <TouchableOpacity style={styles.navRow} onPress={() => router.push('/(admin)/point-rules')}>
-            <View style={[styles.navIcon, { backgroundColor: '#FFC10715' }]}>
-              <Ionicons name="trophy-outline" size={20} color="#FFC107" />
-            </View>
-            <View style={styles.navInfo}>
-              <Text style={styles.navTitle}>Reguły punktowania</Text>
-              <Text style={styles.navSub}>Typy służb i ich wartości</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={c.iconMuted} />
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      {/* Success toast */}
-      {toastMsg && (
-        <View style={styles.toast} pointerEvents="none">
-          <Ionicons name="checkmark-circle" size={20} color="#fff" />
-          <Text style={styles.toastText}>{toastMsg}</Text>
         </View>
       )}
+      {methods.includes('gps') && (
+        <View style={[styles.gpsBox, { backgroundColor: c.goldSurface }]}>
+          <AppText variant="label" color={c.goldText}>Lokalizacja kościoła</AppText>
+          <GpsLocationPicker lat={lat} lng={lng} gpsRadius={gpsRadius} onLatChange={setLat} onLngChange={setLng} onGpsRadiusChange={setGpsRadius} />
+        </View>
+      )}
+      {methods.includes('qr') && (
+        <Button label="Pokaż kod QR do wydruku" icon="qrcode" variant="secondary" onPress={() => setQrModalVisible(true)} />
+      )}
+      <Button label="Zapisz ustawienia obecności" onPress={handleSaveAttendance} loading={savingAttendance} />
+    </Card>
+  )
 
-      {/* QR Modal */}
-      <Modal visible={qrModalVisible} transparent animationType="fade" onRequestClose={() => setQrModalVisible(false)}>
-        <TouchableOpacity style={styles.qrOverlay} activeOpacity={1} onPress={() => setQrModalVisible(false)}>
-          <TouchableOpacity style={styles.qrCard} activeOpacity={1}>
-            <Text style={styles.qrCardTitle}>Kod QR parafii</Text>
-            <Text style={styles.qrCardSub}>Wydrukuj i wywieś w zakrystii. Ministranci skanują go aplikacją przy każdej służbie.</Text>
-            <View style={styles.qrWrapper}>
-              <QRCode
-                value={buildParishQrValue(parish.id)}
-                size={220}
-                color="#000000"
-                backgroundColor="#FFFFFF"
-              />
-            </View>
-            <Text style={styles.qrParishName}>{parish.name}</Text>
-            <TouchableOpacity style={styles.qrCloseBtn} onPress={() => setQrModalVisible(false)}>
-              <Text style={styles.qrCloseBtnText}>Zamknij</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+  const chatCard = (
+    <Card large style={styles.card}>
+      <AppText variant="eyebrow" color={c.goldInk}>Czat</AppText>
+      <ToggleRow
+        value={allowMemberDm}
+        onChange={setAllowMemberDm}
+        title="Wiadomości prywatne między ministrantami"
+        sub={allowMemberDm ? 'Włączone — ministranci i rodzice mogą pisać między sobą' : 'Wyłączone — rozmowę prywatną zaczyna tylko opiekun'}
+      />
+      {chatExtras && (
+        <>
+          <ToggleRow
+            value={parentsGeneral}
+            onChange={setParentsGeneral}
+            title="Rodzice widzą kanał ogólny"
+            sub={parentsGeneral ? 'Rodzice czytają kanał „Ministranci” (bez pisania)' : 'Kanał „Ministranci” tylko dla ministrantów i opiekunów'}
+          />
+          <ToggleRow
+            value={memberPolls}
+            onChange={setMemberPolls}
+            title="Ministranci mogą tworzyć ankiety"
+            sub={memberPolls ? 'Każdy w kanale może założyć ankietę' : 'Ankiety zakłada tylko opiekun'}
+          />
+        </>
+      )}
+      <Button label="Zapisz ustawienia czatu" variant="secondary" onPress={handleSaveDm} loading={savingDm} />
+    </Card>
+  )
+
+  const configCard = (
+    <Card flush>
+      <View style={styles.cardHead}><AppText variant="eyebrow" color={c.goldInk}>Konfiguracja</AppText></View>
+      <ListRow first icon="clock-outline" title="Rozkład Mszy Świętych" subtitle="Stały tydzień, zmiany okresowe, niedziele" onPress={() => router.push('/(admin)/mass-schedule')} />
+      <ListRow icon="church" title="Kościoły i kaplice" subtitle="Filie, kaplice i ich lokalizacja GPS" onPress={() => router.push('/(admin)/churches' as any)} />
+      <ListRow icon="account-star" title="Funkcje liturgiczne" subtitle="Lektor, ceremoniarz, turyferariusz… — kto co może pełnić" onPress={() => router.push('/(admin)/functions' as any)} />
+      <ListRow icon="tablet" title="Tryb zakrystii (tablet)" subtitle="Dzieci bez telefonu potwierdzają obecność na wspólnym tablecie" onPress={() => router.push('/(admin)/kiosk' as any)} />
+      <ListRow icon="star-circle" title="Reguły punktowania" subtitle="Ile punktów za jaką służbę" onPress={() => router.push('/(admin)/point-rules')} />
+      <ListRow icon="trophy" title="Wyzwania sezonowe" subtitle="Roraty, Droga Krzyżowa, Różaniec… z premią punktową" onPress={() => router.push('/(admin)/challenges' as any)} />
+      <ListRow icon="calendar-sync" title="Stałe dyżury" subtitle="Kto służy co tydzień" onPress={() => router.push('/(admin)/recurring-assignments')} />
+      <ListRow icon="shield-star" title="Rangi" subtitle="Ścieżka formacji i przypisywanie" onPress={() => router.push('/(admin)/rank-management')} />
+      <ListRow icon="medal" title="Odznaki" subtitle="Tworzenie i przyznawanie" onPress={() => router.push('/(admin)/badge-management')} />
+      <ListRow icon="book-open-variant" title="Wiedza parafii" subtitle="Własne wpisy" onPress={() => router.push('/(admin)/wiedza-admin')} />
+      <ListRow icon="flag" title="Zgłoszenia z czatu" subtitle="Moderacja wiadomości" onPress={() => router.push('/(admin)/chat-reports')} />
+    </Card>
+  )
+
+  return (
+    <View style={[styles.flex, { backgroundColor: c.bg }]}>
+      <Stack.Screen options={{ title: 'Ustawienia parafii', headerShown: false }} />
+      <KeyboardScrollView contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
+        {!isDesktop && (
+          <ScreenHeader
+            eyebrow={parish.name}
+            title="Ustawienia parafii"
+            onBack={() => (router.canGoBack() ? router.back() : router.replace('/(admin)/(admin-tabs)'))}
+          />
+        )}
+        {isDesktop ? (
+          <View style={styles.desktop}>
+            <View style={styles.col}>{dataCard}{codeCard}<TourTarget id="settings:public"><PublicScheduleCard /></TourTarget><TourTarget id="settings:config">{configCard}</TourTarget></View>
+            <View style={styles.col}>{attendanceCard}{chatCard}</View>
+          </View>
+        ) : (
+          <View style={styles.body}>{dataCard}{codeCard}<TourTarget id="settings:public"><PublicScheduleCard /></TourTarget>{attendanceCard}{chatCard}<TourTarget id="settings:config">{configCard}</TourTarget></View>
+        )}
+      </KeyboardScrollView>
+
+      <Sheet
+        visible={confirmRegen}
+        onClose={() => setConfirmRegen(false)}
+        title="Wygenerować nowy kod?"
+        footer={<><Button label="Wygeneruj nowy" variant="danger" onPress={() => { setConfirmRegen(false); doRegenerate() }} /><Button label="Anuluj" variant="secondary" onPress={() => setConfirmRegen(false)} /></>}
+      >
+        <AppText muted>{`Stary kod ${inviteCode} przestanie działać. Osoby, które już dołączyły, zostają w parafii.`}</AppText>
+      </Sheet>
+
+      <Sheet visible={qrModalVisible} onClose={() => setQrModalVisible(false)} title="Kod QR parafii">
+        <AppText muted>Wydrukuj i wywieś w zakrystii. Ministranci skanują go przy każdej służbie.</AppText>
+        <View style={styles.qrWrap}>
+          <QRCode value={buildParishQrValue(parish.id)} size={220} color="#000000" backgroundColor="#FFFFFF" />
+        </View>
+        <AppText variant="bodyStrong" style={styles.centerText}>{parish.name}</AppText>
+      </Sheet>
     </View>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    content: { padding: 16, gap: 16 },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-    section: { backgroundColor: c.surface, borderRadius: 16, padding: 16, ...shadow.md, gap: 6 },
-    sectionTitle: { fontSize: 16, fontWeight: '700', color: c.text, marginBottom: 4 },
-    sectionSub: { fontSize: 13, color: c.subtext, lineHeight: 18, marginBottom: 8 },
-
-    label: { fontSize: 13, fontWeight: '600', color: c.subtext, marginTop: 6 },
-    input: {
-      backgroundColor: c.bg, borderRadius: 10, padding: 13,
-      fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
-    },
-    saveButton: { backgroundColor: c.primary, borderRadius: 10, padding: 14, alignItems: 'center', marginTop: 8 },
-    saveButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-
-    // Attendance mode options
-    modeRow: {
-      flexDirection: 'row', alignItems: 'center', gap: 12,
-      borderWidth: 1.5, borderColor: c.border, borderRadius: 12,
-      padding: 12, marginBottom: 8,
-    },
-    modeIcon: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-    modeLabel: { fontSize: 15, fontWeight: '600', color: c.text },
-    modeSub: { fontSize: 12, color: c.textTertiary, marginTop: 2, lineHeight: 16 },
-    radioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: c.iconMuted, justifyContent: 'center', alignItems: 'center' },
-    radioInner: { width: 10, height: 10, borderRadius: 5 },
-
-    // GPS fields
-    gpsBox: { backgroundColor: '#EA580C10', borderRadius: 12, padding: 14, gap: 4, marginBottom: 4 },
-    gpsBoxTitle: { fontSize: 14, fontWeight: '700', color: '#EA580C', marginBottom: 8 },
-
-    // QR button
-    qrButton: {
-      flexDirection: 'row', alignItems: 'center', gap: 8,
-      backgroundColor: c.primaryAlpha08, borderRadius: 10, padding: 13,
-      borderWidth: 1, borderColor: c.primaryAlpha20, marginBottom: 4,
-    },
-    qrButtonText: { fontSize: 14, color: c.primary, fontWeight: '600' },
-
-    codeRow: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      backgroundColor: c.primaryAlpha08, borderRadius: 12, padding: 16,
-      borderWidth: 1, borderColor: c.primaryAlpha20,
-    },
-    codeText: { fontSize: 28, fontWeight: '800', color: c.primary, letterSpacing: 4, fontVariant: ['tabular-nums'] },
-    copyButton: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      backgroundColor: c.surface, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
-      borderWidth: 1, borderColor: c.primaryAlpha20,
-    },
-    copyButtonText: { fontSize: 14, color: c.primary, fontWeight: '600' },
-    regenButton: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      gap: 6, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: c.danger + '33',
-    },
-    regenButtonText: { fontSize: 14, color: c.danger, fontWeight: '500' },
-
-    navRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-    navIcon: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-    navInfo: { flex: 1 },
-    navTitle: { fontSize: 15, fontWeight: '600', color: c.text },
-    navSub: { fontSize: 12, color: c.textTertiary, marginTop: 1 },
-    divider: { height: 1, backgroundColor: c.primarySurface, marginVertical: 2 },
-
-    toast: {
-      position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
-      bottom: 24, left: 20, right: 20, zIndex: 9999,
-      backgroundColor: '#10B981', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14,
-      flexDirection: 'row', alignItems: 'center', gap: 10,
-      ...shadow.md,
-    },
-    toastText: { color: '#fff', fontSize: 14, fontWeight: '600', flex: 1 },
-
-    // QR Modal
-    qrOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-    qrCard: {
-      backgroundColor: c.surface, borderRadius: 24, padding: 28,
-      alignItems: 'center', gap: 8, width: '100%', maxWidth: 340,
-      ...shadow.brand,
-    },
-    qrCardTitle: { fontSize: 20, fontWeight: '700', color: c.text },
-    qrCardSub: { fontSize: 13, color: c.subtext, textAlign: 'center', lineHeight: 18 },
-    qrWrapper: { padding: 16, backgroundColor: c.surface, borderRadius: 12, marginVertical: 8 },
-    qrParishName: { fontSize: 14, fontWeight: '600', color: c.primary },
-    qrCloseBtn: {
-      backgroundColor: c.primary, borderRadius: 12, paddingHorizontal: 32, paddingVertical: 12, marginTop: 8,
-    },
-    qrCloseBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  })
-}
+const styles = StyleSheet.create({
+  primaryBox: { gap: 8 },
+  primaryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  flex: { flex: 1, minWidth: 0 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  centerText: { textAlign: 'center' },
+  selfStart: { alignSelf: 'flex-start' },
+  body: { padding: 16, gap: 14 },
+  desktop: { flexDirection: 'row', gap: 20, padding: 28, paddingHorizontal: 32, alignItems: 'flex-start' },
+  col: { flex: 1, gap: 16 },
+  card: { gap: 12, padding: 18 },
+  cardHead: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 8 },
+  codeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  code: { ...sans(800), fontSize: 30, letterSpacing: 2, flex: 1, minWidth: 140, fontVariant: ['tabular-nums'] },
+  gpsBox: { gap: 8, borderRadius: 14, padding: 12 },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, cursor: 'pointer' } as any,
+  qrWrap: { alignSelf: 'center', padding: 16, backgroundColor: '#FFFFFF', borderRadius: 16 },
+})

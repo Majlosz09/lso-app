@@ -1,358 +1,360 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
-import {
-  View, Text, StyleSheet, TouchableOpacity,
-  ActivityIndicator, ScrollView
-} from 'react-native'
-import { useRouter, useFocusEffect } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { useFocusEffect, useRouter } from 'expo-router'
 import { supabase } from '../../../lib/supabase'
+import { slotTitle } from '../../../lib/massSchedule'
+import { PrintScheduleSheet } from '../../../components/schedule/PrintScheduleSheet'
+import { churchLabel, useChurches } from '../../../hooks/useChurches'
 import { useAuthStore } from '../../../stores/authStore'
-import { MassTemplate, getCatColors, ScheduleCategory } from '../../../types/database'
-import { shadow } from '../../../lib/shadows'
+import { ScheduleCategory, CATEGORY_CONFIG } from '../../../types/database'
 import { useTheme } from '../../../lib/ThemeContext'
-import { Colors } from '../../../lib/theme'
+import { sans, serif, VESTMENT_DOT, VestmentColor } from '../../../lib/theme'
+import { getLiturgicalDay, useLiturgyVersion } from '../../../lib/liturgy'
+import { dayShort, localDateStr, pl, shortDate, weekDays as weekOf } from '../../../lib/dates'
+import { useIsDesktop } from '../../../hooks/useIsDesktop'
+import { useLiturgyHeader } from '../../../hooks/useLiturgyHeader'
+import { ChoiceCard } from '../../../components/auth/formParts'
+import { AppText, Button, Card, Icon, ScreenHeader, Sheet } from '../../../components/ui'
+import { TourTarget, tourRef } from '../../../components/tour/TourTarget'
 
-type AssignedProfile = { full_name: string }
-type Assignment = { profile: AssignedProfile | null }
+type Assignment = { status: string; profile: { full_name: string } | null }
 type WeekSchedule = {
   id: string
   title: string
   date: string
   time: string
   category: ScheduleCategory
+  service_mode: string
+  church_id: string | null
   schedule_assignments: Assignment[]
 }
-
 type SlotItem = {
   key: string
   time: string
   title: string
   category: ScheduleCategory
+  /** none = bez obecności i punktów (nie alarmujemy o braku obsady) */
+  mode: string
+  churchId: string | null
   isTemplate: boolean
   schedule: WeekSchedule | null
+  names: string[]
 }
 
-const DAYS_PL = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota']
-
-function localDateStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function getWeekBounds(offsetWeeks: number) {
-  const now = new Date()
-  const dayOfWeek = now.getDay()
-  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-  const monday = new Date(now)
-  monday.setDate(now.getDate() + diffToMonday + offsetWeeks * 7)
-  monday.setHours(0, 0, 0, 0)
-  const sunday = new Date(monday)
-  sunday.setDate(monday.getDate() + 6)
-  sunday.setHours(23, 59, 59, 999)
-  const fmt = (d: Date) => d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })
-  return {
-    start: monday,
-    end: sunday,
-    label: `${fmt(monday)} – ${fmt(sunday)} ${monday.getFullYear()}`,
-  }
-}
+const INACTIVE = ['absent', 'excused', 'confirmed', 'swapped']
 
 export default function SchedulesTab() {
+  useLiturgyVersion() // odśwież, gdy kalendarz kolejnego roku się policzy
   const router = useRouter()
+  const isDesktop = useIsDesktop()
   const { profile } = useAuthStore()
+  const { colors: c } = useTheme()
+  const { palette } = useLiturgyHeader()
   const [weekOffset, setWeekOffset] = useState(0)
   const [schedules, setSchedules] = useState<WeekSchedule[]>([])
-  const [templates, setTemplates] = useState<MassTemplate[]>([])
+  const [slots, setSlots] = useState<any[]>([])
+  const { main, byId: churchById, multi } = useChurches()
   const [loading, setLoading] = useState(true)
   const [creatingSlotKey, setCreatingSlotKey] = useState<string | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [printOpen, setPrintOpen] = useState(false)
 
-  const { colors: c, isDark } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
+  const days = useMemo(() => weekOf(weekOffset), [weekOffset])
+  const today = localDateStr()
 
-  const { start, end, label } = useMemo(() => getWeekBounds(weekOffset), [weekOffset])
-
+  // obowiązujący rozkład tygodnia (stały + zmiany okresowe)
   useEffect(() => {
     if (!profile?.parish_id) return
-    supabase
-      .from('mass_templates')
-      .select('*')
-      .eq('parish_id', profile.parish_id)
-      .order('day_of_week')
-      .order('time')
-      .then(({ data }) => { if (data) setTemplates(data as MassTemplate[]) })
-  }, [profile?.parish_id])
+    supabase.rpc('mass_slots', { p_parish: profile.parish_id, p_from: days[0], p_to: days[6] })
+      .then(({ data }) => { if (data) setSlots(data as any[]) })
+  }, [profile?.parish_id, days])
 
   const loadSchedules = useCallback(() => {
+    if (!profile?.parish_id) return
     setLoading(true)
-    const startStr = localDateStr(start)
-    const endStr = localDateStr(end)
     supabase
       .from('schedules')
-      .select('id, title, date, time, category, schedule_assignments(profile:profiles(full_name))')
-      .eq('parish_id', profile?.parish_id)
-      .gte('date', startStr)
-      .lte('date', endStr)
+      .select('id, title, date, time, category, service_mode, church_id, schedule_assignments(status, profile:profiles(full_name))')
+      .eq('parish_id', profile.parish_id)
+      .gte('date', days[0])
+      .lte('date', days[6])
       .order('date')
       .order('time')
       .then(({ data, error }) => {
         if (!error && data) setSchedules(data as unknown as WeekSchedule[])
         setLoading(false)
       })
-  }, [start, end])
+  }, [days, profile?.parish_id])
 
   useFocusEffect(useCallback(() => { loadSchedules() }, [loadSchedules]))
 
-  useEffect(() => { loadSchedules() }, [weekOffset])
-
-  const weekDays = useMemo(() => {
-    const days: { date: string; dow: number }[] = []
-    const d = new Date(start)
-    while (d <= end) {
-      days.push({ date: localDateStr(d), dow: d.getDay() })
-      d.setDate(d.getDate() + 1)
-    }
-    return days
-  }, [start, end])
-
-  const grouped = useMemo(() => {
-    return weekDays.map(({ date, dow }) => {
-      const daySchedules = schedules.filter(s => s.date === date)
-      const scheduledSlots: SlotItem[] = daySchedules.map(s => ({
-        key: s.id,
-        time: s.time.slice(0, 5),
-        title: s.title,
-        category: s.category ?? 'msza',
-        isTemplate: false,
-        schedule: s,
+  const grouped = useMemo(() => days.map(date => {
+    const scheduled: SlotItem[] = schedules.filter(s => s.date === date).map(s => ({
+      key: s.id,
+      time: s.time.slice(0, 5),
+      title: s.title,
+      category: s.category ?? 'msza',
+      mode: s.service_mode ?? 'signup',
+      churchId: s.church_id ?? null,
+      isTemplate: false,
+      schedule: s,
+      names: s.schedule_assignments.filter(a => !INACTIVE.includes(a.status)).map(a => a.profile?.full_name ?? '').filter(Boolean),
+    }))
+    const times = new Set(scheduled.map(s => `${s.time}_${s.churchId ?? main?.id ?? ''}`))
+    const tpl: SlotItem[] = slots
+      .filter(t => t.slot_date === date && !times.has(`${String(t.slot_time).slice(0, 5)}_${t.church_id ?? main?.id ?? ''}`))
+      .map(t => ({
+        key: `tpl-${date}-${t.entry_id}`, time: String(t.slot_time).slice(0, 5), title: slotTitle(t),
+        category: t.category as ScheduleCategory, mode: t.service_mode, churchId: t.church_id ?? null, isTemplate: true, schedule: null, names: [],
       }))
-      const scheduledTimes = new Set(scheduledSlots.map(s => s.time))
-      const templateSlots: SlotItem[] = templates
-        .filter(t => t.day_of_week === dow && !scheduledTimes.has(t.time.slice(0, 5)))
-        .map(t => ({
-          key: `tpl-${date}-${t.id}`,
-          time: t.time.slice(0, 5),
-          title: t.label ?? 'Msza Święta',
-          category: 'msza' as ScheduleCategory,
-          isTemplate: true,
-          schedule: null,
-        }))
-      const slots = [...scheduledSlots, ...templateSlots]
-        .sort((a, b) => a.time.localeCompare(b.time))
-      return { date, dow, slots }
-    }).filter(d => d.slots.length > 0)
-  }, [weekDays, schedules, templates])
+    return { date, slots: [...scheduled, ...tpl].sort((a, b) => a.time.localeCompare(b.time)) }
+  }), [days, schedules, slots, main?.id])
 
+  const allSlots = grouped.flatMap(g => g.slots).filter(s => s.mode !== 'none')
+  const staffedCount = allSlots.filter(s => s.names.length > 0).length
+
+  // Wolne miejsce z rozkładu Mszy → tworzy służbę i otwiera jej szczegóły (jak dotąd)
   const handleEmptySlot = async (date: string, slot: SlotItem) => {
     setCreatingSlotKey(slot.key)
     const { data, error } = await supabase
       .from('schedules')
       .insert({
-        title: slot.title,
-        date,
-        time: slot.time + ':00',
-        category: slot.category,
-        group_id: null,
-        location: '',
-        gps_radius: 100,
-        notes: null,
-        created_by: profile?.id,
-        parish_id: profile?.parish_id,
+        title: slot.title, date, time: slot.time + ':00', category: slot.category, group_id: null,
+        location: '', gps_radius: 100, notes: null, created_by: profile?.id, parish_id: profile?.parish_id,
+        church_id: slot.churchId,
       })
       .select('id')
       .single()
     setCreatingSlotKey(null)
-    if (!error && data) {
-      router.push(`/(admin)/schedule-detail?id=${data.id}`)
-    }
+    if (!error && data) router.push(`/(admin)/schedule-detail?id=${data.id}`)
   }
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.weekNav}>
-        <TouchableOpacity
-          onPress={() => setWeekOffset(w => Math.max(-52, w - 1))}
-          hitSlop={12}
-          disabled={weekOffset <= -52}
-        >
-          <Ionicons name="chevron-back" size={22} color={weekOffset <= -52 ? c.iconMuted : c.primary} />
-        </TouchableOpacity>
-        <Text style={styles.weekLabel}>{label}</Text>
-        <TouchableOpacity
-          onPress={() => setWeekOffset(w => Math.min(104, w + 1))}
-          hitSlop={12}
-          disabled={weekOffset >= 104}
-        >
-          <Ionicons name="chevron-forward" size={22} color={weekOffset >= 104 ? c.iconMuted : c.primary} />
-        </TouchableOpacity>
-      </View>
+  const open = (date: string, slot: SlotItem) =>
+    slot.schedule ? router.push(`/(admin)/schedule-detail?id=${slot.schedule.id}`) : handleEmptySlot(date, slot)
 
-      <View style={styles.addRow}>
-        <TouchableOpacity
-          style={[styles.addButton, { flex: 1 }]}
-          onPress={() => router.push('/(admin)/schedule-form')}
-        >
-          <Ionicons name="add" size={18} color={c.primary} />
-          <Text style={styles.addButtonText}>Jednorazowa służba</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.addButton, { flex: 1 }]}
-          onPress={() => router.push('/(admin)/schedule-series')}
-        >
-          <Ionicons name="calendar-outline" size={18} color={c.primary} />
-          <Text style={styles.addButtonText}>Cykliczne służby</Text>
-        </TouchableOpacity>
-      </View>
+  const weekLabel = `${shortDate(days[0])} – ${shortDate(days[6])}`
 
-      <TouchableOpacity
-        style={[styles.addButton, styles.recurringButton]}
-        onPress={() => router.push('/(admin)/recurring-assignments')}
-      >
-        <Ionicons name='repeat-outline' size={18} color={c.primary} />
-        <Text style={styles.addButtonText}>Stałe dyżury ministrantów</Text>
-      </TouchableOpacity>
+  const weekNav = (onHeader: boolean) => (
+    <View style={[styles.weekNav, { backgroundColor: onHeader ? palette.chip : c.surface, borderColor: onHeader ? 'transparent' : c.border }]}>
+      <Pressable accessibilityLabel="Poprzedni tydzień" onPress={() => setWeekOffset(w => Math.max(-52, w - 1))} hitSlop={6}>
+        <Icon name="chevron-left" size={20} color={onHeader ? palette.fg : c.primary} />
+      </Pressable>
+      <AppText style={[styles.weekText, { color: onHeader ? palette.fg : c.text }]}>{weekLabel}</AppText>
+      <Pressable accessibilityLabel="Następny tydzień" onPress={() => setWeekOffset(w => Math.min(104, w + 1))} hitSlop={6}>
+        <Icon name="chevron-right" size={20} color={onHeader ? palette.fg : c.primary} />
+      </Pressable>
+    </View>
+  )
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={c.primary} />
+  const addSheet = (
+    <>
+    <PrintScheduleSheet visible={printOpen} onClose={() => setPrintOpen(false)} />
+    <Sheet visible={addOpen} onClose={() => setAddOpen(false)} title="Dodaj służbę">
+      <ChoiceCard icon="printer" title="Drukuj grafik" subtitle="Tydzień albo miesiąc na A4 do zakrystii (z kodem QR)"
+        onPress={() => { setAddOpen(false); setPrintOpen(true) }} />
+      <ChoiceCard icon="auto-fix" title="Ułóż grafik za mnie" subtitle="Sprawiedliwa propozycja obsady na tydzień albo miesiąc"
+        onPress={() => { setAddOpen(false); router.push('/(admin)/auto-schedule' as any) }} />
+      <ChoiceCard icon="calendar-plus" title="Jednorazowa służba" subtitle="Jeden termin: dzień, godzina, rodzaj"
+        onPress={() => { setAddOpen(false); router.push('/(admin)/schedule-form') }} />
+      <ChoiceCard icon="calendar-multiple" title="Cykl służb" subtitle="Seria terminów, np. roraty albo różaniec"
+        onPress={() => { setAddOpen(false); router.push('/(admin)/schedule-series') }} />
+      <ChoiceCard icon="calendar-sync" title="Stałe dyżury ministrantów" subtitle="Kto służy co tydzień o danej godzinie"
+        onPress={() => { setAddOpen(false); router.push('/(admin)/recurring-assignments') }} />
+    </Sheet>
+    </>
+  )
+
+  // nazwa filii / kaplicy (kościoła głównego nie podpisujemy)
+  const churchTag = (s: SlotItem) => {
+    const ch = s.churchId ? churchById[s.churchId] : null
+    return multi && ch && !ch.is_main ? churchLabel(ch) : ''
+  }
+  const staffText = (s: SlotItem) => s.mode === 'none' && !s.names.length
+    ? 'bez punktów'
+    : s.isTemplate
+    ? 'wolne miejsce z rozkładu'
+    : s.names.length ? `${s.names.length} ${pl(s.names.length, ['ministrant', 'ministrantów', 'ministrantów'])}` : 'bez obsady'
+  const staffColor = (s: SlotItem) => (s.names.length ? c.success : s.mode === 'none' ? c.subtext : s.isTemplate ? c.goldInk : c.dangerStrong)
+
+  // ── Web: siatka tygodnia ─────────────────────────────────────────────────
+  if (isDesktop) {
+    return (
+      <View style={[styles.flex, { backgroundColor: c.bg }]}>
+        <View style={styles.deskBar}>
+          {weekNav(false)}
+          <AppText variant="small" muted style={styles.deskCount}>{`${staffedCount} z ${allSlots.length} służb obsadzonych`}</AppText>
+          <TourTarget id="schedules:add" style={styles.deskActions}>
+          <Button label="Drukuj" icon="printer" variant="secondary" compact onPress={() => setPrintOpen(true)} />
+          <Button label="Ułóż grafik" icon="auto-fix" variant="secondary" compact onPress={() => router.push('/(admin)/auto-schedule' as any)} />
+          <Button label="Stałe dyżury" icon="calendar-sync" variant="secondary" compact onPress={() => router.push('/(admin)/recurring-assignments')} />
+          <Button label="Cykl służb" icon="calendar-multiple" variant="secondary" compact onPress={() => router.push('/(admin)/schedule-series')} />
+          <Button label="Dodaj służbę" icon="plus" compact onPress={() => router.push('/(admin)/schedule-form')} />
+          </TourTarget>
         </View>
-      ) : grouped.length === 0 ? (
-        <View style={styles.empty}>
-          <Ionicons name="calendar-outline" size={52} color={c.iconMuted} />
-          <Text style={styles.emptyText}>Brak służb w tym tygodniu</Text>
-          <TouchableOpacity onPress={() => setWeekOffset(0)}>
-            <Text style={styles.emptyLink}>Wróć do bieżącego tygodnia</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.listContent}>
-          {grouped.map(({ date, dow, slots }) => {
-            const d = new Date(date + 'T12:00:00')
-            return (
-              <View key={date} style={styles.dayGroup}>
-                <View style={styles.dayHeader}>
-                  <Text style={styles.dayName}>{DAYS_PL[dow]}</Text>
-                  <Text style={styles.dayDate}>
-                    {d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' })}
-                  </Text>
-                </View>
-                {slots.map(slot => {
-                  const names = slot.schedule?.schedule_assignments
-                    .map(a => a.profile?.full_name)
-                    .filter(Boolean) ?? []
-                  const isCreating = creatingSlotKey === slot.key
-                  const cat = getCatColors(slot.category, isDark)
-
-                  return (
-                    <TouchableOpacity
-                      key={slot.key}
-                      style={[styles.card, { borderLeftColor: cat.color }]}
-                      onPress={() => {
-                        if (slot.schedule) {
-                          router.push(`/(admin)/schedule-detail?id=${slot.schedule.id}`)
-                        } else {
-                          handleEmptySlot(date, slot)
-                        }
-                      }}
-                      activeOpacity={0.75}
-                      disabled={isCreating}
-                    >
-                      <View style={styles.cardTop}>
-                        <View style={[styles.timeBadge, { backgroundColor: cat.bg }]}>
-                          <Text style={[styles.timeText, { color: cat.color }]}>{slot.time}</Text>
-                        </View>
-                        <View style={styles.cardInfo}>
-                          <Text style={styles.cardTitle} numberOfLines={1}>{slot.title}</Text>
-                          <Text style={[styles.categoryLabel, { color: cat.color }]}>{cat.label}</Text>
-                        </View>
-                        {isCreating
-                          ? <ActivityIndicator size="small" color={cat.color} />
-                          : <Ionicons name="chevron-forward" size={16} color={c.iconMuted} />
-                        }
+        {loading ? <ActivityIndicator color={c.primary} style={styles.loader} /> : (
+          <ScrollView>
+          {/* wąski desktop: kolumny dni nie ściskają się poniżej czytelnej szerokości — przewijanie w poziomie */}
+          <ScrollView horizontal contentContainerStyle={styles.gridScroll}>
+          <View style={styles.grid}>
+            {grouped.map(({ date, slots }) => {
+              const lit = getLiturgicalDay(date)
+              const vest = (lit.color ?? 'GREEN') as VestmentColor
+              const isToday = date === today
+              return (
+                <View key={date} style={styles.gridCol}>
+                  <Pressable
+                    onPress={() => router.push(`/(admin)/schedule-day?date=${date}` as any)}
+                    style={[styles.dayHead, { backgroundColor: isToday ? c.primary : c.surface, borderColor: isToday ? c.primary : c.border }]}
+                  >
+                    <View style={styles.rowBetween}>
+                      <AppText style={[styles.dayHeadTitle, { color: isToday ? '#FFFFFF' : c.text }]}>
+                        {dayShort(date)} <AppText style={[styles.dayHeadDate, { color: isToday ? '#C9D3E3' : c.subtext }]}>{shortDate(date)}</AppText>
+                      </AppText>
+                      <View style={[styles.dot, { backgroundColor: VESTMENT_DOT[vest] }, vest === 'WHITE' && { borderWidth: 1, borderColor: c.gold }]} />
+                    </View>
+                    <AppText style={[styles.dayHeadLit, { color: isToday ? '#C9D3E3' : c.subtext }]} numberOfLines={1}>{lit.typeLabel}</AppText>
+                  </Pressable>
+                  {slots.length === 0 && (
+                    <View style={[styles.noSvc, { borderColor: c.iconMuted }]}><AppText variant="small" muted>Brak służb</AppText></View>
+                  )}
+                  {slots.map(s => (
+                    <Card key={s.key} style={styles.gCard} onPress={() => open(date, s)}>
+                      <View style={styles.rowBetween}>
+                        <AppText style={[styles.gTime, { color: c.text }]}>{s.time}</AppText>
+                        {creatingSlotKey === s.key
+                          ? <ActivityIndicator size="small" color={c.primary} />
+                          : <AppText style={[styles.gCount, { color: staffColor(s) }]}>{s.names.length}</AppText>}
                       </View>
-
-                      {names.length > 0 ? (
-                        <View style={styles.assigneesRow}>
-                          <Ionicons name="people-outline" size={13} color={cat.color} />
-                          <Text style={[styles.assigneesText, { color: cat.color }]} numberOfLines={2}>
-                            {names.join(', ')}
-                          </Text>
-                          <Text style={[styles.countBadge, { color: cat.color, backgroundColor: cat.bg }]}>{names.length}</Text>
+                      <AppText variant="bodyStrong" numberOfLines={2}>{s.title}</AppText>
+                      {!!churchTag(s) && <AppText variant="small" color={c.goldInk} numberOfLines={1}>{churchTag(s)}</AppText>}
+                      {s.names.map(n => (
+                        <View key={n} style={[styles.person, { backgroundColor: c.borderLight }]}>
+                          <AppText style={[styles.personRole, { color: c.subtext }]}>MINISTRANT</AppText>
+                          <AppText style={[styles.personName, { color: c.text }]} numberOfLines={1}>{n}</AppText>
                         </View>
-                      ) : (
-                        <View style={styles.assigneesRow}>
-                          <Ionicons name="person-outline" size={13} color={c.textTertiary} />
-                          <Text style={[styles.assigneesText, { color: c.textTertiary }]}>
-                            Brak zapisanych ministrantów
-                          </Text>
+                      ))}
+                      {s.names.length === 0 && (
+                        <View style={[styles.person, styles.assign, { borderColor: c.gold, backgroundColor: c.highlight }]}>
+                          <AppText style={[styles.personName, { color: c.goldInk }]}>+ Przydziel</AppText>
                         </View>
                       )}
-                    </TouchableOpacity>
+                    </Card>
+                  ))}
+                </View>
+              )
+            })}
+          </View>
+          </ScrollView>
+          </ScrollView>
+        )}
+        <PrintScheduleSheet visible={printOpen} onClose={() => setPrintOpen(false)} />
+      </View>
+    )
+  }
+
+  // ── Telefon ──────────────────────────────────────────────────────────────
+  return (
+    <View style={[styles.flex, { backgroundColor: c.bg }]}>
+      <ScrollView>
+        <ScreenHeader
+          eyebrow="Grafik parafii"
+          title={weekLabel}
+          subtitle={`${staffedCount} z ${allSlots.length} służb obsadzonych`}
+          right={
+            <Pressable ref={tourRef('schedules:add')} onPress={() => setAddOpen(true)} style={[styles.addBtn, { backgroundColor: c.gold }]} accessibilityRole="button">
+              <Icon name="plus" size={18} color="#071C3A" />
+              <AppText style={styles.addText}>Dodaj</AppText>
+            </Pressable>
+          }
+        >
+          {weekNav(true)}
+        </ScreenHeader>
+        <View style={styles.body}>
+          {loading ? <ActivityIndicator color={c.primary} style={styles.loader} /> : grouped.filter(g => g.slots.length).length === 0 ? (
+            <View style={[styles.noSvc, { borderColor: c.iconMuted, padding: 24 }]}>
+              <AppText muted>Brak służb w tym tygodniu.</AppText>
+              <Pressable onPress={() => setWeekOffset(0)}><AppText variant="label" color={c.primary}>Wróć do bieżącego tygodnia</AppText></Pressable>
+            </View>
+          ) : grouped.filter(g => g.slots.length).map(({ date, slots }) => {
+            const lit = getLiturgicalDay(date)
+            const vest = (lit.color ?? 'GREEN') as VestmentColor
+            return (
+              <View key={date} style={styles.group}>
+                <View style={styles.groupHead}>
+                  <View style={[styles.dot, { backgroundColor: VESTMENT_DOT[vest] }, vest === 'WHITE' && { borderWidth: 1, borderColor: c.gold }]} />
+                  <AppText style={[styles.groupDay, { color: c.text }]}>{`${dayShort(date)} ${shortDate(date)}`}</AppText>
+                  <AppText variant="small" muted numberOfLines={1} style={styles.flex}>{lit.name}</AppText>
+                </View>
+                {slots.map(s => {
+                  const cat = CATEGORY_CONFIG[s.category] ?? CATEGORY_CONFIG.msza
+                  return (
+                    <Card key={s.key} onPress={() => open(date, s)} style={styles.mCard}>
+                      <View style={styles.mTop}>
+                        <AppText style={[styles.mTime, { color: c.text }]}>{s.time}</AppText>
+                        <View style={[styles.catLine, { backgroundColor: cat.color }]} />
+                        <View style={styles.flex}>
+                          <AppText variant="bodyStrong" numberOfLines={1}>{s.title}</AppText>
+                          {!!churchTag(s) && <AppText variant="small" color={c.goldInk} numberOfLines={1}>{churchTag(s)}</AppText>}
+                          <AppText style={[styles.mStaff, { color: staffColor(s) }]}>{staffText(s)}</AppText>
+                        </View>
+                        {creatingSlotKey === s.key ? <ActivityIndicator size="small" color={c.primary} /> : <Icon name="chevron-right" size={22} color={c.iconMuted} />}
+                      </View>
+                      {s.names.length > 0 && (
+                        <AppText variant="small" muted numberOfLines={2} style={styles.mNames}>{s.names.join(', ')}</AppText>
+                      )}
+                      <View style={[styles.mBar, { backgroundColor: c.borderLight }]}>
+                        <View style={[styles.mBarFill, { width: s.names.length ? '100%' : '0%', backgroundColor: c.successStrong }]} />
+                      </View>
+                    </Card>
                   )
                 })}
               </View>
             )
           })}
-        </ScrollView>
-      )}
+        </View>
+      </ScrollView>
+      {addSheet}
     </View>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-    weekNav: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      backgroundColor: c.surface, paddingHorizontal: 20, paddingVertical: 13,
-      borderBottomWidth: 1, borderBottomColor: c.primarySurface,
-    },
-    weekLabel: { fontSize: 14, fontWeight: '600', color: c.text },
-
-    addRow: {
-      flexDirection: 'row', gap: 10, marginHorizontal: 16, marginTop: 16, marginBottom: 8,
-    },
-    addButton: {
-      flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center',
-      backgroundColor: c.primaryAlpha08, borderRadius: 12, padding: 12,
-      borderWidth: 1, borderColor: c.primaryAlpha20,
-    },
-    addButtonSeries: {},
-    recurringButton: { marginHorizontal: 16, marginBottom: 8 },
-    addButtonText: { color: c.primary, fontSize: 14, fontWeight: '600' },
-
-    listContent: { padding: 16, gap: 4 },
-
-    dayGroup: { marginBottom: 16 },
-    dayHeader: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 8 },
-    dayName: { fontSize: 14, fontWeight: '700', color: c.text },
-    dayDate: { fontSize: 12, color: c.subtext },
-
-    card: {
-      backgroundColor: c.surface, borderRadius: 12, padding: 12, marginBottom: 8,
-      ...shadow.xs, gap: 8,
-      borderLeftWidth: 4,
-    },
-    categoryLabel: { fontSize: 11, fontWeight: '600', marginTop: 1 },
-    cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    timeBadge: {
-      borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5,
-      minWidth: 48, alignItems: 'center',
-    },
-    timeText: { fontSize: 13, fontWeight: '700' },
-    cardInfo: { flex: 1 },
-    cardTitle: { fontSize: 15, fontWeight: '600', color: c.text, flexShrink: 1 },
-
-    assigneesRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    assigneesText: { flex: 1, fontSize: 12, lineHeight: 16 },
-    countBadge: {
-      fontSize: 12, fontWeight: '700',
-      borderRadius: 10,
-      paddingHorizontal: 7, paddingVertical: 2,
-    },
-
-    empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-    emptyText: { color: c.textTertiary, fontSize: 15 },
-    emptyLink: { color: c.primary, fontSize: 13, fontWeight: '600', marginTop: 4 },
-  })
-}
+const styles = StyleSheet.create({
+  deskActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  flex: { flex: 1, minWidth: 0 },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  loader: { marginTop: 40 },
+  weekNav: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, borderWidth: 1, alignSelf: 'flex-start' },
+  weekText: { ...sans(700), fontSize: 13, fontVariant: ['tabular-nums'] },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12 },
+  addText: { ...sans(800), fontSize: 14, color: '#071C3A' },
+  body: { padding: 16, gap: 16, paddingBottom: 32 },
+  group: { gap: 8 },
+  groupHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
+  groupDay: { ...sans(700), fontSize: 13 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  mCard: { gap: 8 },
+  mTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  mTime: { ...sans(800), fontSize: 16, minWidth: 48, flexShrink: 0, fontVariant: ['tabular-nums'] },
+  catLine: { width: 3, alignSelf: 'stretch', borderRadius: 2 },
+  mStaff: { ...sans(600), fontSize: 12 },
+  mNames: { marginLeft: 63 },
+  mBar: { height: 5, borderRadius: 3, overflow: 'hidden' },
+  mBarFill: { height: 5, borderRadius: 3 },
+  noSvc: { borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 14, padding: 14, alignItems: 'center', gap: 8 },
+  deskBar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 32, paddingTop: 24, paddingBottom: 14, flexWrap: 'wrap' },
+  deskCount: { flex: 1, minWidth: 150 },
+  gridScroll: { flexGrow: 1 },
+  grid: { flex: 1, flexDirection: 'row', gap: 10, paddingHorizontal: 32, paddingBottom: 32, alignItems: 'flex-start' },
+  gridCol: { flex: 1, minWidth: 116, gap: 8 },
+  dayHead: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, gap: 2, cursor: 'pointer' } as any,
+  dayHeadTitle: { ...sans(800), fontSize: 15 },
+  dayHeadDate: { ...sans(600), fontSize: 12 },
+  dayHeadLit: { ...sans(500), fontSize: 11 },
+  gCard: { gap: 6, padding: 12 },
+  gTime: { ...sans(800), fontSize: 16, fontVariant: ['tabular-nums'] },
+  gCount: { ...sans(800), fontSize: 12 },
+  person: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, gap: 1 },
+  personRole: { ...sans(800), fontSize: 9, letterSpacing: 0.8 },
+  personName: { ...sans(700), fontSize: 12 },
+  assign: { borderWidth: 1 },
+})

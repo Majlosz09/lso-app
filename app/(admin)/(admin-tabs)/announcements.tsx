@@ -1,24 +1,28 @@
-import { useEffect, useState, useMemo } from 'react'
-import {
-  View, Text, FlatList, StyleSheet, TouchableOpacity,
-  Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform,
-  RefreshControl, ScrollView
-} from 'react-native'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, View } from 'react-native'
 import Toast from 'react-native-toast-message'
-import { ConfirmDialog } from '../../../components/ConfirmDialog'
-import { Ionicons } from '@expo/vector-icons'
-import { useLocalSearchParams } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { supabase } from '../../../lib/supabase'
 import { useAuthStore } from '../../../stores/authStore'
 import { Announcement, Rank } from '../../../types/database'
-import { shadow } from '../../../lib/shadows'
 import { useTheme } from '../../../lib/ThemeContext'
-import { Colors } from '../../../lib/theme'
+import { sans, serif } from '../../../lib/theme'
+import { useIsDesktop } from '../../../hooks/useIsDesktop'
+import { announcementWhen } from '../../../components/announcements/AnnouncementsFeed'
+import { AppText, Badge, Button, Chip, Icon, ScreenHeader, Sheet, TextField } from '../../../components/ui'
+import { KeyboardScrollView } from '../../../components/ui/KeyboardScrollView'
 
-type AudienceOption = { key: string; label: string; color: string }
+const FIXED_AUDIENCES = [
+  { key: 'all', label: 'Wszyscy' },
+  { key: 'members', label: 'Ministranci' },
+  { key: 'parents', label: 'Rodzice' },
+]
 
 export default function AnnouncementsTab() {
+  const router = useRouter()
+  const isDesktop = useIsDesktop()
   const { profile } = useAuthStore()
+  const { colors: c } = useTheme()
   const { openModal } = useLocalSearchParams<{ openModal?: string }>()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,15 +35,7 @@ export default function AnnouncementsTab() {
   const [ranks, setRanks] = useState<Rank[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState<{ id: string; title: string } | null>(null)
-
-  const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
-
-  const FIXED_AUDIENCES: AudienceOption[] = useMemo(() => [
-    { key: 'all', label: 'Wszyscy', color: c.primary },
-    { key: 'members', label: 'Wszyscy ministranci', color: '#2563EB' },
-    { key: 'parents', label: 'Wszyscy rodzice', color: '#16A34A' },
-  ], [c.primary])
+  const [open, setOpen] = useState<Record<string, boolean>>({})
 
   const fetchAnnouncements = async () => {
     const { data, error } = await supabase
@@ -48,26 +44,22 @@ export default function AnnouncementsTab() {
       .eq('parish_id', profile?.parish_id)
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false })
-
     if (!error && data) setAnnouncements(data as Announcement[])
     setLoading(false)
     setRefreshing(false)
   }
 
   useEffect(() => {
-    supabase.from('ranks').select('*').order('order').then(({ data }) => {
-      setRanks(data ?? [])
-    })
+    supabase.from('ranks').select('*').order('order').then(({ data }) => setRanks(data ?? []))
+    fetchAnnouncements()
   }, [])
 
-  useEffect(() => { fetchAnnouncements() }, [])
-
-  const onRefresh = () => { setRefreshing(true); fetchAnnouncements() }
+  const audienceLabel = (t: string) =>
+    FIXED_AUDIENCES.find(a => a.key === t)?.label ?? ranks.find(r => r.id === t)?.name ?? 'Wybrana grupa'
 
   const handleAdd = async () => {
-    if (!title.trim()) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Podaj tytuł ogłoszenia.' }); return }
-    if (!content.trim()) { Toast.show({ type: 'error', text1: 'Błąd', text2: 'Podaj treść ogłoszenia.' }); return }
-
+    if (!title.trim()) { Toast.show({ type: 'error', text1: 'Dodaj tytuł ogłoszenia' }); return }
+    if (!content.trim()) { Toast.show({ type: 'error', text1: 'Dodaj treść ogłoszenia' }); return }
     setSubmitting(true)
     const { error } = await supabase.from('announcements').insert({
       title: title.trim(),
@@ -78,19 +70,11 @@ export default function AnnouncementsTab() {
       parish_id: profile?.parish_id,
     })
     setSubmitting(false)
-
-    if (error) {
-      Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
-    } else {
-      setTitle(''); setContent(''); setPinned(false); setAudience('all')
-      setModalVisible(false)
-      fetchAnnouncements()
-      Toast.show({ type: 'success', text1: 'Ogłoszenie opublikowane' })
-    }
-  }
-
-  const handleDelete = (id: string, annoTitle: string) => {
-    setDeleteDialog({ id, title: annoTitle })
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    setTitle(''); setContent(''); setPinned(false); setAudience('all')
+    setModalVisible(false)
+    fetchAnnouncements()
+    Toast.show({ type: 'success', text1: 'Ogłoszenie opublikowane' })
   }
 
   const doDelete = async () => {
@@ -99,244 +83,110 @@ export default function AnnouncementsTab() {
     setDeleteDialog(null)
     const { error } = await supabase.from('announcements').delete().eq('id', id)
     if (error) Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
-    else setAnnouncements(prev => prev.filter(a => a.id !== id))
+    else {
+      setAnnouncements(prev => prev.filter(a => a.id !== id))
+      Toast.show({ type: 'success', text1: 'Ogłoszenie usunięte' })
+    }
   }
 
-  return (
-    <View style={styles.container}>
-      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
-        <Ionicons name="add" size={18} color="#fff" />
-        <Text style={styles.addButtonText}>Nowe ogłoszenie</Text>
-      </TouchableOpacity>
-
-      {loading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
-      ) : (
-        <FlatList
-          data={announcements}
-          keyExtractor={item => item.id}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="megaphone-outline" size={48} color={c.iconMuted} />
-              <Text style={styles.emptyText}>Brak ogłoszeń</Text>
-            </View>
-          }
-          renderItem={({ item }) => {
-            const fixedAud = FIXED_AUDIENCES.find(a => a.key === item.target_audience)
-            const rankAud = !fixedAud && item.target_audience !== 'all'
-              ? ranks.find(r => r.id === item.target_audience)
-              : null
-            return (
-            <View style={[styles.card, item.is_pinned && styles.cardPinned]}>
-              <View style={styles.cardHeader}>
-                <View style={styles.cardHeaderLeft}>
-                  {item.is_pinned && (
-                    <View style={styles.pinnedBadge}>
-                      <Ionicons name="pin" size={10} color={c.primary} />
-                      <Text style={styles.pinnedText}>Przypięte</Text>
-                    </View>
-                  )}
-                  <View style={styles.titleRow}>
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                    {item.target_audience !== 'all' && (
-                      <View style={[styles.audienceBadge, {
-                        backgroundColor: (fixedAud?.color ?? c.subtext) + '22',
-                      }]}>
-                        <Text style={[styles.audienceBadgeText, {
-                          color: fixedAud?.color ?? c.subtext,
-                        }]}>
-                          {fixedAud?.label ?? rankAud?.name ?? item.target_audience}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-                <TouchableOpacity onPress={() => handleDelete(item.id, item.title)} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={18} color={c.danger} />
-                </TouchableOpacity>
+  const list = loading ? <ActivityIndicator color={c.primary} style={styles.loader} /> : announcements.length === 0 ? (
+    <View style={[styles.empty, { borderColor: c.iconMuted }]}>
+      <Icon name="bullhorn" size={36} color={c.iconMuted} />
+      <AppText muted>Brak ogłoszeń. Dodaj pierwsze.</AppText>
+    </View>
+  ) : announcements.map(a => {
+    const expanded = open[a.id] ?? a === announcements[0]
+    return (
+      <Pressable
+        key={a.id}
+        onPress={() => setOpen(o => ({ ...o, [a.id]: !expanded }))}
+        style={[styles.card, { backgroundColor: c.surface, borderColor: a.is_pinned ? c.gold : c.border }]}
+      >
+        <View style={styles.head}>
+          <View style={styles.tags}>
+            {a.is_pinned && (
+              <View style={[styles.pinned, { backgroundColor: c.primary }]}>
+                <Icon name="pin" size={12} color="#FFFFFF" filled />
+                <AppText style={styles.pinnedText}>PRZYPIĘTE</AppText>
               </View>
-              <Text style={styles.cardContent}>{item.content}</Text>
-              <View style={styles.cardFooter}>
-                <Text style={styles.cardMeta}>
-                  {item.author?.full_name ?? 'Nieznany autor'}
-                </Text>
-                <Text style={styles.cardMeta}>
-                  {new Date(item.created_at).toLocaleDateString('pl-PL', {
-                    day: 'numeric', month: 'short', year: 'numeric'
-                  })}
-                </Text>
-              </View>
-            </View>
-            )
-          }}
-          contentContainerStyle={{ padding: 16, gap: 10 }}
-        />
-      )}
-
-      <ConfirmDialog
-        visible={!!deleteDialog}
-        title="Usuń ogłoszenie"
-        message={`Usunąć "${deleteDialog?.title}"?`}
-        confirmText="Usuń"
-        destructive
-        onConfirm={doDelete}
-        onCancel={() => setDeleteDialog(null)}
-      />
-
-      <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet">
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => { setModalVisible(false); setTitle(''); setContent(''); setPinned(false) }}>
-              <Ionicons name="close" size={24} color={c.text} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Nowe ogłoszenie</Text>
-            <TouchableOpacity
-              onPress={handleAdd}
-              disabled={submitting}
-              style={[styles.modalSave, submitting && { opacity: 0.5 }]}
-            >
-              {submitting
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={styles.modalSaveText}>Opublikuj</Text>
-              }
-            </TouchableOpacity>
+            )}
+            <Badge label={audienceLabel(a.target_audience).toUpperCase()} tone="gold" />
           </View>
+          <AppText variant="small" muted>{`${(a as any).author?.full_name ?? 'Parafia'} · ${announcementWhen(a.created_at)}`}</AppText>
+          <Pressable onPress={() => setDeleteDialog({ id: a.id, title: a.title })} hitSlop={8} accessibilityLabel="Usuń ogłoszenie">
+            <Icon name="delete" size={20} color={c.dangerStrong} />
+          </Pressable>
+        </View>
+        <AppText style={isDesktop ? [serif(), styles.titleWeb, { color: c.text }] : [styles.title, { color: c.text }]}>{a.title}</AppText>
+        {expanded && <AppText style={[styles.content, { color: c.text }]}>{a.content}</AppText>}
+      </Pressable>
+    )
+  })
 
-          <ScrollView
-            style={styles.modalBody}
-            contentContainerStyle={styles.modalContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            <Text style={styles.inputLabel}>Tytuł *</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Tytuł ogłoszenia"
-              placeholderTextColor={c.textTertiary}
-              value={title}
-              onChangeText={setTitle}
-            />
+  return (
+    <View style={[styles.flex, { backgroundColor: c.bg }]}>
+      <KeyboardScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAnnouncements() }} />}>
+        {!isDesktop && (
+          <ScreenHeader
+            title="Ogłoszenia"
+            onBack={() => (router.canGoBack() ? router.back() : router.replace('/(admin)/(admin-tabs)'))}
+          />
+        )}
+        <View style={[styles.body, isDesktop && styles.desktop]}>
+          <Button label="Nowe ogłoszenie" icon="plus" style={isDesktop ? styles.deskBtn : undefined} onPress={() => setModalVisible(true)} />
+          {list}
+        </View>
+      </KeyboardScrollView>
 
-            <Text style={styles.inputLabel}>Treść *</Text>
-            <TextInput
-              style={[styles.textInput, styles.textArea]}
-              placeholder="Treść ogłoszenia..."
-              placeholderTextColor={c.textTertiary}
-              value={content}
-              onChangeText={setContent}
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
-            />
+      <Sheet
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        title="Nowe ogłoszenie"
+        footer={<Button label="Opublikuj" onPress={handleAdd} loading={submitting} />}
+      >
+        <TextField label="Tytuł" placeholder="np. Zbiórka w sobotę" value={title} onChangeText={setTitle} />
+        <TextField label="Treść" placeholder="Co chcesz przekazać?" value={content} onChangeText={setContent} multiline />
+        <AppText variant="label" muted>Do kogo</AppText>
+        <View style={styles.chips}>
+          {FIXED_AUDIENCES.map(a => <Chip key={a.key} label={a.label} selected={audience === a.key} onPress={() => setAudience(a.key)} />)}
+          {ranks.map(r => <Chip key={r.id} label={r.name} icon="shield-star" selected={audience === r.id} onPress={() => setAudience(r.id)} />)}
+        </View>
+        <Pressable onPress={() => setPinned(v => !v)} style={styles.toggle} accessibilityRole="switch" accessibilityState={{ checked: pinned }}>
+          <View style={styles.flex}>
+            <AppText variant="bodyStrong">Przypnij na górze</AppText>
+            <AppText variant="small" muted>Przypięte ogłoszenie jest zawsze pierwsze na liście</AppText>
+          </View>
+          <Switch value={pinned} onValueChange={setPinned} trackColor={{ true: c.primary, false: c.inputBorder }} thumbColor="#FFFFFF" {...({ activeThumbColor: "#FFFFFF" } as any)} />
+        </Pressable>
+      </Sheet>
 
-            <Text style={styles.inputLabel}>Odbiorcy</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
-              <View style={styles.audienceRow}>
-                {[...FIXED_AUDIENCES, ...ranks.map(r => ({ key: r.id, label: r.name, color: c.subtext }))].map(opt => (
-                  <TouchableOpacity
-                    key={opt.key}
-                    style={[styles.audienceChip, audience === opt.key && { borderColor: opt.color, backgroundColor: opt.color + '18' }]}
-                    onPress={() => setAudience(opt.key)}
-                  >
-                    <Text style={[styles.audienceChipText, audience === opt.key && { color: opt.color, fontWeight: '700' }]}>
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.pinnedToggle}
-              onPress={() => setPinned(p => !p)}
-            >
-              <Ionicons
-                name={pinned ? 'checkbox' : 'square-outline'}
-                size={22}
-                color={c.primary}
-              />
-              <Text style={styles.pinnedToggleText}>Przypiąć ogłoszenie na górze</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
+      <Sheet
+        visible={!!deleteDialog}
+        onClose={() => setDeleteDialog(null)}
+        title="Usunąć ogłoszenie?"
+        footer={<><Button label="Usuń" variant="danger" onPress={doDelete} /><Button label="Anuluj" variant="secondary" onPress={() => setDeleteDialog(null)} /></>}
+      >
+        <AppText muted>{`„${deleteDialog?.title ?? ''}” zniknie dla wszystkich.`}</AppText>
+      </Sheet>
     </View>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-    addButton: {
-      flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center',
-      backgroundColor: c.primary, margin: 16, marginBottom: 0,
-      borderRadius: 12, padding: 12,
-    },
-    addButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-
-    card: {
-      backgroundColor: c.surface, borderRadius: 12, padding: 14, gap: 8,
-      ...shadow.xs,
-    },
-    cardPinned: { borderLeftWidth: 3, borderLeftColor: c.primary },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-    cardHeaderLeft: { flex: 1, gap: 4, marginRight: 8 },
-    pinnedBadge: {
-      flexDirection: 'row', alignItems: 'center', gap: 4,
-      backgroundColor: c.primaryAlpha08, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2,
-      alignSelf: 'flex-start',
-    },
-    pinnedText: { fontSize: 10, fontWeight: '600', color: c.primary },
-    titleRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
-    cardTitle: { fontSize: 16, fontWeight: '700', color: c.text },
-    audienceBadge: { borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 },
-    audienceBadgeText: { fontSize: 10, fontWeight: '700' },
-    cardContent: { fontSize: 14, color: c.subtext, lineHeight: 20 },
-    cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-    cardMeta: { fontSize: 12, color: c.textTertiary },
-
-    empty: { alignItems: 'center', marginTop: 60, gap: 12 },
-    emptyText: { color: c.textTertiary, fontSize: 15 },
-
-    modalHeader: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingHorizontal: 16, paddingVertical: 14,
-      borderBottomWidth: 1, borderBottomColor: c.primarySurface,
-      backgroundColor: c.surface,
-    },
-    modalTitle: { fontSize: 17, fontWeight: '600', color: c.text },
-    modalSave: {
-      backgroundColor: c.primary, borderRadius: 8,
-      paddingHorizontal: 14, paddingVertical: 7,
-    },
-    modalSaveText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-
-    modalBody: { flex: 1, backgroundColor: c.bg },
-    modalContent: { padding: 16, gap: 6 },
-
-    inputLabel: { fontSize: 13, fontWeight: '600', color: c.subtext, marginTop: 8 },
-    textInput: {
-      backgroundColor: c.surface, borderRadius: 10, padding: 13,
-      fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
-    },
-    textArea: { minHeight: 120, textAlignVertical: 'top' },
-
-    pinnedToggle: {
-      flexDirection: 'row', alignItems: 'center', gap: 10,
-      paddingVertical: 12, marginTop: 4,
-    },
-    pinnedToggleText: { fontSize: 15, color: c.text },
-
-    audienceRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
-    audienceChip: {
-      paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-      borderWidth: 1, borderColor: c.border, backgroundColor: c.surface,
-    },
-    audienceChipText: { fontSize: 13, color: c.subtext, fontWeight: '500' },
-  })
-}
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  loader: { marginTop: 40 },
+  body: { padding: 16, gap: 12, paddingBottom: 32 },
+  desktop: { padding: 28, paddingHorizontal: 32, maxWidth: 900 },
+  deskBtn: { alignSelf: 'flex-start' },
+  empty: { alignItems: 'center', gap: 10, padding: 28, borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 16 },
+  card: { borderWidth: 1, borderRadius: 18, padding: 16, gap: 8, cursor: 'pointer' } as any,
+  head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  tags: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  pinned: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  pinnedText: { ...sans(800), fontSize: 10, color: '#FFFFFF', letterSpacing: 0.6 },
+  title: { ...sans(800), fontSize: 17, lineHeight: 22 },
+  titleWeb: { fontSize: 28, lineHeight: 31 },
+  content: { ...sans(500), fontSize: 14, lineHeight: 22 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  toggle: { flexDirection: 'row', alignItems: 'center', gap: 12, cursor: 'pointer' } as any,
+})

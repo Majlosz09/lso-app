@@ -41,7 +41,7 @@ export default function WiedzaItemScreen() {
       return <View style={styles.center}><ActivityIndicator color={c.primary} /></View>
     }
     if (!dbItem) {
-      return <View style={styles.center}><Text style={{ color: c.subtext }}>Nie znaleziono treści</Text></View>
+      return <View style={styles.center}><Stack.Screen options={{ title: 'Wiedza' }} /><Text style={{ color: c.subtext }}>Nie znaleziono treści</Text></View>
     }
     return (
       <>
@@ -64,7 +64,7 @@ export default function WiedzaItemScreen() {
   if (!found) {
     return (
       <View style={styles.center}>
-        <Text style={{ color: c.subtext }}>Nie znaleziono treści</Text>
+        <Stack.Screen options={{ title: 'Wiedza' }} /><Text style={{ color: c.subtext }}>Nie znaleziono treści</Text>
       </View>
     )
   }
@@ -124,13 +124,14 @@ function createStyles(c: Colors) {
     scroll: { flex: 1, backgroundColor: c.bg },
     content: { padding: 16 },
     subtitle: {
-      fontSize: 13, color: c.primary, fontWeight: '600',
+      fontSize: 13, color: c.primary,
       marginBottom: 12, textAlign: 'center',
+      fontFamily: 'Manrope_600SemiBold',
     },
     textCard: {
       backgroundColor: c.surface, borderRadius: 14, padding: 20, ...shadow.md,
     },
-    text: { fontSize: 16, color: c.text, lineHeight: 26 },
+    text: { fontSize: 16, color: c.text, lineHeight: 26, fontFamily: 'Manrope_500Medium' },
     navBar: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.border,
@@ -143,8 +144,8 @@ function createStyles(c: Colors) {
     },
     navBtnRight: { justifyContent: 'flex-end' },
     navBtnDisabled: { backgroundColor: c.bg, borderColor: c.border },
-    navText: { flex: 1, fontSize: 12, color: c.primary, fontWeight: '500' },
+    navText: { flex: 1, fontSize: 12, color: c.primary, fontFamily: 'Manrope_500Medium' },
     navTextDisabled: { color: c.iconMuted },
-    navCount: { fontSize: 12, color: c.textTertiary, minWidth: 40, textAlign: 'center' },
+    navCount: { fontSize: 12, color: c.textTertiary, minWidth: 40, textAlign: 'center', fontFamily: 'Manrope_500Medium' },
   })
 }

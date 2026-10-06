@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Modal, FlatList,
@@ -236,10 +237,10 @@ export default function BadgeManagementScreen() {
                     {item.full_name.split(' ').filter(w => w.length > 0).map((w: string) => w[0]).slice(0, 2).join('')}
                   </Text>
                 </View>
-                <Text style={[styles.pickerRowName, isSelected && { color: '#FFC107' }]}>
+                <Text style={[styles.pickerRowName, isSelected && { color: '#C9A55A' }]}>
                   {item.full_name}
                 </Text>
-                {isSelected && <Ionicons name="checkmark" size={18} color="#FFC107" />}
+                {isSelected && <Ionicons name="checkmark" size={18} color="#C9A55A" />}
               </TouchableOpacity>
             )
           }}
@@ -284,10 +285,10 @@ export default function BadgeManagementScreen() {
               activeOpacity={0.7}
             >
               <Text style={{ fontSize: 22 }}>{item.icon}</Text>
-              <Text style={[styles.pickerRowName, isSelected && { color: '#FFC107' }]}>
+              <Text style={[styles.pickerRowName, isSelected && { color: '#C9A55A' }]}>
                 {item.name}
               </Text>
-              {isSelected && <Ionicons name="checkmark" size={18} color="#FFC107" />}
+              {isSelected && <Ionicons name="checkmark" size={18} color="#C9A55A" />}
             </TouchableOpacity>
           )
         }}
@@ -357,12 +358,12 @@ export default function BadgeManagementScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
+      <KeyboardScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom + 72, 80) }]}
       >
         {/* Sekcja: Odznaki parafii */}
-        <SectionHeader label="Odznaki parafii" color="#FFC107" />
+        <SectionHeader label="Odznaki parafii" color="#C9A55A" />
         <View style={styles.card}>
           {customBadges.length === 0 ? (
             <View style={styles.emptyRow}>
@@ -379,7 +380,7 @@ export default function BadgeManagementScreen() {
                   <Text style={styles.badgeSub}>Przyznawana ręcznie</Text>
                 </View>
                 <TouchableOpacity onPress={() => handleDelete(b)} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={20} color="#DC2626" />
+                  <Ionicons name="trash-outline" size={20} color="#B3261E" />
                 </TouchableOpacity>
               </View>
             ))
@@ -394,7 +395,7 @@ export default function BadgeManagementScreen() {
               maxLength={4}
             />
             <TextInput
-              style={[styles.addInput, { flex: 1 }]}
+              style={[styles.addInput, { flex: 1, minWidth: 0 }]}
               placeholder="Nazwa odznaki..."
               placeholderTextColor={c.textTertiary}
               value={newName}
@@ -462,7 +463,7 @@ export default function BadgeManagementScreen() {
             </View>
           ))}
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
 
       {/* FAB */}
       <View style={[styles.fabWrap, { bottom: Math.max(insets.bottom + 16, 24) }]}>
@@ -482,7 +483,8 @@ export default function BadgeManagementScreen() {
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
+          enabled={Platform.OS !== 'web'}
         >
           <TouchableOpacity style={StyleSheet.absoluteFill} onPress={closeWizard} activeOpacity={1} />
           <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom + 16, 16) }]}>
@@ -507,7 +509,7 @@ function StepDots({ current }: { current: 1 | 2 | 3 }) {
         key={n}
         style={{
           width: isActive ? 20 : 7, height: 7, borderRadius: 4,
-          backgroundColor: isDone ? '#30d158' : isActive ? '#FFC107' : '#3a3a3c',
+          backgroundColor: isDone ? '#30d158' : isActive ? '#C9A55A' : '#3a3a3c',
         }}
       />
     )
@@ -545,8 +547,9 @@ function createStyles(c: Colors) {
       width: 3, height: 13, borderRadius: 2,
     },
     sectionLabel: {
-      fontSize: 12, fontWeight: '700', color: c.textTertiary,
+      fontSize: 12, color: c.textTertiary,
       textTransform: 'uppercase', letterSpacing: 0.8,
+      fontFamily: 'Manrope_700Bold',
     },
     card: {
       backgroundColor: c.surface, borderRadius: 14,
@@ -555,7 +558,7 @@ function createStyles(c: Colors) {
     },
     rowBorder: { borderBottomWidth: 1, borderBottomColor: c.primarySurface },
     emptyRow: { padding: 16, alignItems: 'center' },
-    emptyText: { fontSize: 13, color: c.textTertiary, textAlign: 'center' },
+    emptyText: { fontSize: 13, color: c.textTertiary, textAlign: 'center', fontFamily: 'Manrope_500Medium' },
 
     badgeRow: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -566,9 +569,9 @@ function createStyles(c: Colors) {
       backgroundColor: c.goldAlpha,
       justifyContent: 'center', alignItems: 'center',
     },
-    badgeIcon: { fontSize: 18 },
-    badgeName: { fontSize: 15, fontWeight: '500', color: c.text },
-    badgeSub: { fontSize: 11, color: c.textTertiary, marginTop: 1 },
+    badgeIcon: { fontSize: 18, fontFamily: 'Manrope_500Medium' },
+    badgeName: { fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
+    badgeSub: { fontSize: 11, color: c.textTertiary, marginTop: 1, fontFamily: 'Manrope_500Medium' },
 
     addRow: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -578,9 +581,10 @@ function createStyles(c: Colors) {
       backgroundColor: c.bg, borderRadius: 10,
       paddingHorizontal: 12, paddingVertical: 10,
       fontSize: 15, color: c.text, borderWidth: 1, borderColor: c.border,
+      fontFamily: 'Manrope_500Medium',
     },
     addButton: {
-      width: 44, height: 44, borderRadius: 10,
+      flexShrink: 0, width: 44, height: 44, borderRadius: 10,
       backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center',
     },
 
@@ -588,22 +592,22 @@ function createStyles(c: Colors) {
       flexDirection: 'row', alignItems: 'flex-start', gap: 10,
       paddingHorizontal: 16, paddingVertical: 12,
     },
-    historyIcon: { fontSize: 22, lineHeight: 26 },
-    historyBadgeName: { fontSize: 14, fontWeight: '600', color: c.text },
-    historyMeta: { fontSize: 12, color: c.subtext, marginTop: 2 },
-    historyAwarder: { fontSize: 11, color: c.textTertiary, marginTop: 1 },
-    historyNote: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontStyle: 'italic' },
+    historyIcon: { fontSize: 22, lineHeight: 26, fontFamily: 'Manrope_500Medium' },
+    historyBadgeName: { fontSize: 14, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    historyMeta: { fontSize: 12, color: c.subtext, marginTop: 2, fontFamily: 'Manrope_500Medium' },
+    historyAwarder: { fontSize: 11, color: c.textTertiary, marginTop: 1, fontFamily: 'Manrope_500Medium' },
+    historyNote: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontStyle: 'italic', fontFamily: 'Manrope_500Medium' },
 
     catalogRow: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       paddingHorizontal: 16, paddingVertical: 12,
     },
-    catalogDesc: { fontSize: 12, color: c.subtext, marginTop: 2 },
+    catalogDesc: { fontSize: 12, color: c.subtext, marginTop: 2, fontFamily: 'Manrope_500Medium' },
     autoChip: {
       backgroundColor: c.primarySurface, borderRadius: 5,
       paddingHorizontal: 6, paddingVertical: 2,
     },
-    autoChipText: { fontSize: 10, color: c.textTertiary },
+    autoChipText: { fontSize: 10, color: c.textTertiary, fontFamily: 'Manrope_500Medium' },
 
     fabWrap: {
       position: 'absolute', right: 16,
@@ -614,10 +618,10 @@ function createStyles(c: Colors) {
       paddingHorizontal: 10, paddingVertical: 6,
       ...shadow.xs,
     },
-    fabTipText: { fontSize: 12, color: c.text, fontWeight: '500' },
+    fabTipText: { fontSize: 12, color: c.text, fontFamily: 'Manrope_500Medium' },
     fab: {
       width: 52, height: 52, borderRadius: 26,
-      backgroundColor: '#FFC107',
+      backgroundColor: '#C9A55A',
       justifyContent: 'center', alignItems: 'center',
       ...shadow.xs,
     },
@@ -639,57 +643,59 @@ function createStyles(c: Colors) {
     },
 
     stepTitle: {
-      fontSize: 11, fontWeight: '700', color: '#FFC107',
+      fontSize: 11, color: '#C9A55A',
       textTransform: 'uppercase', letterSpacing: 0.5,
       textAlign: 'center', marginBottom: 12,
+      fontFamily: 'Manrope_700Bold',
     },
-    stepSub: { fontSize: 12, color: c.textTertiary, textAlign: 'center', marginBottom: 12 },
+    stepSub: { fontSize: 12, color: c.textTertiary, textAlign: 'center', marginBottom: 12, fontFamily: 'Manrope_500Medium' },
     searchBox: {
       flexDirection: 'row', alignItems: 'center', gap: 8,
       backgroundColor: c.bg, borderRadius: 10,
       paddingHorizontal: 12, paddingVertical: 8,
       marginBottom: 10, borderWidth: 1, borderColor: c.border,
     },
-    searchInput: { flex: 1, fontSize: 14, color: c.text },
+    searchInput: { flex: 1, fontSize: 14, color: c.text, fontFamily: 'Manrope_500Medium' },
     pickerList: { maxHeight: 240 },
     pickerRow: {
       flexDirection: 'row', alignItems: 'center', gap: 10,
       paddingVertical: 10, paddingHorizontal: 4,
       borderBottomWidth: 1, borderBottomColor: c.primarySurface,
     },
-    pickerRowSelected: { backgroundColor: '#FFC10710', borderRadius: 8 },
-    pickerRowName: { flex: 1, fontSize: 14, color: c.text },
+    pickerRowSelected: { backgroundColor: '#C9A55A10', borderRadius: 8 },
+    pickerRowName: { flex: 1, fontSize: 14, color: c.text, fontFamily: 'Manrope_500Medium' },
     memberAvatar: {
       width: 30, height: 30, borderRadius: 15,
       backgroundColor: c.primarySurface,
       justifyContent: 'center', alignItems: 'center',
     },
-    memberAvatarText: { fontSize: 11, fontWeight: '700', color: c.textTertiary },
+    memberAvatarText: { fontSize: 11, color: c.textTertiary, fontFamily: 'Manrope_700Bold' },
     btnRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
     btnBack: {
       flex: 1, backgroundColor: c.bg, borderRadius: 12,
       paddingVertical: 12, alignItems: 'center',
       borderWidth: 1, borderColor: c.border,
     },
-    btnBackText: { fontSize: 14, color: c.subtext, fontWeight: '600' },
+    btnBackText: { fontSize: 14, color: c.subtext, fontFamily: 'Manrope_600SemiBold' },
     btnNext: {
       flex: 1.5, borderRadius: 12,
       paddingVertical: 12, alignItems: 'center',
-      backgroundColor: '#FFC107',
+      backgroundColor: '#C9A55A',
     },
-    btnNextText: { fontSize: 14, color: '#000', fontWeight: '700' },
+    btnNextText: { fontSize: 14, color: '#000', fontFamily: 'Manrope_700Bold' },
 
     summaryCard: {
       flexDirection: 'row', alignItems: 'center', gap: 14,
       backgroundColor: c.bg, borderRadius: 12,
       padding: 14, marginBottom: 14,
-      borderWidth: 1, borderColor: '#FFC10740',
+      borderWidth: 1, borderColor: '#C9A55A40',
     },
-    summaryBadgeName: { fontSize: 16, fontWeight: '700', color: c.text },
-    summaryFor: { fontSize: 12, color: c.textTertiary, marginTop: 3 },
+    summaryBadgeName: { fontSize: 16, color: c.text, fontFamily: 'Manrope_700Bold' },
+    summaryFor: { fontSize: 12, color: c.textTertiary, marginTop: 3, fontFamily: 'Manrope_500Medium' },
     noteLabel: {
-      fontSize: 11, fontWeight: '700', color: c.textTertiary,
+      fontSize: 11, color: c.textTertiary,
       textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6,
+      fontFamily: 'Manrope_700Bold',
     },
     noteInput: {
       backgroundColor: c.bg, borderRadius: 10,
@@ -698,6 +704,7 @@ function createStyles(c: Colors) {
       borderWidth: 1, borderColor: c.border,
       minHeight: 72, textAlignVertical: 'top',
       marginBottom: 4,
+      fontFamily: 'Manrope_500Medium',
     },
   })
 }

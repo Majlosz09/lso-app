@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { useTheme } from '../lib/ThemeContext'
 import { Colors } from '../lib/theme'
+import { ModalKeyboardAvoider } from './ui/ModalKeyboardAvoider'
 
 const CONFIRM_WORD = 'USUŃ'
 
@@ -42,6 +43,7 @@ export function DeleteAccountButton() {
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+<ModalKeyboardAvoider>
         <View style={styles.overlay}>
           <View style={styles.sheet}>
             <Text style={styles.title}>Usunąć konto?</Text>
@@ -76,7 +78,8 @@ export function DeleteAccountButton() {
             </View>
           </View>
         </View>
-      </Modal>
+      </ModalKeyboardAvoider>
+</Modal>
     </>
   )
 }
@@ -84,20 +87,21 @@ export function DeleteAccountButton() {
 function createStyles(c: Colors) {
   return StyleSheet.create({
     link: { alignItems: 'center', paddingVertical: 8 },
-    linkText: { fontSize: 13, color: c.subtext, textDecorationLine: 'underline' },
+    linkText: { fontSize: 13, color: c.subtext, textDecorationLine: 'underline', fontFamily: 'Manrope_500Medium' },
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 32 },
     sheet: { backgroundColor: c.surface, borderRadius: 16, padding: 24, gap: 12, width: '100%', maxWidth: 400 },
-    title: { fontSize: 18, fontWeight: '700', color: c.text },
-    message: { fontSize: 14, color: c.subtext },
+    title: { fontSize: 18, color: c.text, fontFamily: 'Manrope_700Bold' },
+    message: { fontSize: 14, color: c.subtext, fontFamily: 'Manrope_500Medium' },
     input: {
       borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 12,
       fontSize: 15, color: c.text, backgroundColor: c.bg,
+      fontFamily: 'Manrope_500Medium',
     },
     actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
     cancelBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: c.primarySurface, alignItems: 'center' },
-    cancelText: { fontSize: 15, fontWeight: '600', color: c.primary },
+    cancelText: { fontSize: 15, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
     deleteBtn: { flex: 1, padding: 14, borderRadius: 10, backgroundColor: c.danger, alignItems: 'center' },
-    deleteText: { fontSize: 15, fontWeight: '600', color: '#fff' },
+    deleteText: { fontSize: 15, color: '#fff', fontFamily: 'Manrope_600SemiBold' },
     disabled: { opacity: 0.4 },
   })
 }

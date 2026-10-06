@@ -1,20 +1,30 @@
 import { useEffect, useState, useMemo } from 'react'
 import {
   View, Text, StyleSheet, ScrollView,
-  ActivityIndicator, TouchableOpacity, Modal, Alert, TextInput
-} from 'react-native'
+  ActivityIndicator, TouchableOpacity, Modal, Alert, TextInput,
+  Pressable, Switch } from 'react-native'
 import Toast from 'react-native-toast-message'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
+import { FormationProgressCard } from '../../components/FormationProgressCard'
+import { MemberFunctionsCard } from '../../components/admin/MemberFunctionsCard'
 import { STATUS_COLORS, STATUS_LABELS } from '../../lib/status'
 import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { Colors, headerPalette, sans, serif, VestmentColor } from '../../lib/theme'
+import { getLiturgicalDay } from '../../lib/liturgy'
+import { localDateStr } from '../../lib/dates'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { StatusBar } from 'expo-status-bar'
+import { AppText, Avatar, Icon, Card } from '../../components/ui'
 import { AvatarImage } from '../../components/AvatarImage'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
+import { ModalKeyboardAvoider } from '../../components/ui/ModalKeyboardAvoider'
+import { topGap } from '../../lib/safeTop'
 
 type MemberProfile = {
   id: string
@@ -24,6 +34,9 @@ type MemberProfile = {
   rocznik: number | null
   avatar_url: string | null
   rank_id: string | null
+  is_helper?: boolean
+  managed?: boolean
+  claim_code?: string | null
   parent_id: string | null
 }
 
@@ -72,7 +85,8 @@ export default function MemberDetailScreen() {
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const { profile: adminProfile } = useAuthStore()
-  const { colors: c } = useTheme()
+  const { colors: c, isDark } = useTheme()
+  const isDesktop = useIsDesktop()
   const styles = useMemo(() => createStyles(c), [c])
 
   const [profile, setProfile] = useState<MemberProfile | null>(null)
@@ -108,7 +122,7 @@ export default function MemberDetailScreen() {
     const today = new Date().toISOString().split('T')[0]
 
     const queries: PromiseLike<any>[] = [
-      supabase.from('profiles').select('id, full_name, role, phone, rocznik, avatar_url, rank_id, parent_id').eq('id', id).single(),
+      supabase.from('profiles').select('id, full_name, role, phone, rocznik, avatar_url, rank_id, parent_id, is_helper, managed, claim_code').eq('id', id).single(),
       supabase.from('schedule_assignments')
         .select('id, status, schedule:schedules(id, title, date, time)')
         .eq('profile_id', id)
@@ -312,57 +326,74 @@ export default function MemberDetailScreen() {
     )
   }
 
+  const pal = headerPalette((getLiturgicalDay(localDateStr()).color ?? 'GREEN') as VestmentColor, isDark)
+
   if (loading || !profile) {
     return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
   }
 
   const isMember = profile.role === 'member'
+  const newClaimCode = async () => {
+    if (!profile) return
+    const { data, error } = await supabase.rpc('regenerate_claim_code', { p_profile: profile.id })
+    if (error) { Toast.show({ type: 'error', text1: 'Nie udało się', text2: error.message }); return }
+    setProfile(prev => prev ? { ...prev, claim_code: data as string } : prev)
+    Toast.show({ type: 'success', text1: 'Nowy kod osobisty' })
+  }
+
+  const toggleHelper = async () => {
+    if (!profile) return
+    const next = !profile.is_helper
+    const { error } = await supabase.from('profiles').update({ is_helper: next }).eq('id', profile.id)
+    if (error) { Toast.show({ type: 'error', text1: 'Nie zapisano', text2: error.message }); return }
+    setProfile(prev => prev ? { ...prev, is_helper: next } : prev)
+    Toast.show({ type: 'success', text1: next ? 'Wyznaczono pomocnika opiekuna' : 'Odebrano uprawnienia pomocnika' })
+  }
+
   const memberRankObj = ranksList.find(r => r.id === profile.rank_id) ?? null
 
+  const heroChip = (label: string, icon: string, onPress?: () => void, muted?: boolean) => (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={[heroStyles.chip, { backgroundColor: pal.chip }]}
+      accessibilityRole={onPress ? 'button' : undefined}
+    >
+      <Icon name={icon} size={14} color={pal.fg} />
+      <AppText style={[heroStyles.chipText, { color: pal.fg, opacity: muted ? 0.75 : 1 }]}>{label}</AppText>
+    </Pressable>
+  )
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-      {/* Header */}
-      <View style={styles.headerCard}>
-        <AvatarImage avatarUrl={profile.avatar_url} size={72} />
-        <Text style={styles.name}>{profile.full_name}</Text>
-        <View style={styles.roleBadge}>
-          <Text style={styles.roleText}>{ROLE_LABELS[profile.role] ?? profile.role}</Text>
+    <KeyboardScrollView style={styles.container} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
+      <Stack.Screen options={{ headerShown: false, title: profile.full_name }} />
+      <View style={[heroStyles.hero, { backgroundColor: pal.bg, paddingTop: isDesktop ? 22 : topGap(insets.top, 8) }, isDesktop && heroStyles.heroDesktop]}>
+        <StatusBar style={pal.statusBar} />
+        {!isDesktop && (
+          <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/(admin)/(admin-tabs)/members'))} style={heroStyles.back} accessibilityRole="button">
+            <Icon name="chevron-left" size={22} color={pal.fg} />
+            <AppText style={[heroStyles.backText, { color: pal.fg }]}>Członkowie</AppText>
+          </Pressable>
+        )}
+        <View style={heroStyles.identity}>
+          {profile.avatar_url
+            ? <AvatarImage avatarUrl={profile.avatar_url} size={68} />
+            : <Avatar name={profile.full_name} size={68} />}
+          <View style={heroStyles.flex}>
+            <AppText style={[serif(), heroStyles.name, { color: pal.fg }]}>{profile.full_name}</AppText>
+            <AppText style={[heroStyles.meta, { color: pal.fg }]}>
+              {[ROLE_LABELS[profile.role] ?? profile.role, isMember && profile.rocznik ? `rocznik ${profile.rocznik}` : null, profile.phone].filter(Boolean).join(' · ')}
+            </AppText>
+          </View>
         </View>
-        {profile.phone && (
-          <View style={styles.infoRow}>
-            <Ionicons name="call-outline" size={14} color={c.subtext} />
-            <Text style={styles.infoText}>{profile.phone}</Text>
-          </View>
-        )}
-        {isMember && profile.rocznik && (
-          <View style={styles.infoRow}>
-            <Ionicons name="calendar-outline" size={14} color={c.subtext} />
-            <Text style={styles.infoText}>Rocznik {profile.rocznik}</Text>
-          </View>
-        )}
         {isMember && (
-          <TouchableOpacity
-            style={memberRankObj ? styles.rankPill : styles.rankPillEmpty}
-            onPress={() => setRankModalVisible(true)}
-          >
-            <Ionicons name="ribbon-outline" size={13} color={memberRankObj ? '#EA580C' : c.textTertiary} />
-            <Text style={memberRankObj ? styles.rankText : styles.rankTextEmpty}>
-              {memberRankObj ? memberRankObj.name : 'Przypisz rangę'}
-            </Text>
-          </TouchableOpacity>
-        )}
-        {isMember && (
-          <TouchableOpacity
-            style={profile.parent_id ? styles.parentPill : styles.rankPillEmpty}
-            onPress={openParentPicker}
-          >
-            <Ionicons name="people-outline" size={13} color={profile.parent_id ? '#0EA5E9' : c.textTertiary} />
-            <Text style={profile.parent_id ? styles.parentText : styles.rankTextEmpty}>
-              {parentName ?? 'Przypisz rodzica'}
-            </Text>
-          </TouchableOpacity>
+          <View style={heroStyles.chips}>
+            {heroChip(memberRankObj ? memberRankObj.name : 'Przypisz rangę', 'shield-star', () => setRankModalVisible(true), !memberRankObj)}
+            {heroChip(parentName ?? 'Przypisz rodzica', 'human-male-female-child', openParentPicker, !profile.parent_id)}
+          </View>
         )}
       </View>
+      <View style={[styles.content, isDesktop && heroStyles.bodyDesktop]}>
 
       <Modal
         visible={parentModalVisible}
@@ -370,6 +401,7 @@ export default function MemberDetailScreen() {
         animationType="slide"
         onRequestClose={() => setParentModalVisible(false)}
       >
+<ModalKeyboardAvoider>
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setParentModalVisible(false)} />
           <View style={styles.modalSheet}>
@@ -395,20 +427,21 @@ export default function MemberDetailScreen() {
                   style={styles.rankOption}
                   onPress={() => handleChangeParent(p.id)}
                 >
-                  <Ionicons name="person-outline" size={20} color="#0EA5E9" />
+                  <Ionicons name="person-outline" size={20} color="#0E7490" />
                   <Text style={[
                     styles.rankOptionText,
-                    profile?.parent_id === p.id && { fontWeight: '700', color: '#0EA5E9' },
+                    profile?.parent_id === p.id && { fontWeight: '700', color: '#0E7490' },
                   ]}>
                     {p.full_name}
                   </Text>
-                  {profile?.parent_id === p.id && <Ionicons name="checkmark" size={18} color="#0EA5E9" />}
+                  {profile?.parent_id === p.id && <Ionicons name="checkmark" size={18} color="#0E7490" />}
                 </TouchableOpacity>
               ))
             )}
           </View>
         </View>
-      </Modal>
+      </ModalKeyboardAvoider>
+</Modal>
 
       <Modal
         visible={rankModalVisible}
@@ -416,6 +449,7 @@ export default function MemberDetailScreen() {
         animationType="slide"
         onRequestClose={() => setRankModalVisible(false)}
       >
+<ModalKeyboardAvoider>
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setRankModalVisible(false)} />
           <View style={styles.modalSheet}>
@@ -441,25 +475,62 @@ export default function MemberDetailScreen() {
                 style={styles.rankOption}
                 onPress={() => handleChangeRank(r.id)}
               >
-                <Ionicons name="ribbon" size={20} color="#EA580C" />
+                <Ionicons name="ribbon" size={20} color="#B8741A" />
                 <Text style={[
                   styles.rankOptionText,
-                  profile.rank_id === r.id && { fontWeight: '700', color: '#EA580C' },
+                  profile.rank_id === r.id && { fontWeight: '700', color: '#B8741A' },
                 ]}>
                   {r.name}
                 </Text>
-                {profile.rank_id === r.id && <Ionicons name="checkmark" size={18} color="#EA580C" />}
+                {profile.rank_id === r.id && <Ionicons name="checkmark" size={18} color="#B8741A" />}
               </TouchableOpacity>
             ))}
           </View>
         </View>
-      </Modal>
+      </ModalKeyboardAvoider>
+</Modal>
+
+      {/* Ministrant bez konta: kod osobisty do założenia konta */}
+      {isMember && profile.managed && (
+        <View style={{ marginHorizontal: 16, marginTop: 12 }}>
+          <Card style={{ gap: 6 }}>
+            <AppText variant="bodyStrong">Ministrant bez konta</AppText>
+            <AppText variant="small" muted>Jest w grafiku, na tablecie i w punktach. Konto może założyć z kodem osobistym — przejmie całą historię.</AppText>
+            <AppText style={{ fontSize: 22, letterSpacing: 2, fontFamily: 'Manrope_800ExtraBold', color: c.primary }} selectable>
+              {profile.claim_code ? `${profile.claim_code.slice(0, 4)}-${profile.claim_code.slice(4)}` : '—'}
+            </AppText>
+            <Pressable accessibilityRole="button" onPress={newClaimCode}>
+              <AppText variant="small" color={c.primary}>Nowy kod (stary przestanie działać)</AppText>
+            </Pressable>
+          </Card>
+        </View>
+      )}
+
+      {/* Pomocnik opiekuna: grafik, obecność, zgłoszenia */}
+      {isMember && !profile.managed && (
+        <View style={{ marginHorizontal: 16, marginTop: 12 }}>
+          <Card style={{ gap: 6 }}>
+            <Pressable accessibilityRole="switch" accessibilityState={{ checked: !!profile.is_helper }} onPress={toggleHelper}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <AppText variant="bodyStrong">Pomocnik opiekuna</AppText>
+                <AppText variant="small" muted>Może układać grafik, zaznaczać obecność (także na tablecie) i rozpatrywać zgłoszenia. Bez dostępu do członków, ustawień i punktów.</AppText>
+              </View>
+              <Switch value={!!profile.is_helper} onValueChange={toggleHelper} trackColor={{ true: c.primary, false: c.inputBorder }} thumbColor="#FFFFFF" />
+            </Pressable>
+          </Card>
+        </View>
+      )}
+
+      {/* Funkcje liturgiczne (lektor, ceremoniarz…) */}
+      {isMember && <View style={{ marginHorizontal: 16, marginTop: 12 }}><MemberFunctionsCard profileId={profile.id} editable /></View>}
+      {isMember && <View style={{ marginHorizontal: 16, marginTop: 12 }}><FormationProgressCard profileId={profile.id} who="admin" /></View>}
 
       {/* Statystyki — tylko dla ministrancóin */}
       {isMember && (
         <View style={styles.statsRow}>
-          <StatCard icon="trophy" color="#FFC107" value={summary?.total_points ?? 0} label="Punkty" styles={styles} />
-          <StatCard icon="checkmark-circle" color="#16A34A" value={summary?.services_count ?? 0} label="Służby" styles={styles} />
+          <StatCard icon="trophy" color="#C9A55A" value={summary?.total_points ?? 0} label="Punkty" styles={styles} />
+          <StatCard icon="checkmark-circle" color="#2F7D4F" value={summary?.services_count ?? 0} label="Służby" styles={styles} />
           {rank && <StatCard icon="podium" color={c.primary} value={`#${rank}`} label="Ranking" styles={styles} />}
         </View>
       )}
@@ -528,8 +599,8 @@ export default function MemberDetailScreen() {
           ) : (
             points.map((p, i) => (
               <View key={p.id} style={[styles.pointRow, i < points.length - 1 && styles.rowBorder]}>
-                <View style={[styles.pointAmount, { backgroundColor: (p.amount >= 0 ? '#16A34A' : '#DC2626') + '18' }]}>
-                  <Text style={[styles.pointAmountText, { color: p.amount >= 0 ? '#16A34A' : '#DC2626' }]}>
+                <View style={[styles.pointAmount, { backgroundColor: (p.amount >= 0 ? '#2F7D4F' : '#B3261E') + '18' }]}>
+                  <Text style={[styles.pointAmountText, { color: p.amount >= 0 ? '#2F7D4F' : '#B3261E' }]}>
                     {p.amount >= 0 ? '+' : ''}{p.amount}
                   </Text>
                 </View>
@@ -596,6 +667,7 @@ export default function MemberDetailScreen() {
         animationType="slide"
         onRequestClose={() => { setAwardSheetVisible(false); setSelectedBadgeDef(null); setAwardNote('') }}
       >
+<ModalKeyboardAvoider>
         <View style={styles.modalOverlay}>
           <TouchableOpacity
             style={{ flex: 1 }}
@@ -653,8 +725,10 @@ export default function MemberDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
-    </ScrollView>
+      </ModalKeyboardAvoider>
+</Modal>
+      </View>
+    </KeyboardScrollView>
   )
 }
 
@@ -715,14 +789,14 @@ function createStyles(c: Colors) {
       alignItems: 'center', gap: 6,
       ...shadow.md,
     },
-    name: { fontSize: 20, fontWeight: '700', color: c.text },
+    name: { fontSize: 20, color: c.text, fontFamily: 'Manrope_700Bold' },
     roleBadge: { backgroundColor: c.primaryAlpha12, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
-    roleText: { fontSize: 12, color: c.primary, fontWeight: '600' },
+    roleText: { fontSize: 12, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
     infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    infoText: { fontSize: 13, color: c.subtext },
+    infoText: { fontSize: 13, color: c.subtext, fontFamily: 'Manrope_500Medium' },
     rankPill: {
       flexDirection: 'row', alignItems: 'center', gap: 5,
-      backgroundColor: '#EA580C18', borderRadius: 10,
+      backgroundColor: '#B8741A18', borderRadius: 10,
       paddingHorizontal: 10, paddingVertical: 4,
     },
     rankPillEmpty: {
@@ -730,14 +804,14 @@ function createStyles(c: Colors) {
       backgroundColor: c.primarySurface, borderRadius: 10,
       paddingHorizontal: 10, paddingVertical: 4,
     },
-    rankText: { fontSize: 12, color: '#EA580C', fontWeight: '600' },
-    rankTextEmpty: { fontSize: 12, color: c.textTertiary },
+    rankText: { fontSize: 12, color: '#B8741A', fontFamily: 'Manrope_600SemiBold' },
+    rankTextEmpty: { fontSize: 12, color: c.textTertiary, fontFamily: 'Manrope_500Medium' },
     parentPill: {
       flexDirection: 'row', alignItems: 'center', gap: 5,
-      backgroundColor: '#0EA5E918', borderRadius: 10,
+      backgroundColor: '#0E749018', borderRadius: 10,
       paddingHorizontal: 10, paddingVertical: 4,
     },
-    parentText: { fontSize: 12, color: '#0EA5E9', fontWeight: '600' },
+    parentText: { fontSize: 12, color: '#0E7490', fontFamily: 'Manrope_600SemiBold' },
 
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
     modalSheet: {
@@ -747,12 +821,12 @@ function createStyles(c: Colors) {
     modalHeader: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12,
     },
-    modalTitle: { fontSize: 17, fontWeight: '700', color: c.text },
+    modalTitle: { fontSize: 17, color: c.text, fontFamily: 'Manrope_700Bold' },
     rankOption: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.primarySurface,
     },
-    rankOptionText: { flex: 1, fontSize: 15, color: c.text },
+    rankOptionText: { flex: 1, fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
 
     statsRow: { flexDirection: 'row', gap: 10 },
     statCard: {
@@ -760,59 +834,75 @@ function createStyles(c: Colors) {
       alignItems: 'center', gap: 3,
       ...shadow.xs,
     },
-    statValue: { fontSize: 20, fontWeight: '700', color: c.text },
-    statLabel: { fontSize: 11, color: c.subtext, textAlign: 'center' },
+    statValue: { fontSize: 20, color: c.text, fontFamily: 'Manrope_700Bold' },
+    statLabel: { fontSize: 11, color: c.subtext, textAlign: 'center', fontFamily: 'Manrope_500Medium' },
 
     awardButton: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
       backgroundColor: c.primary, borderRadius: 12, padding: 14,
     },
-    awardButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+    awardButtonText: { color: '#fff', fontSize: 15, fontFamily: 'Manrope_600SemiBold' },
     manageRow: {
       flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14, paddingHorizontal: 4,
       borderBottomWidth: 1, borderBottomColor: c.border,
     },
     manageRowLast: { borderBottomWidth: 0 },
-    manageText: { flex: 1, fontSize: 15, fontWeight: '600', color: c.primary },
+    manageText: { flex: 1, fontSize: 15, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
 
     section: { gap: 8 },
-    sectionTitle: { fontSize: 13, fontWeight: '600', color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5 },
+    sectionTitle: { fontSize: 13, color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Manrope_600SemiBold' },
     sectionCard: {
       backgroundColor: c.surface, borderRadius: 12, overflow: 'hidden',
       ...shadow.xs,
     },
 
     emptyRow: { padding: 16, alignItems: 'center' },
-    emptyText: { fontSize: 14, color: c.textTertiary },
+    emptyText: { fontSize: 14, color: c.textTertiary, fontFamily: 'Manrope_500Medium' },
 
     serviceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 },
     rowBorder: { borderBottomWidth: 1, borderBottomColor: c.primarySurface },
-    serviceTitle: { fontSize: 14, fontWeight: '600', color: c.text },
-    serviceDate: { fontSize: 12, color: c.subtext, marginTop: 2 },
+    serviceTitle: { fontSize: 14, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    serviceDate: { fontSize: 12, color: c.subtext, marginTop: 2, fontFamily: 'Manrope_500Medium' },
     statusPill: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
-    statusText: { fontSize: 11, fontWeight: '600' },
+    statusText: { fontSize: 11, fontFamily: 'Manrope_600SemiBold' },
 
     pointRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
     pointAmount: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 44, alignItems: 'center' },
-    pointAmountText: { fontSize: 14, fontWeight: '700' },
-    pointReason: { fontSize: 14, color: c.text, fontWeight: '500' },
-    pointDate: { fontSize: 12, color: c.textTertiary, marginTop: 2 },
+    pointAmountText: { fontSize: 14, fontFamily: 'Manrope_700Bold' },
+    pointReason: { fontSize: 14, color: c.text, fontFamily: 'Manrope_500Medium' },
+    pointDate: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontFamily: 'Manrope_500Medium' },
 
     badgeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12 },
-    badgeRowIcon: { fontSize: 22, lineHeight: 26 },
-    badgeRowName: { fontSize: 14, fontWeight: '600', color: c.text },
-    badgeRowMeta: { fontSize: 12, color: c.subtext, marginTop: 2 },
-    badgeRowNote: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontStyle: 'italic' },
+    badgeRowIcon: { fontSize: 22, lineHeight: 26, fontFamily: 'Manrope_500Medium' },
+    badgeRowName: { fontSize: 14, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    badgeRowMeta: { fontSize: 12, color: c.subtext, marginTop: 2, fontFamily: 'Manrope_500Medium' },
+    badgeRowNote: { fontSize: 12, color: c.textTertiary, marginTop: 2, fontStyle: 'italic', fontFamily: 'Manrope_500Medium' },
     awardBadgeBtn: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
       padding: 12, borderTopWidth: 1, borderTopColor: c.primarySurface,
     },
-    awardBadgeBtnText: { fontSize: 14, fontWeight: '600', color: c.primary },
+    awardBadgeBtnText: { fontSize: 14, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
     awardNoteInput: {
       backgroundColor: c.bg, borderRadius: 10,
       paddingHorizontal: 12, paddingVertical: 10,
       fontSize: 14, color: c.text, borderWidth: 1, borderColor: c.border,
       marginTop: 12, marginBottom: 4, minHeight: 60, textAlignVertical: 'top',
+      fontFamily: 'Manrope_500Medium',
     },
   })
 }
+
+const heroStyles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  hero: { paddingHorizontal: 22, paddingBottom: 22, gap: 14 },
+  heroDesktop: { marginHorizontal: 32, marginTop: 24, borderRadius: 22 },
+  bodyDesktop: { paddingHorizontal: 32, maxWidth: 900 },
+  back: { flexDirection: 'row', alignItems: 'center', marginLeft: -6, alignSelf: 'flex-start' },
+  backText: { ...sans(700), fontSize: 13 },
+  identity: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  name: { fontSize: 32, lineHeight: 35, fontFamily: 'Manrope_500Medium' },
+  meta: { ...sans(600), fontSize: 13, opacity: 0.9, marginTop: 4 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, cursor: 'pointer' } as any,
+  chipText: { ...sans(700), fontSize: 13 },
+})

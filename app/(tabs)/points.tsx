@@ -1,313 +1,233 @@
-import { useEffect, useState, useMemo } from 'react'
-import {
-  View, Text, FlatList, StyleSheet,
-  RefreshControl, ActivityIndicator, TouchableOpacity
-} from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { useCallback, useEffect, useState } from 'react'
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
-import { shadow } from '../../lib/shadows'
 import { useAuthStore } from '../../stores/authStore'
-import { PointsSummary } from '../../types/database'
-import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { sans, serif } from '../../lib/theme'
+import { localDateStr, shortDate, dayShort, pl } from '../../lib/dates'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
+import { useRealtimeTable } from '../../hooks/useRealtimeTable'
+import type { BadgeWithDef } from '../../components/FormationBadges'
+import { BadgeGrid } from '../../components/BadgeGrid'
+import { AppText, Card, Icon, ScreenHeader, Segmented, SectionHeader } from '../../components/ui'
 
-type PointWithSchedule = {
-  id: string
-  profile_id: string
-  amount: number
-  reason: string
-  schedule_id: string | null
-  awarded_by: string | null
-  created_at: string
-  schedule?: { title: string; date: string } | null
-}
+type Seg = 'ranking' | 'history' | 'badges'
+type RankRow = { profile_id: string; full_name: string; total_points: number; services_count: number; rankName: string | null }
+type PointRow = { id: string; amount: number; reason: string; created_at: string; schedule: { title: string; date: string } | null }
 
-type RankingEntry = {
-  profile_id: string
-  full_name: string
-  total_points: number
-  services_count: number
+export function usePointsData() {
+  const profile = useAuthStore(s => s.profile)
+  const [ranking, setRanking] = useState<RankRow[]>([])
+  const [history, setHistory] = useState<PointRow[]>([])
+  const [badges, setBadges] = useState<BadgeWithDef[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    if (!profile?.id || !profile.parish_id) return
+    const [rankRes, histRes, profRes, ranksRes, badgeRes] = await Promise.all([
+      supabase.from('points_summary').select('profile_id, full_name, total_points, services_count')
+        .eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
+      supabase.from('points').select('id, amount, reason, created_at, schedule:schedules(title, date)')
+        .eq('profile_id', profile.id).order('created_at', { ascending: false }),
+      supabase.from('profiles').select('id, rank_id').eq('parish_id', profile.parish_id).eq('is_active', true),
+      supabase.from('ranks').select('id, name').or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`),
+      supabase.from('member_badges')
+        .select('id, awarded_at, badge_definition:badge_definitions(id, name, icon, criteria_key)')
+        .eq('profile_id', profile.id).eq('is_active', true),
+    ])
+    const rankName = new Map((ranksRes.data ?? []).map((r: any) => [r.id, r.name]))
+    const profRank = new Map((profRes.data ?? []).map((p: any) => [p.id, p.rank_id]))
+    setRanking(((rankRes.data ?? []) as any[])
+      .filter(r => profRank.has(r.profile_id))
+      .map(r => ({ ...r, rankName: rankName.get(profRank.get(r.profile_id)) ?? null })))
+    setHistory((histRes.data ?? []) as any)
+    const seen = new Set<string>()
+    setBadges(((badgeRes.data ?? []) as any[]).filter(b => {
+      if (!b.badge_definition) return false
+      const key = b.badge_definition.criteria_key ?? b.badge_definition.id
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    }))
+    setLoading(false)
+  }, [profile?.id, profile?.parish_id])
+
+  useEffect(() => { load() }, [load])
+  useRealtimeTable('points', () => { load() }, profile?.parish_id ? `parish_id=eq.${profile.parish_id}` : undefined)
+  return { ranking, history, badges, loading, reload: load }
 }
 
 export default function PointsScreen() {
-  const { profile } = useAuthStore()
-  const [summary, setSummary] = useState<PointsSummary | null>(null)
-  const [points, setPoints] = useState<PointWithSchedule[]>([])
-  const [ranking, setRanking] = useState<RankingEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [activeTab, setActiveTab] = useState<'history' | 'ranking'>('history')
-
+  const router = useRouter()
+  const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
+  const { palette } = useLiturgyHeader()
+  const profile = useAuthStore(s => s.profile)
+  const { ranking, history, badges, loading, reload } = usePointsData()
+  const [seg, setSeg] = useState<Seg>('ranking')
+  const [refreshing, setRefreshing] = useState(false)
 
-  const fetchData = async () => {
-    if (!profile?.id || !profile?.parish_id) return
+  const myIdx = ranking.findIndex(r => r.profile_id === profile?.id)
+  const me = myIdx >= 0 ? ranking[myIdx] : null
+  const total = me?.total_points ?? 0
+  const leader = ranking[0]?.total_points ?? 0
+  const toLeader = Math.max(0, leader - total)
+  const progress = leader > 0 ? Math.min(1, total / leader) : 0
+  const openMember = (id: string) => id !== profile?.id && router.push(`/(tabs)/member-profile?id=${id}` as any)
 
-    const [mySummaryRes, pointsRes, rankingRes, parishProfilesRes] = await Promise.all([
-      supabase
-        .from('points_summary')
-        .select('profile_id, total_points, services_count')
-        .eq('profile_id', profile.id)
-        .maybeSingle(),
-      supabase
-        .from('points')
-        .select('*, schedule:schedules(title, date)')
-        .eq('profile_id', profile.id)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('points_summary')
-        .select('profile_id, full_name, total_points, services_count')
-        .eq('parish_id', profile.parish_id)
-        .order('total_points', { ascending: false }),
-      supabase
-        .from('profiles')
-        .select('id')
-        .eq('parish_id', profile.parish_id)
-        .eq('is_active', true),
-    ])
+  const summaryLine = myIdx === 0
+    ? 'Prowadzisz w rankingu parafii — tak trzymaj!'
+    : leader > 0 ? `Do 1. miejsca brakuje ${toLeader} pkt` : 'Punkty zdobywasz za każdą potwierdzoną służbę.'
 
-    const parishIds = new Set((parishProfilesRes.data ?? []).map((p: any) => p.id))
-    const parishRanking = (rankingRes.data ?? []).filter(r => parishIds.has(r.profile_id))
+  // ── Listy ────────────────────────────────────────────────────────────────
+  const rankingList = (
+    <Card flush>
+      {ranking.length === 0 ? <AppText muted style={styles.pad}>Brak danych rankingowych.</AppText> : ranking.map((r, i) => {
+        const isMe = r.profile_id === profile?.id
+        const medal = ['#C9A55A', '#D9D6CF', '#C98E5A'][i]
+        return (
+          <Pressable
+            key={r.profile_id}
+            onPress={() => openMember(r.profile_id)}
+            style={({ hovered }: any) => [
+              styles.rankRow,
+              i > 0 && { borderTopWidth: 1, borderTopColor: c.borderLight },
+              (isMe || hovered) && { backgroundColor: isMe ? c.goldSurface : c.highlight },
+            ]}
+          >
+            <View style={[styles.pos, medal ? { backgroundColor: medal } : { borderWidth: 1, borderColor: c.inputBorder }]}>
+              <AppText style={[styles.posText, { color: medal ? '#14213A' : c.subtext }]}>{i + 1}</AppText>
+            </View>
+            <View style={styles.flex}>
+              <AppText style={[styles.rankName, isMe && sans(800)]} numberOfLines={1}>{r.full_name}</AppText>
+              <AppText variant="small" muted>{r.rankName ?? 'Ministrant'}</AppText>
+            </View>
+            <AppText style={[styles.rankPts, { color: c.text }]}>{r.total_points}</AppText>
+          </Pressable>
+        )
+      })}
+    </Card>
+  )
 
-    if (mySummaryRes.data) {
-      setSummary(mySummaryRes.data as any)
-    } else {
-      setSummary({ profile_id: profile.id, total_points: 0, services_count: 0 })
-    }
-    setPoints(pointsRes.data ?? [])
-    setRanking(parishRanking)
+  const historyList = (
+    <Card flush>
+      {history.length === 0 ? (
+        <AppText muted style={styles.pad}>Brak historii — punkty zdobywasz za każdą potwierdzoną służbę.</AppText>
+      ) : history.map((h, i) => {
+        const date = h.schedule?.date ?? localDateStr(new Date(h.created_at))
+        return (
+          <View key={h.id} style={[styles.histRow, i > 0 && { borderTopWidth: 1, borderTopColor: c.borderLight }]}>
+            <View style={styles.flex}>
+              <AppText variant="bodyStrong" numberOfLines={1}>{h.schedule?.title ?? h.reason}</AppText>
+              <AppText variant="small" muted numberOfLines={1}>
+                {`${dayShort(date).toLowerCase()} ${shortDate(date)}${h.schedule ? ` · ${h.reason}` : ''}`}
+              </AppText>
+            </View>
+            <AppText style={[styles.amount, { color: h.amount >= 0 ? c.success : c.dangerStrong }]}>
+              {h.amount > 0 ? `+${h.amount}` : h.amount}
+            </AppText>
+          </View>
+        )
+      })}
+    </Card>
+  )
 
-    setLoading(false)
-    setRefreshing(false)
-  }
+  const badgesGrid = (
+    <Card style={styles.badgesCard}>
+      <BadgeGrid badges={badges} emptyText="Nie masz jeszcze odznak. Zdobywasz je za regularną służbę." />
+      <Pressable onPress={() => router.push('/(tabs)/badge-catalog')} style={styles.catalogLink}>
+        <AppText variant="label" color={c.primary}>Katalog odznak →</AppText>
+      </Pressable>
+    </Card>
+  )
 
-  useEffect(() => { fetchData() }, [profile?.id])
+  if (loading) return <View style={[styles.center, { backgroundColor: c.bg }]}><ActivityIndicator color={c.primary} /></View>
 
-  useRealtimeTable('points', fetchData, profile?.parish_id ? `parish_id=eq.${profile.parish_id}` : undefined)
-
-  const onRefresh = () => { setRefreshing(true); fetchData() }
-
-  if (loading) {
+  if (isDesktop) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={c.primary} />
-      </View>
+      <ScrollView style={{ backgroundColor: c.bg }} contentContainerStyle={styles.desktop}>
+        <View style={styles.col}>
+          <View style={[styles.hero, { backgroundColor: c.primary }]}>
+            <AppText variant="eyebrow" color={c.gold}>Twoje punkty</AppText>
+            <View style={styles.bigRow}>
+              <AppText style={[serif(), styles.big, { color: '#FFFFFF' }]}>{total}</AppText>
+              <AppText style={[styles.bigSub, { color: '#C9D3E3' }]}>{`pkt · #${myIdx + 1 || '—'} w parafii`}</AppText>
+            </View>
+            <View style={styles.barTrack}><View style={[styles.barFill, { width: `${progress * 100}%`, backgroundColor: c.gold }]} /></View>
+            <AppText style={[styles.heroLine, { color: '#C9D3E3' }]}>{`${me?.rankName ?? 'Ministrant'} · ${summaryLine}`}</AppText>
+          </View>
+          <View>
+            <SectionHeader title="Odznaki" />
+            {badgesGrid}
+          </View>
+          <View>
+            <SectionHeader title="Historia" />
+            {historyList}
+          </View>
+        </View>
+        <View style={styles.col}>
+          <SectionHeader title="Ranking parafii" />
+          {rankingList}
+        </View>
+      </ScrollView>
     )
   }
 
-  const myRank = ranking.findIndex(r => r.profile_id === profile?.id) + 1
-
   return (
-    <View style={styles.container}>
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryTop}>
-          <Ionicons name="trophy" size={28} color={c.gold} />
-          <Text style={styles.summaryTitle}>Twoje punkty</Text>
-        </View>
-        <Text style={styles.summaryPoints}>{summary?.total_points ?? 0}</Text>
-        <View style={styles.summaryRow}>
-          <Ionicons name="checkmark-circle-outline" size={14} color={c.white + 'AA'} />
-          <Text style={styles.summaryMeta}>{summary?.services_count ?? 0} służb</Text>
-          {myRank > 0 && (
-            <>
-              <Text style={styles.summaryDot}>·</Text>
-              <Ionicons name="bar-chart-outline" size={14} color={c.white + 'AA'} />
-              <Text style={styles.summaryMeta}>#{myRank} w rankingu</Text>
-            </>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'history' && styles.tabActive]}
-          onPress={() => setActiveTab('history')}
-        >
-          <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>Historia</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'ranking' && styles.tabActive]}
-          onPress={() => setActiveTab('ranking')}
-        >
-          <Text style={[styles.tabText, activeTab === 'ranking' && styles.tabTextActive]}>Ranking</Text>
-        </TouchableOpacity>
-      </View>
-
-      {activeTab === 'history' ? (
-        <FlatList
-          data={points}
-          keyExtractor={(item) => item.id}
-          style={{ flex: 1, backgroundColor: c.bg }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="trophy-outline" size={48} color={c.iconMuted} />
-              <Text style={styles.emptyTitle}>Brak historii punktów</Text>
-              <Text style={styles.emptySubtitle}>
-                Punkty zdobywasz za każdą potwierdzoną służbę przy ołtarzu.
-              </Text>
-            </View>
-          }
-          renderItem={({ item }) => <PointCard point={item} styles={styles} colors={c} />}
-          contentContainerStyle={{ padding: 16, gap: 10 }}
-        />
-      ) : (
-        <FlatList
-          data={ranking}
-          keyExtractor={(item) => item.profile_id}
-          style={{ flex: 1, backgroundColor: c.bg }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="podium-outline" size={48} color={c.iconMuted} />
-              <Text style={styles.emptyText}>Brak danych rankingowych</Text>
-            </View>
-          }
-          renderItem={({ item, index }) => (
-            <RankingRow
-              entry={item}
-              position={index + 1}
-              isMe={item.profile_id === profile?.id}
-              styles={styles}
-              colors={c}
-            />
-          )}
-          contentContainerStyle={{ padding: 16, gap: 8 }}
-        />
-      )}
-    </View>
-  )
-}
-
-function PointCard({ point, styles, colors: c }: { point: PointWithSchedule; styles: any; colors: Colors }) {
-  const isPositive = point.amount > 0
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardReason} numberOfLines={1}>{point.reason}</Text>
-        <View style={[styles.amountBadge, { backgroundColor: isPositive ? c.success + '33' : c.subtext + '22' }]}>
-          <Text style={[styles.amountText, { color: isPositive ? c.success : c.subtext }]}>
-            {isPositive ? '+' : ''}{point.amount} pkt
-          </Text>
-        </View>
-      </View>
-      {point.schedule && (
-        <View style={styles.row}>
-          <Ionicons name="calendar-outline" size={13} color={c.textTertiary} />
-          <Text style={styles.cardMeta}>
-            {point.schedule.title} · {new Date(point.schedule.date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' })}
-          </Text>
-        </View>
-      )}
-      <View style={styles.row}>
-        <Ionicons name="time-outline" size={13} color={c.textTertiary} />
-        <Text style={styles.cardMeta}>
-          {new Date(point.created_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
-        </Text>
-      </View>
-    </View>
-  )
-}
-
-const MEDALS = ['🥇', '🥈', '🥉']
-
-function RankingRow({ entry, position, isMe, styles, colors: c }: {
-  entry: RankingEntry; position: number; isMe: boolean; styles: any; colors: Colors
-}) {
-  const router = useRouter()
-  return (
-    <TouchableOpacity
-      style={[styles.rankRow, isMe && styles.rankRowMe]}
-      onPress={() => !isMe && router.push(`/(tabs)/member-profile?id=${entry.profile_id}`)}
-      activeOpacity={isMe ? 1 : 0.7}
+    <ScrollView
+      style={{ backgroundColor: c.bg }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await reload(); setRefreshing(false) }} />}
     >
-      <Text style={styles.rankPosition}>
-        {position <= 3 ? MEDALS[position - 1] : `#${position}`}
-      </Text>
-      <View style={styles.rankInfo}>
-        <Text style={[styles.rankName, isMe && styles.rankNameMe]}>
-          {entry.full_name ?? '—'}{isMe ? ' (Ty)' : ''}
-        </Text>
-        <Text style={styles.rankMeta}>{entry.services_count} służb</Text>
+      <ScreenHeader eyebrow="Twoje punkty">
+        <View style={styles.bigRow}>
+          <AppText style={[serif(), styles.big, { color: palette.fg }]}>{total}</AppText>
+          <AppText style={[styles.bigSub, { color: palette.fg }]}>{`pkt · #${myIdx + 1 || '—'} w parafii`}</AppText>
+        </View>
+        <View style={styles.barLabels}>
+          <AppText variant="label" color={palette.fg}>{me?.rankName ?? 'Ministrant'}</AppText>
+          <AppText variant="label" color={palette.fg}>{`${me?.services_count ?? 0} ${pl(me?.services_count ?? 0, ['służba', 'służby', 'służb'])}`}</AppText>
+        </View>
+        <View style={[styles.barTrack, { backgroundColor: palette.chip }]}>
+          <View style={[styles.barFill, { width: `${progress * 100}%`, backgroundColor: c.gold }]} />
+        </View>
+        <AppText variant="small" color={palette.fg}>{summaryLine}</AppText>
+      </ScreenHeader>
+      <View style={styles.mobileBody}>
+        <Segmented
+          value={seg}
+          onChange={setSeg}
+          options={[{ value: 'ranking', label: 'Ranking' }, { value: 'history', label: 'Historia' }, { value: 'badges', label: 'Odznaki' }]}
+        />
+        {seg === 'ranking' ? rankingList : seg === 'history' ? historyList : badgesGrid}
       </View>
-      <Text style={[styles.rankPoints, isMe && { color: c.primary }]}>
-        {entry.total_points} pkt
-      </Text>
-    </TouchableOpacity>
+    </ScrollView>
   )
 }
 
-
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
-    summaryCard: {
-      backgroundColor: c.primary,
-      margin: 16,
-      marginBottom: 0,
-      borderRadius: 16,
-      padding: 20,
-      gap: 6,
-    },
-    summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    summaryTitle: { color: c.white + 'CC', fontSize: 14, fontWeight: '500' },
-    summaryPoints: { color: c.white, fontSize: 48, fontWeight: '700', lineHeight: 56 },
-    summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    summaryMeta: { color: c.white + 'AA', fontSize: 13 },
-    summaryDot: { color: c.white + '55', marginHorizontal: 2 },
-
-    tabs: {
-      flexDirection: 'row',
-      margin: 16,
-      marginBottom: 0,
-      backgroundColor: c.border,
-      borderRadius: 10,
-      padding: 3,
-    },
-    tab: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-    tabActive: { backgroundColor: c.surface, ...shadow.md },
-    tabText: { fontSize: 14, fontWeight: '500', color: c.subtext },
-    tabTextActive: { color: c.text },
-
-    card: {
-      backgroundColor: c.surface,
-      borderRadius: 12,
-      padding: 14,
-      gap: 5,
-      ...shadow.xs,
-    },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
-    cardReason: { fontSize: 14, fontWeight: '500', color: c.text, flex: 1 },
-    amountBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-    amountText: { fontSize: 13, fontWeight: '600' },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    cardMeta: { fontSize: 12, color: c.textTertiary },
-
-    rankRow: {
-      backgroundColor: c.surface,
-      borderRadius: 12,
-      padding: 14,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      ...shadow.xs,
-    },
-    rankRowMe: { backgroundColor: c.primaryAlpha08, borderWidth: 1, borderColor: c.primaryAlpha20 },
-    rankPosition: { fontSize: 18, width: 36, textAlign: 'center' },
-    rankInfo: { flex: 1 },
-    rankName: { fontSize: 14, fontWeight: '500', color: c.text },
-    rankNameMe: { fontWeight: '700' },
-    rankMeta: { fontSize: 12, color: c.textTertiary, marginTop: 1 },
-    rankPoints: { fontSize: 15, fontWeight: '700', color: c.text },
-
-    empty: { alignItems: 'center', marginTop: 60, gap: 12 },
-    emptyText: { color: c.textTertiary, fontSize: 15 },
-    emptyTitle: { color: c.text, fontSize: 16, fontWeight: '600' },
-    emptySubtitle: { color: c.textTertiary, fontSize: 14, textAlign: 'center', maxWidth: 260, lineHeight: 20 },
-  })
-}
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  pad: { padding: 14 },
+  mobileBody: { padding: 16, gap: 14, paddingBottom: 32 },
+  bigRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
+  big: { fontSize: 72, lineHeight: 76 },
+  bigSub: { ...sans(700), fontSize: 15 },
+  barLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+  barTrack: { height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.14)', overflow: 'hidden' },
+  barFill: { height: 8, borderRadius: 4 },
+  rankRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11, cursor: 'pointer' } as any,
+  pos: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  posText: { ...sans(800), fontSize: 12 },
+  rankName: { ...sans(600), fontSize: 15 },
+  rankPts: { ...sans(800), fontSize: 16, fontVariant: ['tabular-nums'] },
+  histRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  amount: { ...sans(800), fontSize: 15, fontVariant: ['tabular-nums'] },
+  badgesCard: { gap: 14 },
+  catalogLink: { alignSelf: 'flex-start', cursor: 'pointer' } as any,
+  desktop: { flexDirection: 'row', gap: 20, padding: 28, paddingHorizontal: 32, alignItems: 'flex-start' },
+  col: { flex: 1, gap: 18 },
+  hero: { borderRadius: 22, padding: 24, gap: 12 },
+  heroLine: { ...sans(600), fontSize: 13 },
+})

@@ -64,6 +64,6 @@ function createStyles(c: Colors) {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       padding: 20, paddingBottom: 8,
     },
-    title: { fontSize: 17, fontWeight: '700', color: c.text },
+    title: { fontSize: 17, color: c.text, fontFamily: 'Manrope_700Bold' },
   })
 }

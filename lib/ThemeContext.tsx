@@ -17,7 +17,8 @@ const ThemeContext = createContext<ThemeContextValue>({
 })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const systemScheme = useColorScheme() ?? 'light'
+  // RN 0.86: useColorScheme może zwrócić też 'unspecified'
+  const systemScheme: 'light' | 'dark' = useColorScheme() === 'dark' ? 'dark' : 'light'
   const themeOverride = useThemeStore((s) => s.themeOverride)
 
   const scheme: 'light' | 'dark' =

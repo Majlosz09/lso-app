@@ -1,19 +1,16 @@
-import { useState, useMemo } from 'react'
-import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView
-} from 'react-native'
+import { useMemo, useState } from 'react'
+import { Pressable, StyleSheet, View } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
-import { shadow } from '../../lib/shadows'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
-import { Colors } from '../../lib/theme'
+import { sans } from '../../lib/theme'
 import type { AttendanceMode } from '../../types/database'
 import GpsLocationPicker from '../../components/GpsLocationPicker'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { AuthLayout } from '../../components/auth/AuthLayout'
+import { ChoiceCard } from '../../components/auth/formParts'
+import { AppText, Button, Chip, Segmented, Sheet, TextField } from '../../components/ui'
 
 // Alert.alert nie wyświetla się na webie — Toast działa wszędzie
 const showError = (message: string) => Toast.show({ type: 'error', text1: 'Błąd', text2: message })
@@ -46,14 +43,13 @@ export default function ParishSetupScreen() {
   const { colors: c } = useTheme()
 
   const handleLogout = () => setConfirmLogout(true)
-  const styles = useMemo(() => createStyles(c), [c])
 
-  const ATTENDANCE_OPTIONS: { mode: AttendanceMode; label: string; icon: string; color: string }[] = useMemo(() => [
-    { mode: 'button', label: 'Przycisk (bez weryfikacji)', icon: 'hand-left-outline',   color: '#10B981' },
-    { mode: 'qr',     label: 'Kod QR w zakrystii',         icon: 'qr-code-outline',     color: c.primary },
-    { mode: 'gps',    label: 'Lokalizacja GPS',             icon: 'location-outline',    color: '#EA580C' },
-    { mode: 'admin',  label: 'Tylko admin (zaznacza ksiądz)', icon: 'shield-checkmark-outline', color: '#7C3AED' },
-  ], [c.primary])
+  const ATTENDANCE_OPTIONS: { mode: AttendanceMode; label: string; sub: string; icon: string }[] = useMemo(() => [
+    { mode: 'button', label: 'Samodzielne potwierdzenie', sub: 'Ministrant sam oznacza obecność przyciskiem', icon: 'gesture-tap' },
+    { mode: 'qr',     label: 'Kod QR w zakrystii',        sub: 'Ministrant skanuje wydrukowany kod',        icon: 'qrcode-scan' },
+    { mode: 'gps',    label: 'Lokalizacja GPS',           sub: 'Obecność, gdy telefon jest przy kościele',   icon: 'map-marker' },
+    { mode: 'admin',  label: 'Zaznacza ksiądz / opiekun', sub: 'Opiekun odhacza listę obecności po służbie', icon: 'shield-check' },
+  ], [])
 
   const handleJoin = async () => {
     if (!inviteCode.trim() || inviteCode.trim().length !== 6) {
@@ -150,219 +146,110 @@ export default function ParishSetupScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.7}>
-          <Ionicons name="log-out-outline" size={18} color={c.textTertiary} />
-          <Text style={styles.logoutText}>Wyloguj</Text>
-        </TouchableOpacity>
-        <View style={styles.iconWrapper}>
-          <Ionicons name="business-outline" size={48} color={c.primary} />
-        </View>
-        <Text style={styles.title}>Dołącz do parafii</Text>
-        <Text style={styles.subtitle}>Twoje konto nie jest jeszcze przypisane do żadnej parafii.</Text>
-
-        <View style={styles.tabRow}>
-          <TouchableOpacity
-            style={[styles.tab, tab === 'join' && styles.tabActive]}
-            onPress={() => setTab('join')}
-          >
-            <Text style={[styles.tabText, tab === 'join' && styles.tabTextActive]}>Dołącz z kodem</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, tab === 'create' && styles.tabActive]}
-            onPress={() => setTab('create')}
-          >
-            <Text style={[styles.tabText, tab === 'create' && styles.tabTextActive]}>Utwórz parafię</Text>
-          </TouchableOpacity>
-        </View>
-
-        {tab === 'join' ? (
-          <>
-            <Text style={styles.label}>Kim jesteś?</Text>
-            <View style={styles.roleRow}>
-              {([['member', 'Ministrant'], ['parent', 'Rodzic']] as const).map(([r, label]) => (
-                <TouchableOpacity
-                  key={r}
-                  style={[styles.roleChip, joinRole === r && styles.roleChipActive]}
-                  onPress={() => setJoinRole(r)}
-                >
-                  <Text style={[styles.roleChipText, joinRole === r && styles.roleChipTextActive]}>{label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {needsName && (
-              <View style={styles.nameRow}>
-                <TextInput style={[styles.input, { flex: 1 }]} placeholder="Imię" placeholderTextColor={c.textTertiary}
-                  value={firstName} onChangeText={setFirstName} />
-                <TextInput style={[styles.input, { flex: 1 }]} placeholder="Nazwisko" placeholderTextColor={c.textTertiary}
-                  value={lastName} onChangeText={setLastName} />
-              </View>
-            )}
-            {joinRole === 'member' && (
-              <TextInput style={styles.input} placeholder="Rocznik (np. 2014)" placeholderTextColor={c.textTertiary}
-                keyboardType="number-pad" maxLength={4} value={rocznik} onChangeText={setRocznik} />
-            )}
-            <Text style={styles.label}>Kod parafii</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="6-znakowy kod (np. AB12CD)"
-              placeholderTextColor={c.textTertiary}
-              autoCapitalize="characters"
-              value={inviteCode}
-              onChangeText={t => setInviteCode(t.toUpperCase())}
-              maxLength={6}
-            />
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleJoin}
-              disabled={loading}
-            >
-              {loading
-                ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.buttonText}>Dołącz do parafii</Text>
-              }
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Text style={styles.label}>Nazwa parafii *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="np. Parafia pw. św. Jana"
-              placeholderTextColor={c.textTertiary}
-              value={parishName}
-              onChangeText={setParishName}
-            />
-            <Text style={styles.label}>Miejscowość (opcjonalnie)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="np. Warszawa"
-              placeholderTextColor={c.textTertiary}
-              value={parishCity}
-              onChangeText={setParishCity}
-            />
-
-            <Text style={[styles.label, { marginTop: 16 }]}>Weryfikacja obecności</Text>
-            {ATTENDANCE_OPTIONS.map(opt => (
-              <TouchableOpacity
-                key={opt.mode}
-                style={[styles.modeRow, attendanceMode === opt.mode && { borderColor: opt.color, backgroundColor: opt.color + '0a' }]}
-                onPress={() => setAttendanceMode(opt.mode)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name={opt.icon as any} size={18} color={attendanceMode === opt.mode ? opt.color : c.textTertiary} />
-                <Text style={[styles.modeLabel, attendanceMode === opt.mode && { color: opt.color }]}>{opt.label}</Text>
-                <View style={[styles.radioOuter, attendanceMode === opt.mode && { borderColor: opt.color }]}>
-                  {attendanceMode === opt.mode && <View style={[styles.radioInner, { backgroundColor: opt.color }]} />}
-                </View>
-              </TouchableOpacity>
-            ))}
-
-            {attendanceMode === 'gps' && (
-              <View style={styles.gpsBox}>
-                <Text style={styles.gpsLabel}>Lokalizacja kościoła</Text>
-                <GpsLocationPicker
-                  lat={lat}
-                  lng={lng}
-                  gpsRadius={gpsRadius}
-                  onLatChange={setLat}
-                  onLngChange={setLng}
-                  onGpsRadiusChange={setGpsRadius}
-                />
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleCreate}
-              disabled={loading}
-            >
-              {loading
-                ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.buttonText}>Utwórz parafię</Text>
-              }
-            </TouchableOpacity>
-          </>
-        )}
-      </ScrollView>
-      <ConfirmDialog
-        visible={confirmLogout}
-        title="Wyloguj"
-        message="Czy na pewno chcesz się wylogować?"
-        confirmText="Wyloguj"
-        destructive
-        onConfirm={() => { setConfirmLogout(false); supabase.auth.signOut() }}
-        onCancel={() => setConfirmLogout(false)}
+    <AuthLayout
+      title={tab === 'join' ? 'Dołącz do parafii' : 'Nowa parafia'}
+      subtitle="Twoje konto nie jest jeszcze przypisane do żadnej parafii."
+    >
+      <Segmented
+        value={tab}
+        onChange={setTab}
+        options={[{ value: 'join', label: 'Dołącz z kodem' }, { value: 'create', label: 'Utwórz parafię' }]}
       />
-    </KeyboardAvoidingView>
+
+      {tab === 'join' ? (
+        <>
+          <View style={styles.group}>
+            <AppText variant="label" muted>Kim jesteś?</AppText>
+            <View style={styles.chips}>
+              <Chip label="Ministrant" icon="account" selected={joinRole === 'member'} onPress={() => setJoinRole('member')} />
+              <Chip label="Rodzic" icon="human-male-female-child" selected={joinRole === 'parent'} onPress={() => setJoinRole('parent')} />
+            </View>
+          </View>
+          {needsName && (
+            <View style={styles.row}>
+              <TextField label="Imię" placeholder="Imię" value={firstName} onChangeText={setFirstName} containerStyle={styles.flex} />
+              <TextField label="Nazwisko" placeholder="Nazwisko" value={lastName} onChangeText={setLastName} containerStyle={styles.flex} />
+            </View>
+          )}
+          {joinRole === 'member' && (
+            <TextField label="Rocznik" placeholder="np. 2014" keyboardType="number-pad" maxLength={4} value={rocznik} onChangeText={setRocznik} />
+          )}
+          <TextField
+            label="Kod parafii"
+            placeholder="6-znakowy kod (np. AB12CD)"
+            autoCapitalize="characters"
+            value={inviteCode}
+            onChangeText={t => setInviteCode(t.toUpperCase())}
+            maxLength={6}
+            style={styles.code}
+          />
+          <Button label="Dołącz do parafii" onPress={handleJoin} loading={loading} />
+        </>
+      ) : (
+        <>
+          <TextField label="Nazwa parafii *" placeholder="np. Parafia pw. św. Jana" value={parishName} onChangeText={setParishName} />
+          <TextField label="Miejscowość (opcjonalnie)" placeholder="np. Warszawa" value={parishCity} onChangeText={setParishCity} />
+
+          <View style={styles.group}>
+            <AppText variant="label" muted>Weryfikacja obecności</AppText>
+            {ATTENDANCE_OPTIONS.map(opt => (
+              <ChoiceCard
+                key={opt.mode}
+                icon={opt.icon}
+                title={opt.label}
+                subtitle={opt.sub}
+                selected={attendanceMode === opt.mode}
+                onPress={() => setAttendanceMode(opt.mode)}
+              />
+            ))}
+          </View>
+
+          {attendanceMode === 'gps' && (
+            <View style={[styles.gpsBox, { backgroundColor: c.goldSurface }]}>
+              <AppText variant="label" color={c.goldText}>Lokalizacja kościoła</AppText>
+              <GpsLocationPicker
+                lat={lat}
+                lng={lng}
+                gpsRadius={gpsRadius}
+                onLatChange={setLat}
+                onLngChange={setLng}
+                onGpsRadiusChange={setGpsRadius}
+              />
+            </View>
+          )}
+
+          <Button label="Utwórz parafię" onPress={handleCreate} loading={loading} />
+        </>
+      )}
+
+      <Pressable onPress={handleLogout} accessibilityRole="button" style={styles.logout}>
+        <AppText style={[styles.logoutText, { color: c.subtext }]}>Wyloguj się</AppText>
+      </Pressable>
+
+      <Sheet
+        visible={confirmLogout}
+        onClose={() => setConfirmLogout(false)}
+        title="Wylogować się?"
+        footer={
+          <>
+            <Button label="Wyloguj" variant="danger" onPress={() => { setConfirmLogout(false); supabase.auth.signOut() }} />
+            <Button label="Anuluj" variant="secondary" onPress={() => setConfirmLogout(false)} />
+          </>
+        }
+      >
+        <AppText muted>Czy na pewno chcesz się wylogować?</AppText>
+      </Sheet>
+    </AuthLayout>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.bg },
-    inner: { justifyContent: 'center', paddingHorizontal: 32, paddingVertical: 48 },
-
-    iconWrapper: {
-      width: 80, height: 80, borderRadius: 24,
-      backgroundColor: c.primary + '11', justifyContent: 'center', alignItems: 'center',
-      alignSelf: 'center', marginBottom: 20,
-    },
-    title: { fontSize: 28, fontWeight: '700', textAlign: 'center', color: c.text, marginBottom: 8 },
-    subtitle: { fontSize: 14, textAlign: 'center', color: c.subtext, marginBottom: 28, lineHeight: 20 },
-
-    tabRow: {
-      flexDirection: 'row', backgroundColor: c.border,
-      borderRadius: 10, padding: 3, marginBottom: 20,
-    },
-    tab: {
-      flex: 1, paddingVertical: 10, borderRadius: 8,
-      alignItems: 'center',
-    },
-    tabActive: {
-      backgroundColor: c.surface,
-      ...shadow.md,
-    },
-    tabText: { fontSize: 14, fontWeight: '500', color: c.subtext },
-    tabTextActive: { color: c.primary, fontWeight: '600' },
-
-    label: { fontSize: 13, fontWeight: '600', color: c.subtext, marginBottom: 6, marginTop: 4 },
-    input: {
-      backgroundColor: c.surface, borderRadius: 12,
-      paddingHorizontal: 16, paddingVertical: 14,
-      fontSize: 16, marginBottom: 12,
-      borderWidth: 1, borderColor: c.border, color: c.text,
-    },
-    button: {
-      backgroundColor: c.primary, borderRadius: 12,
-      paddingVertical: 16, alignItems: 'center', marginTop: 8,
-    },
-    buttonDisabled: { opacity: 0.6 },
-    buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-
-    modeRow: {
-      flexDirection: 'row', alignItems: 'center', gap: 10,
-      borderWidth: 1.5, borderColor: c.border, borderRadius: 10,
-      padding: 12, marginBottom: 6,
-    },
-    modeLabel: { flex: 1, fontSize: 14, fontWeight: '500', color: c.subtext },
-    radioOuter: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: c.iconMuted, justifyContent: 'center', alignItems: 'center' },
-    radioInner: { width: 8, height: 8, borderRadius: 4 },
-
-    roleRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-    roleChip: {
-      flex: 1, paddingVertical: 11, borderRadius: 10, alignItems: 'center',
-      borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface,
-    },
-    roleChipActive: { borderColor: c.primary, backgroundColor: c.primarySurface },
-    roleChipText: { fontSize: 14, fontWeight: '600', color: c.subtext },
-    roleChipTextActive: { color: c.primary },
-    nameRow: { flexDirection: 'row', gap: 8 },
-
-    gpsBox: { gap: 8, backgroundColor: '#EA580C10', borderRadius: 10, padding: 12, marginBottom: 4 },
-    gpsLabel: { fontSize: 13, fontWeight: '600', color: '#EA580C' },
-    logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-end', paddingVertical: 8, marginBottom: 8 },
-    logoutText: { fontSize: 13, color: c.textTertiary },
-  })
-}
+const styles = StyleSheet.create({
+  group: { gap: 8 },
+  chips: { flexDirection: 'row', gap: 8 },
+  row: { flexDirection: 'row', gap: 10 },
+  flex: { flex: 1 },
+  code: { ...sans(800), letterSpacing: 1 },
+  gpsBox: { gap: 8, borderRadius: 14, padding: 12 },
+  logout: { alignSelf: 'center', padding: 10, cursor: 'pointer' } as any,
+  logoutText: { ...sans(700), fontSize: 14 },
+})

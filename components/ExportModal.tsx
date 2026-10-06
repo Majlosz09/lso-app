@@ -11,9 +11,24 @@ import { useAuthStore } from '../stores/authStore'
 import { useTheme } from '../lib/ThemeContext'
 import { Colors } from '../lib/theme'
 import { DatePickerModal } from './DatePickerModal'
-import { buildExportData, generateCSV, generateHTML, generateXLS, shareFile } from '../lib/export'
+import { buildExportData, generateCSV, generateHTML, generateXLSX, shareFile } from '../lib/export'
+import { toBase64 } from '../lib/xlsx'
 
-type Format = 'csv' | 'pdf'
+type Format = 'pdf' | 'xlsx' | 'csv'
+
+const FORMAT_LABELS: Record<Format, string> = { pdf: 'PDF', xlsx: 'Excel', csv: 'CSV' }
+
+/** Pobranie pliku w przeglądarce. */
+function downloadWeb(content: BlobPart, type: string, name: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = name
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
 type PresetPeriod = 7 | 30 | 90 | 365
 
 interface Props {
@@ -91,18 +106,19 @@ export function ExportModal({ visible, onClose, pointsOnly = false }: Props) {
       const { from, to } = getRange()
       const data = await buildExportData(supabase, profile.parish_id, parish.name, from, to)
 
-      if (format === 'csv') {
+      if (format === 'xlsx') {
+        const bytes = generateXLSX(data, { pointsOnly })
+        const name = `raport-${from}-${to}.xlsx`
         if (Platform.OS === 'web') {
-          const xls = generateXLS(data, { pointsOnly })
-          const blob = new Blob([xls], { type: 'application/vnd.ms-excel;charset=utf-8' })
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `raport-${from}-${to}.xls`
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          URL.revokeObjectURL(url)
+          downloadWeb(bytes as BlobPart, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', name)
+        } else {
+          const uri = (FileSystem.cacheDirectory ?? '') + name
+          await FileSystem.writeAsStringAsync(uri, toBase64(bytes), { encoding: FileSystem.EncodingType.Base64 })
+          await shareFile(uri)
+        }
+      } else if (format === 'csv') {
+        if (Platform.OS === 'web') {
+          downloadWeb(generateCSV(data, { pointsOnly }), 'text/csv;charset=utf-8', `raport-${from}-${to}.csv`)
         } else {
           const csv = generateCSV(data, { pointsOnly })
           const uri = (FileSystem.cacheDirectory ?? '') + `raport-${from}-${to}.csv`
@@ -112,7 +128,7 @@ export function ExportModal({ visible, onClose, pointsOnly = false }: Props) {
       } else {
         const html = generateHTML(data, { pointsOnly })
         if (Platform.OS === 'web') {
-          const printBar = `<div class="no-print" style="position:sticky;top:0;z-index:99;background:#1A237E;padding:10px 20px;display:flex;justify-content:space-between;align-items:center"><span style="color:#fff;font-size:13px;font-weight:600">Podgląd raportu</span><button onclick="window.print()" style="background:#fff;color:#1A237E;border:none;padding:7px 18px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">🖨 Drukuj / Zapisz PDF</button></div><style>@media print{.no-print{display:none!important}}</style>`
+          const printBar = `<div class="no-print" style="position:sticky;top:0;z-index:99;background:#0B2E5C;padding:10px 20px;display:flex;justify-content:space-between;align-items:center"><span style="color:#fff;font-size:13px;font-weight:600">Podgląd raportu</span><button onclick="window.print()" style="background:#fff;color:#0B2E5C;border:none;padding:7px 18px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px">🖨 Drukuj / Zapisz PDF</button></div><style>@media print{.no-print{display:none!important}}</style>`
           const win = window.open('', '_blank')
           if (win) {
             win.document.write(html.replace('<div class="hdr">', printBar + '<div class="hdr">'))
@@ -148,14 +164,14 @@ export function ExportModal({ visible, onClose, pointsOnly = false }: Props) {
 
             <Text style={styles.label}>Format</Text>
             <View style={styles.chipRow}>
-              {(['pdf', 'csv'] as Format[]).map(f => (
+              {(['pdf', 'xlsx', 'csv'] as Format[]).map(f => (
                 <TouchableOpacity
                   key={f}
                   style={[styles.chip, format === f && styles.chipActive]}
                   onPress={() => setFormat(f)}
                 >
                   <Text style={[styles.chipText, format === f && styles.chipTextActive]}>
-                    {f === 'pdf' ? 'PDF' : 'CSV / Excel'}
+                    {FORMAT_LABELS[f]}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -245,10 +261,11 @@ function createStyles(c: Colors) {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       paddingVertical: 20,
     },
-    title: { fontSize: 17, fontWeight: '700', color: c.text },
+    title: { fontSize: 17, color: c.text, fontFamily: 'Manrope_700Bold' },
     label: {
-      fontSize: 12, fontWeight: '700', color: c.textTertiary,
+      fontSize: 12, color: c.textTertiary,
       textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8, marginTop: 16,
+      fontFamily: 'Manrope_700Bold',
     },
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     chip: {
@@ -257,22 +274,22 @@ function createStyles(c: Colors) {
       backgroundColor: c.surface,
     },
     chipActive: { backgroundColor: c.primary, borderColor: c.primary },
-    chipText: { fontSize: 13, fontWeight: '500', color: c.subtext },
+    chipText: { fontSize: 13, color: c.subtext, fontFamily: 'Manrope_500Medium' },
     chipTextActive: { color: '#fff', fontWeight: '600' },
     dateRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
     dateBtn: {
       flex: 1, padding: 12, backgroundColor: c.bg,
       borderRadius: 10, borderWidth: 1, borderColor: c.border,
     },
-    dateBtnLabel: { fontSize: 11, color: c.textTertiary, marginBottom: 2 },
-    dateBtnValue: { fontSize: 14, fontWeight: '600', color: c.text },
-    dateSep: { fontSize: 16, color: c.subtext },
-    error: { marginTop: 8, fontSize: 12, color: '#DC2626' },
+    dateBtnLabel: { fontSize: 11, color: c.textTertiary, marginBottom: 2, fontFamily: 'Manrope_500Medium' },
+    dateBtnValue: { fontSize: 14, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    dateSep: { fontSize: 16, color: c.subtext, fontFamily: 'Manrope_500Medium' },
+    error: { marginTop: 8, fontSize: 12, color: '#B3261E', fontFamily: 'Manrope_500Medium' },
     exportBtn: {
       marginTop: 24, backgroundColor: c.primary,
       borderRadius: 12, paddingVertical: 14, alignItems: 'center',
     },
     exportBtnDisabled: { opacity: 0.6 },
-    exportBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    exportBtnText: { color: '#fff', fontSize: 15, fontFamily: 'Manrope_700Bold' },
   })
 }

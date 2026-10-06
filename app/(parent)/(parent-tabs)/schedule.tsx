@@ -1,150 +1,201 @@
-import { useEffect, useMemo, useState } from 'react'
-import {
-  View, Text, FlatList, StyleSheet,
-  RefreshControl, ActivityIndicator, TouchableOpacity
-} from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
+import { useState } from 'react'
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
+import Toast from 'react-native-toast-message'
 import { supabase } from '../../../lib/supabase'
-import { shadow } from '../../../lib/shadows'
-import { useAuthStore } from '../../../stores/authStore'
-import { STATUS_COLORS, STATUS_LABELS } from '../../../lib/status'
+import { serviceAvailability } from '../../../lib/serviceRules'
+import { AbsenceSheet } from '../../../components/services/AbsenceSheet'
+import { ChildSignUpSheet } from '../../../components/services/ChildSignUpSheet'
+import { ReportAttendanceSheet } from '../../../components/services/ReportAttendanceSheet'
+import { useServices } from '../../../hooks/useServices'
+import { addDays, localDateStr } from '../../../lib/dates'
+import { Chip } from '../../../components/ui'
 import { useTheme } from '../../../lib/ThemeContext'
-import { Colors } from '../../../lib/theme'
+import { sans, VESTMENT_DOT, VestmentColor } from '../../../lib/theme'
+import { getLiturgicalDay, useLiturgyVersion } from '../../../lib/liturgy'
+import { dayShort, longDate, shortDate } from '../../../lib/dates'
+import { STATUS_COLORS, STATUS_LABELS } from '../../../lib/status'
+import { useIsDesktop } from '../../../hooks/useIsDesktop'
+import { ChildDuty, useChildren } from '../../../hooks/useChildren'
+import { AppText, Avatar, Button, Card, ScreenHeader } from '../../../components/ui'
+import { ChildReports } from '../../../components/services/ChildReports'
 
-export default function ScheduleScreen() {
-  const { profile } = useAuthStore()
-  const [items, setItems] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const today = new Date().toISOString().split('T')[0]
+type Duty = ChildDuty & { child: string; avatar: string | null }
 
+/** N14: rodzic może zgłosić nieobecność dziecka na tych samych zasadach co ministrant. */
+function canReport(d: ChildDuty): boolean {
+  return serviceAvailability(
+    { date: d.date, time: d.time, category: d.category as any, serviceMode: d.serviceMode as any, mine: { id: d.assignmentId, status: d.status } as any, attended: d.status === 'present' },
+    'self',
+  ).canReportAbsence
+}
+
+/** Błąd „brak funkcji” przed migracją 20261001010000. */
+const rpcMissing = (msg: string) => /report_child_absence|withdraw_child_absence|schema cache/.test(msg)
+
+/** Nadchodzące dyżury dzieci (4 tygodnie), pogrupowane po dniach. */
+export default function ParentSchedule() {
+  useLiturgyVersion() // odśwież, gdy kalendarz kolejnego roku się policzy
+  const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
+  const { children, loading, reload } = useChildren(28)
+  const [refreshing, setRefreshing] = useState(false)
+  const [absenceFor, setAbsenceFor] = useState<Duty | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
+  // dziecko bez telefonu: rodzic zapisuje / wypisuje / zgłasza obecność
+  const today = localDateStr()
+  const { services, refresh: refreshServices } = useServices(addDays(today, -2), addDays(today, 14))
+  const [childId, setChildId] = useState<string | null>(null)
+  const [signUpOpen, setSignUpOpen] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const activeChild = children.find(ch => ch.id === childId) ?? children[0] ?? null
+  const childRef = activeChild ? { id: activeChild.id, name: activeChild.full_name.split(' ')[0] } : null
+  const takenIds = new Set((activeChild?.duties ?? []).map(d => d.scheduleId))
 
-  const fetchData = async () => {
-    if (!profile?.id) return
-    const { data: children } = await supabase
-      .from('profiles')
-      .select('id, full_name')
-      .eq('parent_id', profile.id)
+  const unsign = async (d: Duty) => {
+    setBusy(d.assignmentId)
+    const { error } = await supabase.rpc('unsign_child', { p_assignment_id: d.assignmentId })
+    setBusy(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Nie wypisano', text2: error.message }); return }
+    Toast.show({ type: 'success', text1: 'Wypisano', text2: `${d.child} · ${d.title} ${d.time}` })
+    reload()
+  }
+  const canUnsign = (d: Duty) => d.status === 'assigned' && d.serviceMode === 'signup'
+    && new Date(`${d.date}T${d.time}`).getTime() > Date.now() + 30 * 60_000
 
-    if (!children || children.length === 0) {
-      setItems([])
-      setLoading(false)
-      setRefreshing(false)
+  const report = async (text: string) => {
+    const d = absenceFor
+    if (!d) return
+    setBusy(d.assignmentId)
+    const { error } = await supabase.rpc('report_child_absence', { p_assignment_id: d.assignmentId, p_reason: text })
+    setBusy(null)
+    if (error) {
+      Toast.show({ type: 'error', text1: rpcMissing(error.message) ? 'Funkcja jeszcze niedostępna' : 'Nie udało się wysłać', text2: rpcMissing(error.message) ? undefined : error.message })
       return
     }
-
-    const childMap = new Map(children.map((c: any) => [c.id, c.full_name]))
-    const childIds = children.map((c: any) => c.id)
-
-    const { data } = await supabase
-      .from('schedule_assignments')
-      .select(`
-        id, status, profile_id,
-        schedule:schedules(id, title, date, time, group:groups(name))
-      `)
-      .in('profile_id', childIds)
-
-    if (data) {
-      setItems(
-        data
-          .map((a: any) => ({
-            ...a.schedule,
-            assignmentId: a.id,
-            childName: childMap.get(a.profile_id) ?? '?',
-            myStatus: a.status,
-          }))
-          .filter((s: any) => s?.id && s.date >= today)
-          .sort((a: any, b: any) => a.date.localeCompare(b.date))
-      )
-    }
-    setLoading(false)
-    setRefreshing(false)
+    setAbsenceFor(null)
+    Toast.show({ type: 'success', text1: 'Zgłoszenie wysłane do opiekuna', text2: d.child })
+    reload()
   }
 
-  useEffect(() => { fetchData() }, [profile?.id])
-
-  if (loading) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={c.primary} /></View>
+  const withdraw = async (d: Duty) => {
+    setBusy(d.assignmentId)
+    const { error } = await supabase.rpc('withdraw_child_absence', { p_assignment_id: d.assignmentId })
+    setBusy(null)
+    if (error) { Toast.show({ type: 'error', text1: 'Nie udało się wycofać', text2: error.message }); return }
+    Toast.show({ type: 'success', text1: 'Zgłoszenie wycofane', text2: d.child })
+    reload()
   }
 
-  return (
-    <FlatList
-      data={items}
-      keyExtractor={item => item.assignmentId}
-      style={{ flex: 1, backgroundColor: c.bg }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData() }} />}
-      ListHeaderComponent={
-        <Text style={styles.parentHeader}>Nadchodzące dyżury dzieci</Text>
-      }
-      ListEmptyComponent={
-        <View style={styles.empty}>
-          <Ionicons name="calendar-outline" size={48} color={c.iconMuted} />
-          <Text style={styles.emptyText}>Brak nadchodzących dyżurów</Text>
-        </View>
-      }
-      renderItem={({ item }) => <ChildScheduleCard schedule={item} styles={styles} colors={c} />}
-      contentContainerStyle={{ padding: 16, gap: 12 }}
-    />
-  )
-}
+  const duties: Duty[] = children
+    .flatMap(ch => ch.duties.map(d => ({ ...d, child: ch.full_name, avatar: ch.avatar_url })))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+  const days = Array.from(new Set(duties.map(d => d.date)))
 
-function ChildScheduleCard({ schedule, styles, colors: c }: { schedule: any; styles: any; colors: Colors }) {
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{schedule.title}</Text>
-        <View style={[styles.pill, { backgroundColor: (STATUS_COLORS[schedule.myStatus] ?? c.subtext) + '22' }]}>
-          <Text style={[styles.pillText, { color: STATUS_COLORS[schedule.myStatus] ?? c.subtext }]}>
-            {STATUS_LABELS[schedule.myStatus] ?? schedule.myStatus}
-          </Text>
-        </View>
-      </View>
-      <View style={[styles.row, { marginBottom: 2 }]}>
-        <Ionicons name="person-outline" size={14} color={c.primary} />
-        <Text style={[styles.cardMeta, { color: c.primary, fontWeight: '600' }]}>{schedule.childName}</Text>
-      </View>
-      <MetaRow icon="calendar-outline" text={
-        new Date(schedule.date + 'T12:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' })
-      } styles={styles} />
-      <MetaRow icon="time-outline" text={schedule.time?.slice(0, 5)} styles={styles} />
-      {schedule.group && <MetaRow icon="people-outline" text={schedule.group.name} color={c.primary} styles={styles} />}
+  const body = loading ? <ActivityIndicator color={c.primary} style={styles.loader} /> : days.length === 0 ? (
+    <View style={[styles.empty, { borderColor: c.iconMuted }]}>
+      <AppText muted>{children.length ? 'Dzieci nie mają zaplanowanych dyżurów w najbliższych tygodniach.' : 'Brak powiązanych dzieci.'}</AppText>
     </View>
-  )
-}
-
-function MetaRow({ icon, text, color, styles }: { icon: any; text: string; color?: string; styles: any }) {
-  const { colors: c } = useTheme()
-  return (
-    <View style={styles.row}>
-      <Ionicons name={icon} size={14} color={color ?? c.subtext} />
-      <Text style={[styles.cardMeta, { color: color ?? c.subtext }]}>{text}</Text>
-    </View>
-  )
-}
-
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    empty: { alignItems: 'center', marginTop: 60, gap: 10 },
-    emptyText: { color: c.textTertiary, fontSize: 16 },
-    parentHeader: { fontSize: 17, fontWeight: '700', color: c.text, marginBottom: 4 },
-    card: {
-      backgroundColor: c.surface, borderRadius: 12, padding: 12, gap: 4,
-      ...shadow.md,
-    },
-    cardHeader: {
-      flexDirection: 'row', justifyContent: 'space-between',
-      alignItems: 'center', marginBottom: 2,
-    },
-    cardTitle: { fontSize: 16, fontWeight: '600', color: c.text, flex: 1 },
-    pill: {
-      flexDirection: 'row', alignItems: 'center', gap: 3,
-      borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3,
-    },
-    pillText: { fontSize: 12, fontWeight: '500' },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    cardMeta: { fontSize: 13 },
+  ) : days.map(day => {
+    const lit = getLiturgicalDay(day)
+    const vest = (lit.color ?? 'GREEN') as VestmentColor
+    return (
+      <View key={day} style={styles.group}>
+        <View style={styles.dayHead}>
+          <View style={[styles.dot, { backgroundColor: VESTMENT_DOT[vest] }, vest === 'WHITE' && { borderWidth: 1, borderColor: c.gold }]} />
+          <AppText style={[styles.dayLabel, { color: c.text }]}>{`${dayShort(day)} ${shortDate(day)}`}</AppText>
+          <AppText variant="small" muted numberOfLines={1} style={styles.flex}>{lit.name}</AppText>
+        </View>
+        <Card flush>
+          {duties.filter(d => d.date === day).map((d, i) => (
+            <View key={d.assignmentId} style={[styles.rowWrap, i > 0 && { borderTopWidth: 1, borderTopColor: c.borderLight }]}>
+            <View style={styles.row}>
+              <AppText style={[styles.time, { color: c.text }]}>{d.time}</AppText>
+              <View style={styles.flex}>
+                <AppText variant="bodyStrong" numberOfLines={1}>{d.title}</AppText>
+                <View style={styles.childLine}>
+                  <Avatar name={d.child} avatarUrl={d.avatar} size={20} />
+                  <AppText variant="small" muted>{d.child}</AppText>
+                </View>
+              </View>
+              <View style={[styles.status, { backgroundColor: (STATUS_COLORS[d.status] ?? c.subtext) + '22' }]}>
+                <AppText style={[styles.statusText, { color: STATUS_COLORS[d.status] ?? c.subtext }]}>{STATUS_LABELS[d.status] ?? d.status}</AppText>
+              </View>
+            </View>
+            {canReport(d) ? (
+              <Button label="Zgłoś nieobecność" icon="calendar-remove" variant="ghost" compact style={styles.action} onPress={() => setAbsenceFor(d)} />
+            ) : d.status === 'excused' ? (
+              <Button label="Wycofaj zgłoszenie" icon="undo" variant="ghost" compact style={styles.action} loading={busy === d.assignmentId} onPress={() => withdraw(d)} />
+            ) : null}
+            {canUnsign(d) && (
+              <Button label="Wypisz" icon="logout" variant="ghost" compact style={styles.action} loading={busy === d.assignmentId} onPress={() => unsign(d)} />
+            )}
+            </View>
+          ))}
+        </Card>
+      </View>
+    )
   })
+
+  return (
+    <ScrollView
+      style={{ backgroundColor: c.bg }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await reload(); setRefreshing(false) }} />}
+    >
+      {!isDesktop && <ScreenHeader eyebrow="Najbliższe 4 tygodnie" title="Dyżury dzieci" />}
+      <View style={[styles.body, isDesktop && styles.desktop]}>
+        {children.length > 0 && (
+          <Card style={styles.kidActions}>
+            <AppText variant="eyebrow" color={c.goldInk}>Dziecko bez telefonu?</AppText>
+            {children.length > 1 && (
+              <View style={styles.kidChips}>
+                {children.map(ch => (
+                  <Chip key={ch.id} label={ch.full_name.split(' ')[0]} selected={activeChild?.id === ch.id} onPress={() => setChildId(ch.id)} />
+                ))}
+              </View>
+            )}
+            <View style={styles.kidButtons}>
+              <Button label="Zapisz na Mszę" icon="calendar-plus" compact style={styles.flex} onPress={() => setSignUpOpen(true)} />
+              <Button label="Zgłoś obecność" icon="account-check" variant="secondary" compact style={styles.flex} onPress={() => setReportOpen(true)} />
+            </View>
+          </Card>
+        )}
+        <ChildReports childIds={children.map(ch => ch.id)} names={Object.fromEntries(children.map(ch => [ch.id, ch.full_name]))} />
+        {body}
+      </View>
+      <AbsenceSheet
+        visible={!!absenceFor}
+        title={absenceFor ? `${absenceFor.child.split(' ')[0]} nie może być` : 'Nieobecność'}
+        eyebrow={absenceFor ? `${absenceFor.title} · ${longDate(absenceFor.date)} ${absenceFor.time}` : undefined}
+        busy={!!absenceFor && busy === absenceFor.assignmentId}
+        onClose={() => setAbsenceFor(null)}
+        onSubmit={report}
+      />
+      <ChildSignUpSheet visible={signUpOpen} onClose={() => setSignUpOpen(false)} child={childRef}
+        services={services} takenScheduleIds={takenIds} onDone={() => { reload(); refreshServices() }} />
+      <ReportAttendanceSheet visible={reportOpen} onClose={() => setReportOpen(false)} forChild={childRef}
+        services={services} onSent={() => { reload(); refreshServices() }} />
+    </ScrollView>
+  )
 }
+
+const styles = StyleSheet.create({
+  flex: { flex: 1, minWidth: 0 },
+  kidActions: { gap: 10 },
+  kidChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  kidButtons: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
+  loader: { marginTop: 40 },
+  body: { padding: 16, gap: 16, paddingBottom: 32 },
+  desktop: { padding: 28, paddingHorizontal: 32, maxWidth: 900 },
+  empty: { borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 16, padding: 24 },
+  group: { gap: 8 },
+  dayHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  dayLabel: { ...sans(700), fontSize: 13 },
+  rowWrap: { paddingHorizontal: 14, paddingVertical: 12, gap: 6 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  action: { alignSelf: 'flex-start', marginLeft: 48 },
+  time: { ...sans(800), fontSize: 15, minWidth: 48, flexShrink: 0, fontVariant: ['tabular-nums'] },
+  childLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
+  status: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  statusText: { ...sans(700), fontSize: 11 },
+})

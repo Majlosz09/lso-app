@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { ModalKeyboardAvoider } from '../../components/ui/ModalKeyboardAvoider'
 
 type MemberRow = { id: string; full_name: string; rank_id: string | null; rank_name: string | null }
 type RankOption = { id: string; name: string; order: number; is_system: boolean; parish_id: string | null }
@@ -196,7 +197,7 @@ export default function RankAssignmentScreen() {
                       autoFocus
                     />
                     <TouchableOpacity onPress={handleRenameRank} hitSlop={8} disabled={renamingRank}>
-                      <Ionicons name="checkmark" size={22} color="#16A34A" />
+                      <Ionicons name="checkmark" size={22} color="#2F7D4F" />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleCancelEditRank} hitSlop={8}>
                       <Ionicons name="close" size={22} color={c.textTertiary} />
@@ -207,7 +208,7 @@ export default function RankAssignmentScreen() {
                     <Text style={[styles.rankMgmtName, { flex: 1 }]}>{rank.name}</Text>
                     <Text style={styles.deleteConfirmLabel}>Usuń?</Text>
                     <TouchableOpacity onPress={() => handleDeleteRank(rank.id)} hitSlop={8} disabled={deletingRank}>
-                      <Ionicons name="checkmark" size={22} color="#DC2626" />
+                      <Ionicons name="checkmark" size={22} color="#B3261E" />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => setConfirmDeleteId(null)} hitSlop={8}>
                       <Ionicons name="close" size={22} color={c.textTertiary} />
@@ -226,7 +227,7 @@ export default function RankAssignmentScreen() {
                           <Ionicons name="pencil-outline" size={20} color={c.primary} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => { setEditingRankId(null); setEditingRankName(''); setConfirmDeleteId(rank.id) }} hitSlop={8}>
-                          <Ionicons name="trash-outline" size={20} color="#DC2626" />
+                          <Ionicons name="trash-outline" size={20} color="#B3261E" />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -306,6 +307,7 @@ export default function RankAssignmentScreen() {
         animationType="slide"
         onRequestClose={() => setPickerTarget(null)}
       >
+<ModalKeyboardAvoider>
         <View style={styles.overlay}>
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setPickerTarget(null)} />
           <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
@@ -336,7 +338,8 @@ export default function RankAssignmentScreen() {
             ))}
           </View>
         </View>
-      </Modal>
+      </ModalKeyboardAvoider>
+</Modal>
     </View>
   )
 }
@@ -359,14 +362,15 @@ function createStyles(c: Colors) {
       flexDirection: 'row', alignItems: 'center', gap: 8,
     },
     ranksSectionTitle: {
-      fontSize: 11, fontWeight: '700', color: c.textTertiary,
+      fontSize: 11, color: c.textTertiary,
       textTransform: 'uppercase', letterSpacing: 0.8,
+      fontFamily: 'Manrope_700Bold',
     },
     ranksCountBadge: {
       backgroundColor: c.primaryAlpha08, borderRadius: 10,
       paddingHorizontal: 6, paddingVertical: 2,
     },
-    ranksCountText: { fontSize: 11, fontWeight: '700', color: c.primary },
+    ranksCountText: { fontSize: 11, color: c.primary, fontFamily: 'Manrope_700Bold' },
 
     rankMgmtRow: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -378,20 +382,21 @@ function createStyles(c: Colors) {
       backgroundColor: c.primarySurface, justifyContent: 'center', alignItems: 'center',
     },
     rankMgmtIconSystem: { backgroundColor: c.primaryAlpha08 },
-    rankMgmtName: { fontSize: 14, fontWeight: '500', color: c.text },
+    rankMgmtName: { fontSize: 14, color: c.text, fontFamily: 'Manrope_500Medium' },
     rankMgmtActions: { flexDirection: 'row', alignItems: 'center', gap: 14 },
     rankEditInput: {
       flex: 1, fontSize: 14, color: c.text,
       backgroundColor: c.bg, borderRadius: 8,
       paddingHorizontal: 10, paddingVertical: 5,
       borderWidth: 1, borderColor: c.primary,
+      fontFamily: 'Manrope_500Medium',
     },
     systemBadge: {
       backgroundColor: c.primaryAlpha08, borderRadius: 6,
       paddingHorizontal: 7, paddingVertical: 3,
     },
-    systemBadgeText: { fontSize: 10, color: c.primary, fontWeight: '600' },
-    deleteConfirmLabel: { fontSize: 13, color: '#DC2626', fontWeight: '600', marginRight: 4 },
+    systemBadgeText: { fontSize: 10, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
+    deleteConfirmLabel: { fontSize: 13, color: '#B3261E', marginRight: 4, fontFamily: 'Manrope_600SemiBold' },
     addRankRow: {
       flexDirection: 'row', alignItems: 'center', gap: 10,
       paddingHorizontal: 16, paddingVertical: 10,
@@ -401,6 +406,7 @@ function createStyles(c: Colors) {
       flex: 1, backgroundColor: c.bg, borderRadius: 10,
       paddingHorizontal: 12, paddingVertical: 9,
       fontSize: 14, color: c.text,
+      fontFamily: 'Manrope_500Medium',
     },
     addRankButton: {
       width: 40, height: 40, borderRadius: 10,
@@ -410,9 +416,9 @@ function createStyles(c: Colors) {
     // ── Lista ministrantów ──
     list: { flex: 1, backgroundColor: c.bg },
     content: { padding: 0 },
-    hint: { fontSize: 13, color: c.textTertiary, padding: 16, paddingBottom: 8 },
+    hint: { fontSize: 13, color: c.textTertiary, padding: 16, paddingBottom: 8, fontFamily: 'Manrope_500Medium' },
     empty: { alignItems: 'center', padding: 32 },
-    emptyText: { fontSize: 14, color: c.textTertiary },
+    emptyText: { fontSize: 14, color: c.textTertiary, fontFamily: 'Manrope_500Medium' },
     memberRow: {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       backgroundColor: c.surface, paddingHorizontal: 16, paddingVertical: 14,
@@ -422,8 +428,8 @@ function createStyles(c: Colors) {
       backgroundColor: c.primaryAlpha08,
       justifyContent: 'center', alignItems: 'center',
     },
-    memberInitials: { fontSize: 13, fontWeight: '700', color: c.primary },
-    memberName: { flex: 1, fontSize: 15, fontWeight: '500', color: c.text },
+    memberInitials: { fontSize: 13, color: c.primary, fontFamily: 'Manrope_700Bold' },
+    memberName: { flex: 1, fontSize: 15, color: c.text, fontFamily: 'Manrope_500Medium' },
     rankChip: {
       flexDirection: 'row', alignItems: 'center', gap: 4,
       backgroundColor: c.primaryAlpha08, borderRadius: 20,
@@ -431,7 +437,7 @@ function createStyles(c: Colors) {
       borderWidth: 1, borderColor: c.primaryAlpha12,
     },
     rankChipEmpty: { backgroundColor: c.bg, borderColor: c.border },
-    rankChipText: { fontSize: 12, fontWeight: '600', color: c.primary },
+    rankChipText: { fontSize: 12, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
     rankChipTextEmpty: { color: c.textTertiary },
     separator: { height: 1, backgroundColor: c.primarySurface, marginLeft: 64 },
 
@@ -446,13 +452,13 @@ function createStyles(c: Colors) {
       width: 36, height: 4, borderRadius: 2, backgroundColor: c.border,
       alignSelf: 'center', marginBottom: 16,
     },
-    sheetTitle: { fontSize: 16, fontWeight: '700', color: c.text, marginBottom: 12, paddingHorizontal: 4 },
+    sheetTitle: { fontSize: 16, color: c.text, marginBottom: 12, paddingHorizontal: 4, fontFamily: 'Manrope_700Bold' },
     rankOption: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       paddingVertical: 14, paddingHorizontal: 4,
       borderBottomWidth: 1, borderBottomColor: c.primarySurface,
     },
-    rankOptionText: { fontSize: 16, color: c.text },
+    rankOptionText: { fontSize: 16, color: c.text, fontFamily: 'Manrope_500Medium' },
     rankOptionTextActive: { color: c.primary, fontWeight: '600' },
   })
 }

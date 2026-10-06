@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
 import { getCatColors, ScheduleCategory } from '../../types/database'
 import { shadow } from '../../lib/shadows'
-import { getLiturgicalDay, getLiturgicalVestmentColor, VESTMENT_LABELS } from '../../lib/liturgy'
+import { getLiturgicalDay, getLiturgicalVestmentColor, VESTMENT_LABELS, useLiturgyVersion } from '../../lib/liturgy'
 import { useTheme } from '../../lib/ThemeContext'
 import { useAuthStore } from '../../stores/authStore'
 import { Colors } from '../../lib/theme'
@@ -20,6 +20,7 @@ type DaySchedule = {
 }
 
 export default function ScheduleDayScreen() {
+  useLiturgyVersion() // odśwież, gdy kalendarz kolejnego roku się policzy
   const { date: initialDate } = useLocalSearchParams<{ date: string }>()
   const router = useRouter()
   const insets = useSafeAreaInsets()
@@ -178,7 +179,7 @@ function createStyles(c: Colors) {
       borderBottomWidth: 1, borderBottomColor: c.border,
     },
     navBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8 },
-    navBtnText: { fontSize: 13, color: c.primary, fontWeight: '600' },
+    navBtnText: { fontSize: 13, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
 
     scroll: { flex: 1 },
     content: { padding: 16, gap: 8 },
@@ -189,23 +190,23 @@ function createStyles(c: Colors) {
     },
     vestmentStrip: { width: 6 },
     liturgyContent: { flex: 1, padding: 12, gap: 5 },
-    liturgyType: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-    liturgyName: { fontSize: 15, fontWeight: '600', color: c.text, lineHeight: 20 },
+    liturgyType: { fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.6, fontFamily: 'Manrope_700Bold' },
+    liturgyName: { fontSize: 15, color: c.text, lineHeight: 20, fontFamily: 'Manrope_600SemiBold' },
     colorChip: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
       alignSelf: 'flex-start', borderRadius: 20, borderWidth: 1,
       paddingHorizontal: 10, paddingVertical: 4,
     },
     colorDot: { width: 10, height: 10, borderRadius: 5 },
-    colorChipText: { fontSize: 12, fontWeight: '600' },
+    colorChipText: { fontSize: 12, fontFamily: 'Manrope_600SemiBold' },
 
     empty: { alignItems: 'center', gap: 16, marginTop: 40 },
-    emptyText: { fontSize: 15, color: c.textTertiary },
+    emptyText: { fontSize: 15, color: c.textTertiary, fontFamily: 'Manrope_500Medium' },
     addBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
       backgroundColor: c.primary, borderRadius: 10, paddingHorizontal: 18, paddingVertical: 10,
     },
-    addBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+    addBtnText: { color: '#fff', fontSize: 14, fontFamily: 'Manrope_600SemiBold' },
 
     card: {
       backgroundColor: c.surface, borderRadius: 12, padding: 12,
@@ -213,19 +214,19 @@ function createStyles(c: Colors) {
       gap: 8, borderLeftWidth: 4,
     },
     cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    timeBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, minWidth: 48, alignItems: 'center' },
-    timeText: { fontSize: 13, fontWeight: '700' },
-    cardTitle: { fontSize: 15, fontWeight: '600', color: c.text },
-    categoryLabel: { fontSize: 11, fontWeight: '600', marginTop: 1 },
+    timeBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, minWidth: 48, flexShrink: 0, alignItems: 'center' },
+    timeText: { fontSize: 13, fontFamily: 'Manrope_700Bold' },
+    cardTitle: { fontSize: 15, color: c.text, fontFamily: 'Manrope_600SemiBold' },
+    categoryLabel: { fontSize: 11, marginTop: 1, fontFamily: 'Manrope_600SemiBold' },
     assigneesRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    assigneesText: { flex: 1, fontSize: 12, lineHeight: 16 },
-    countBadge: { fontSize: 12, fontWeight: '700', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
+    assigneesText: { flex: 1, fontSize: 12, lineHeight: 16, fontFamily: 'Manrope_500Medium' },
+    countBadge: { fontSize: 12, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2, fontFamily: 'Manrope_700Bold' },
 
     addBtnRow: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
       paddingVertical: 14, borderRadius: 12,
       borderWidth: 1, borderColor: c.primaryAlpha20, borderStyle: 'dashed',
     },
-    addBtnRowText: { fontSize: 14, color: c.primary, fontWeight: '600' },
+    addBtnRowText: { fontSize: 14, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
   })
 }

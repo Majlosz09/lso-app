@@ -62,7 +62,7 @@ function createStyles(c: Colors) {
       padding: 20, paddingBottom: 12,
       borderBottomWidth: 1, borderBottomColor: c.primarySurface,
     },
-    title: { fontSize: 17, fontWeight: '700', color: c.text },
+    title: { fontSize: 17, color: c.text, fontFamily: 'Manrope_700Bold' },
     grid: {
       flexDirection: 'row', flexWrap: 'wrap', padding: 12, gap: 8,
     },
@@ -72,7 +72,7 @@ function createStyles(c: Colors) {
       borderWidth: 1, borderColor: c.border,
     },
     chipActive: { backgroundColor: c.primary, borderColor: c.primary },
-    chipText: { fontSize: 14, fontWeight: '600', color: c.subtext },
+    chipText: { fontSize: 14, color: c.subtext, fontFamily: 'Manrope_600SemiBold' },
     chipTextActive: { color: '#fff' },
   })
 }

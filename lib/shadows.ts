@@ -33,8 +33,8 @@ export const shadow = {
 
   // Brand — indigo glow, used for primary action cards/buttons
   brand: Platform.select({
-    native: nat('#1A237E', 0.30, 10, 4),
-    web: { boxShadow: '0 4px 10px rgba(26,35,126,0.30)' } as any,
+    native: nat('#0B2E5C', 0.22, 10, 4),
+    web: { boxShadow: '0 4px 10px rgba(11,46,92,0.22)' } as any,
   })!,
 
   // Float — subtle panel shadow for floating overlays (reaction picker, action menu)
@@ -47,5 +47,35 @@ export const shadow = {
   fab: Platform.select({
     native: nat('#000', 0.25, 4, 4),
     web: { boxShadow: '0 2px 4px rgba(0,0,0,0.25)' } as any,
+  })!,
+
+  // Redesign v2 — karta wyróżniona („moja służba”)
+  featured: Platform.select({
+    native: nat('#0B2E5C', 0.12, 18, 4),
+    web: { boxShadow: '0 6px 18px rgba(11,46,92,0.12)' } as any,
+  })!,
+
+  // Karta hero (najbliższa służba na Domu)
+  hero: Platform.select({
+    native: nat('#0B2E5C', 0.16, 30, 8),
+    web: { boxShadow: '0 10px 30px rgba(11,46,92,0.16)' } as any,
+  })!,
+
+  // Złoty FAB „Obecność” w tab barze
+  goldFab: Platform.select({
+    native: nat('#8A6A1F', 0.35, 14, 8),
+    web: { boxShadow: '0 8px 20px rgba(138,106,31,0.35)' } as any,
+  })!,
+
+  // Toast
+  toast: Platform.select({
+    native: nat('#0B1F38', 0.35, 30, 10),
+    web: { boxShadow: '0 14px 30px rgba(11,31,56,0.35)' } as any,
+  })!,
+
+  // Modal (web)
+  modal: Platform.select({
+    native: nat('#071C3A', 0.35, 40, 12),
+    web: { boxShadow: '0 30px 80px rgba(7,28,58,0.35)' } as any,
   })!,
 }

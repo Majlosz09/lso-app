@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import { ChatMessageWithSender } from '../../types/chat'
+import { ModalKeyboardAvoider } from '../ui/ModalKeyboardAvoider'
 
 const REASONS = ['Wulgarne lub obraźliwe', 'Nękanie / zastraszanie', 'Niestosowne wobec dziecka', 'Spam', 'Inne']
 
@@ -43,6 +44,7 @@ export function ReportMessageModal({ message, reporterId, onClose }: Props) {
 
   return (
     <Modal visible={!!message} transparent animationType="fade" onRequestClose={close}>
+<ModalKeyboardAvoider>
       <View style={styles.overlay}>
         <View style={styles.sheet}>
           <Text style={styles.title}>Zgłoś wiadomość</Text>
@@ -71,7 +73,8 @@ export function ReportMessageModal({ message, reporterId, onClose }: Props) {
           </View>
         </View>
       </View>
-    </Modal>
+    </ModalKeyboardAvoider>
+</Modal>
   )
 }
 
@@ -79,17 +82,17 @@ function createStyles(c: Colors) {
   return StyleSheet.create({
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 24 },
     sheet: { backgroundColor: c.surface, borderRadius: 16, padding: 20, gap: 8, maxWidth: 420, width: '100%', alignSelf: 'center' },
-    title: { fontSize: 18, fontWeight: '700', color: c.text },
-    quote: { fontSize: 14, color: c.subtext, fontStyle: 'italic', marginBottom: 4 },
+    title: { fontSize: 18, color: c.text, fontFamily: 'Manrope_700Bold' },
+    quote: { fontSize: 14, color: c.subtext, fontStyle: 'italic', marginBottom: 4, fontFamily: 'Manrope_500Medium' },
     reason: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: c.border },
     reasonActive: { borderColor: c.danger, backgroundColor: c.danger + '12' },
-    reasonText: { fontSize: 14, color: c.text },
+    reasonText: { fontSize: 14, color: c.text, fontFamily: 'Manrope_500Medium' },
     reasonTextActive: { color: c.danger, fontWeight: '600' },
-    input: { borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 10, minHeight: 60, color: c.text, fontSize: 14 },
+    input: { borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 10, minHeight: 60, color: c.text, fontSize: 14, fontFamily: 'Manrope_500Medium' },
     actions: { flexDirection: 'row', gap: 10, marginTop: 6 },
     cancel: { flex: 1, padding: 13, borderRadius: 10, backgroundColor: c.primarySurface, alignItems: 'center' },
-    cancelText: { fontSize: 15, fontWeight: '600', color: c.primary },
+    cancelText: { fontSize: 15, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
     send: { flex: 1, padding: 13, borderRadius: 10, backgroundColor: c.danger, alignItems: 'center' },
-    sendText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+    sendText: { fontSize: 15, color: '#fff', fontFamily: 'Manrope_700Bold' },
   })
 }

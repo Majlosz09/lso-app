@@ -88,15 +88,15 @@ function createStyles(c: Colors) {
       width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)',
       justifyContent: 'center', alignItems: 'center',
     },
-    title: { fontSize: 20, fontWeight: '800', color: '#fff', textAlign: 'center' },
+    title: { fontSize: 20, color: '#fff', textAlign: 'center', fontFamily: 'Manrope_800ExtraBold' },
     scroll: { paddingHorizontal: 20, paddingTop: 18, flexGrow: 0 },
-    text: { fontSize: 15, lineHeight: 22, color: c.text },
+    text: { fontSize: 15, lineHeight: 22, color: c.text, fontFamily: 'Manrope_500Medium' },
     bulletRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
     dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#C9A55C', marginTop: 8 },
-    bulletText: { flex: 1, fontSize: 14, lineHeight: 21, color: c.text },
+    bulletText: { flex: 1, fontSize: 14, lineHeight: 21, color: c.text, fontFamily: 'Manrope_500Medium' },
     button: {
-      margin: 20, marginTop: 16, backgroundColor: '#1A237E', borderRadius: 12, paddingVertical: 15, alignItems: 'center',
+      margin: 20, marginTop: 16, backgroundColor: '#0B2E5C', borderRadius: 12, paddingVertical: 15, alignItems: 'center',
     },
-    buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    buttonText: { color: '#fff', fontSize: 16, fontFamily: 'Manrope_700Bold' },
   })
 }

@@ -1,15 +1,7 @@
 import { Stack } from 'expo-router'
-import { useTheme } from '../../lib/ThemeContext'
+import { useNavHeaderOptions } from '../../components/layout/navOptions'
 
 export default function WiedzaLayout() {
-  const { colors: c } = useTheme()
-  return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: c.header },
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: '600' },
-      }}
-    />
-  )
+  const headerOptions = useNavHeaderOptions()
+  return <Stack screenOptions={headerOptions} />
 }

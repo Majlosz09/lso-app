@@ -1,10 +1,12 @@
-import * as Notifications from 'expo-notifications'
+import { getNotifications } from './pushSupport'
 import Constants from 'expo-constants'
 import { Platform } from 'react-native'
 import { supabase } from './supabase'
 
 export async function registerForPushNotificationsAsync(profileId: string): Promise<boolean> {
   if (Platform.OS === 'web') return true
+  const Notifications = getNotifications()
+  if (!Notifications) return false // Expo Go / push wyłączony
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {

@@ -1,135 +1,105 @@
-import { useMemo } from 'react'
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native'
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
+import { Pressable, StyleSheet, View } from 'react-native'
+import type { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../lib/ThemeContext'
-import { Colors } from '../lib/theme'
+import { sans } from '../lib/theme'
+import { shadow } from '../lib/shadows'
+import { useIsDesktop } from '../hooks/useIsDesktop'
+import { AppText } from './ui'
+import { tourRef } from './tour/TourTarget'
 
-export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+type Props = BottomTabBarProps & {
+  /** trasa wyświetlana jako złoty, wysunięty przycisk (np. „Obecność”) */
+  fabRouteName?: string
+}
+
+/** Dolny pasek redesignu v2. Na desktopie (web ≥ 1024 px) ukryty — nawigację robi sidebar. */
+export function CustomTabBar({ state, descriptors, navigation, fabRouteName }: Props) {
   const insets = useSafeAreaInsets()
+  const isDesktop = useIsDesktop()
   const { colors: c } = useTheme()
-  const styles = useMemo(() => createStyles(c), [c])
+  if (isDesktop) return null
+  // ekrany pełnoekranowe (np. Obecność) chowają pasek przez tabBarStyle: { display: 'none' }
+  const focusedOptions = descriptors[state.routes[state.index].key]?.options as any
+  if (focusedOptions?.tabBarStyle?.display === 'none') return null
 
-  const visibleRoutes = state.routes.filter(
-    route => !descriptors[route.key].options.tabBarButton
-  )
-  const centerIndex = Math.floor(visibleRoutes.length / 2)
+  // Ukryte trasy (href: null) mają tabBarItemStyle display:none / tabBarButton — pomijamy je
+  const visibleRoutes = state.routes.filter(route => {
+    const o = descriptors[route.key].options as any
+    return !o.tabBarButton && o.tabBarItemStyle?.display !== 'none' && o.href !== null
+  })
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom || 8 }]}>
-      {visibleRoutes.map((route, index) => {
+    <View
+      style={[
+        styles.bar,
+        { backgroundColor: c.surface, borderTopColor: c.border, paddingBottom: Math.max(insets.bottom, 12) },
+      ]}
+    >
+      {visibleRoutes.map(route => {
         const { options } = descriptors[route.key]
         const focused = state.index === state.routes.indexOf(route)
-        const isCenter = index === centerIndex
+        const label = (options.title ?? route.name) as string
+        const isFab = route.name === fabRouteName
+        const tourId = `nav:${route.name === 'index' ? 'home' : route.name}`
 
         const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          })
-          if (!focused && !event.defaultPrevented) {
-            navigation.navigate(route.name)
-          }
+          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })
+          if (!focused && !event.defaultPrevented) navigation.navigate(route.name)
         }
 
-        const onLongPress = () => {
-          navigation.emit({ type: 'tabLongPress', target: route.key })
-        }
-
-        const label = (options.title ?? route.name) as string
-
-        if (isCenter) {
+        if (isFab) {
           return (
-            <TouchableOpacity
+            <Pressable
               key={route.key}
+              ref={tourRef(tourId)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={label}
               onPress={onPress}
-              onLongPress={onLongPress}
-              style={styles.centerItem}
-              activeOpacity={0.85}
+              style={[styles.item, styles.fabItem]}
             >
-              <View style={[styles.fab, focused && styles.fabFocused]}>
-                {options.tabBarIcon?.({ focused, color: '#fff', size: 26 })}
+              <View style={[styles.fab, { backgroundColor: c.gold }, shadow.goldFab]}>
+                {options.tabBarIcon?.({ focused: true, color: '#071C3A', size: 28 })}
               </View>
-              <Text style={[styles.centerLabel, focused && styles.centerLabelFocused]}>
+              <AppText style={[styles.label, focused ? sans(700) : sans(500), { color: focused ? c.primary : c.subtext }]}>
                 {label}
-              </Text>
-            </TouchableOpacity>
+              </AppText>
+            </Pressable>
           )
         }
 
         return (
-          <TouchableOpacity
+          <Pressable
             key={route.key}
+            ref={tourRef(tourId)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: focused }}
+            accessibilityLabel={label}
             onPress={onPress}
-            onLongPress={onLongPress}
-            style={styles.tabItem}
+            style={styles.item}
           >
-            {options.tabBarIcon?.({ focused, color: focused ? c.primary : c.textTertiary, size: 22 })}
-            <Text style={[styles.label, focused && styles.labelFocused]}>{label}</Text>
-          </TouchableOpacity>
+            {options.tabBarIcon?.({ focused, color: focused ? c.primary : c.subtext, size: 24 })}
+            <AppText style={[styles.label, focused ? sans(700) : sans(500), { color: focused ? c.primary : c.subtext }]}>
+              {label}
+            </AppText>
+          </Pressable>
         )
       })}
     </View>
   )
 }
 
-function createStyles(c: Colors) {
-  return StyleSheet.create({
-    container: {
-      flexDirection: 'row',
-      backgroundColor: c.surface,
-      borderTopWidth: 1,
-      borderTopColor: c.border,
-      alignItems: 'flex-end',
-      overflow: 'visible',
-      paddingTop: 8,
-    },
-    tabItem: {
-      flex: 1,
-      alignItems: 'center',
-      gap: 3,
-      paddingBottom: 4,
-    },
-    label: {
-      fontSize: 10,
-      color: c.textTertiary,
-    },
-    labelFocused: {
-      color: c.primary,
-      fontWeight: '600',
-    },
-    centerItem: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'flex-end',
-      paddingBottom: 4,
-      marginTop: -20,
-    },
-    fab: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: '#818CF8',
-      alignItems: 'center',
-      justifyContent: 'center',
-      elevation: 6,
-      shadowColor: c.primary,
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.4,
-      shadowRadius: 8,
-    },
-    fabFocused: {
-      backgroundColor: c.primary,
-    },
-    centerLabel: {
-      fontSize: 10,
-      color: c.textTertiary,
-      marginTop: 2,
-    },
-    centerLabelFocused: {
-      color: c.primary,
-      fontWeight: '600',
-    },
-  })
-}
+const styles = StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    borderTopWidth: 1,
+    paddingTop: 8,
+    overflow: 'visible',
+  },
+  item: { flex: 1, alignItems: 'center', gap: 3, cursor: 'pointer' } as any,
+  fabItem: { marginTop: -26 },
+  fab: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  label: { fontSize: 11, lineHeight: 14 },
+})

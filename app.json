@@ -2,22 +2,16 @@
   "expo": {
     "name": "LSO App",
     "slug": "lso-app",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "lsoapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "description": "Aplikacja dla Liturgicznej Służby Ołtarza — grafik służb, weryfikacja obecności i punktacja ministrantów.",
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0D1F6B"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "pl.lsoapp.app",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
@@ -28,7 +22,6 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0D1F6B"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
@@ -38,12 +31,12 @@
         "android.permission.RECEIVE_BOOT_COMPLETED"
       ],
       "package": "pl.lsoapp.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -68,7 +61,20 @@
           "color": "#534AB7",
           "sounds": []
         }
-      ]
+      ],
+      "expo-font",
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0D1F6B",
+          "imageWidth": 200
+        }
+      ],
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

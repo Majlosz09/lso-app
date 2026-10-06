@@ -83,14 +83,14 @@ function createStyles(c: Colors) {
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     scroll: { flex: 1, backgroundColor: c.bg },
     content: { padding: 16 },
-    subtitle: { fontSize: 13, color: c.primary, fontWeight: '600', marginBottom: 8, textAlign: 'center' },
+    subtitle: { fontSize: 13, color: c.primary, marginBottom: 8, textAlign: 'center', fontFamily: 'Manrope_600SemiBold' },
     tagBadge: {
       alignSelf: 'center', backgroundColor: c.primaryAlpha08, borderRadius: 8,
       paddingHorizontal: 12, paddingVertical: 5, marginBottom: 12,
     },
-    tagText: { fontSize: 12, color: c.primary, fontWeight: '600' },
+    tagText: { fontSize: 12, color: c.primary, fontFamily: 'Manrope_600SemiBold' },
     textCard: { backgroundColor: c.surface, borderRadius: 14, padding: 20, ...shadow.md },
-    text: { fontSize: 16, color: c.text, lineHeight: 26 },
+    text: { fontSize: 16, color: c.text, lineHeight: 26, fontFamily: 'Manrope_500Medium' },
     navBar: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       backgroundColor: c.surface, borderTopWidth: 1, borderTopColor: c.border,
@@ -103,8 +103,8 @@ function createStyles(c: Colors) {
     },
     navBtnRight: { justifyContent: 'flex-end' },
     navBtnDisabled: { backgroundColor: c.bg, borderColor: c.border },
-    navText: { flex: 1, fontSize: 12, color: c.primary, fontWeight: '500' },
+    navText: { flex: 1, fontSize: 12, color: c.primary, fontFamily: 'Manrope_500Medium' },
     navTextDisabled: { color: c.iconMuted },
-    navCount: { fontSize: 12, color: c.textTertiary, minWidth: 40, textAlign: 'center' },
+    navCount: { fontSize: 12, color: c.textTertiary, minWidth: 40, textAlign: 'center', fontFamily: 'Manrope_500Medium' },
   })
 }

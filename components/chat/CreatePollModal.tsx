@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
+import { ModalKeyboardAvoider } from '../ui/ModalKeyboardAvoider'
 
 interface Props {
   visible: boolean
@@ -60,6 +61,7 @@ export function CreatePollModal({ visible, onClose, onSubmit }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
+<ModalKeyboardAvoider>
       <View style={styles.overlay}>
         <View style={[styles.sheet, { backgroundColor: c.surface }]}>
           <View style={styles.header}>
@@ -119,7 +121,8 @@ export function CreatePollModal({ visible, onClose, onSubmit }: Props) {
           </TouchableOpacity>
         </View>
       </View>
-    </Modal>
+    </ModalKeyboardAvoider>
+</Modal>
   )
 }
 
@@ -131,23 +134,24 @@ function createStyles(c: Colors) {
       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
       padding: 16, paddingBottom: 12,
     },
-    title: { fontSize: 18, fontWeight: '700' },
-    cancel: { fontSize: 15 },
+    title: { fontSize: 18, fontFamily: 'Manrope_700Bold' },
+    cancel: { fontSize: 15, fontFamily: 'Manrope_500Medium' },
     body: { padding: 16, gap: 8 },
-    label: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+    label: { fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4, fontFamily: 'Manrope_600SemiBold' },
     input: {
       borderRadius: 10, borderWidth: 1,
       paddingHorizontal: 12, paddingVertical: 10,
       fontSize: 15,
+      fontFamily: 'Manrope_500Medium',
     },
     optionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     optionInput: { flex: 1 },
     removeBtn: { padding: 4 },
     addBtn: { paddingVertical: 8 },
-    addBtnText: { fontSize: 14, fontWeight: '600' },
+    addBtnText: { fontSize: 14, fontFamily: 'Manrope_600SemiBold' },
     toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
-    toggleLabel: { fontSize: 15 },
+    toggleLabel: { fontSize: 15, fontFamily: 'Manrope_500Medium' },
     submitBtn: { margin: 16, borderRadius: 12, padding: 14, alignItems: 'center' },
-    submitText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    submitText: { color: '#fff', fontSize: 16, fontFamily: 'Manrope_700Bold' },
   })
 }

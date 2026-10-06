@@ -98,7 +98,7 @@ describe('buildExportData', () => {
     const points = [{ profile_id: 'u1', amount: 10 }, { profile_id: 'u1', amount: 5 }]
 
     const supabase: any = {
-      from: jest.fn()
+      from: jest.fn().mockReturnValue(makeChain([]))
         .mockReturnValueOnce(makeChain(profiles))
         .mockReturnValueOnce(makeChain(assignments))
         .mockReturnValueOnce(makeChain(points)),
@@ -117,7 +117,7 @@ describe('buildExportData', () => {
     const assignments = [{ profile_id: 'u1', status: 'confirmed' }]
 
     const supabase: any = {
-      from: jest.fn()
+      from: jest.fn().mockReturnValue(makeChain([]))
         .mockReturnValueOnce(makeChain(profiles))
         .mockReturnValueOnce(makeChain(assignments))
         .mockReturnValueOnce(makeChain([])),
@@ -138,7 +138,7 @@ describe('buildExportData', () => {
     ]
 
     const supabase: any = {
-      from: jest.fn()
+      from: jest.fn().mockReturnValue(makeChain([]))
         .mockReturnValueOnce(makeChain(profiles))
         .mockReturnValueOnce(makeChain([]))
         .mockReturnValueOnce(makeChain(points)),
@@ -151,7 +151,7 @@ describe('buildExportData', () => {
 
   it('returns empty members array when no profiles', async () => {
     const supabase: any = {
-      from: jest.fn()
+      from: jest.fn().mockReturnValue(makeChain([]))
         .mockReturnValueOnce(makeChain([]))
         .mockReturnValueOnce(makeChain([]))
         .mockReturnValueOnce(makeChain([])),
@@ -165,7 +165,7 @@ describe('buildExportData', () => {
     const profiles = [{ id: 'u1', full_name: 'Jan Kowalski' }]
 
     const supabase: any = {
-      from: jest.fn()
+      from: jest.fn().mockReturnValue(makeChain([]))
         .mockReturnValueOnce(makeChain(profiles))
         .mockReturnValueOnce(makeChain([]))
         .mockReturnValueOnce(makeChain([])),
