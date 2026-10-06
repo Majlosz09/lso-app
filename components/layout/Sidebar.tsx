@@ -8,6 +8,7 @@ import { useAuthStore } from '../../stores/authStore'
 import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
 import { NavBadges } from '../../hooks/useNavBadges'
 import { AppText, Avatar, Button, Icon, Sheet } from '../ui'
+import { tourRef } from '../tour/TourTarget'
 
 const LOGO = require('../../assets/images/icon.png')
 
@@ -44,6 +45,7 @@ export function Sidebar({ role, active, badges }: Props) {
           return (
             <Pressable
               key={item.key}
+              ref={tourRef(`nav:${item.key}`)}
               accessibilityRole="link"
               accessibilityState={{ selected: isActive }}
               onPress={() => router.navigate(item.href as any)}
@@ -79,6 +81,7 @@ export function Sidebar({ role, active, badges }: Props) {
 
       <View style={styles.user}>
         <Pressable
+          ref={tourRef('profile')}
           accessibilityRole="link"
           accessibilityLabel="Profil"
           onPress={() => router.navigate(PROFILE_HREF[role] as any)}

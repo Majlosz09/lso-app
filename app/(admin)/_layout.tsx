@@ -21,7 +21,8 @@ export default function AdminLayout() {
   useEffect(() => {
     // profil wczytuje się chwilę po sesji — bez niego nie oceniamy dostępu (odświeżenie podstrony na webie)
     if (!isLoading && profile && !hasAccess) {
-      router.replace((helper ? '/(admin)/(admin-tabs)/schedules' : equivalentRoute(navRoleFor(profile, false), pathname)) as any)
+      // także pomocnik: wspólne adresy webowe („/”, „/profile”, „/points”…) → jego własny ekran ministranta
+      router.replace(equivalentRoute(navRoleFor(profile, false), pathname) as any)
     }
     if (!isLoading && fullAccess && parish && parish.setup_done === false) {
       router.replace('/(admin)/onboarding')

@@ -14,6 +14,7 @@ import { WeekChart } from '../../../components/admin/WeekChart'
 import { MonthCalendar } from '../../../components/admin/MonthCalendar'
 import { AppText, Avatar, Card, Icon, ListRow, SectionHeader } from '../../../components/ui'
 import { NotificationBell } from '../../../components/layout/NotificationBell'
+import { TourTarget, tourRef } from '../../../components/tour/TourTarget'
 
 export default function AdminHome() {
   const router = useRouter()
@@ -189,7 +190,7 @@ export default function AdminHome() {
             <MonthCalendar />
           </View>
           <View style={styles.colSide}>
-            {todoCard}
+            <TourTarget id="admin:todo">{todoCard}</TourTarget>
             {quick}
             {settings}
           </View>
@@ -207,7 +208,7 @@ export default function AdminHome() {
           <AppText variant="eyebrow" color={pal.accent}>Panel opiekuna</AppText>
           <View style={styles.headActions}>
             <NotificationBell tone="header" fg={pal.fg} />
-            <Pressable onPress={() => go('/(admin)/(admin-tabs)/profile')} accessibilityRole="button" accessibilityLabel="Profil">
+            <Pressable ref={tourRef('profile')} onPress={() => go('/(admin)/(admin-tabs)/profile')} accessibilityRole="button" accessibilityLabel="Profil">
               <Avatar name={profile?.full_name} avatarUrl={profile?.avatar_url} size={38} />
             </Pressable>
           </View>
@@ -217,7 +218,7 @@ export default function AdminHome() {
         <AppText style={[styles.headerLit, { color: pal.fg }]}>{liturgy.entry.name}</AppText>
       </View>
       <View style={styles.body}>
-        {todoCard}
+        <TourTarget id="admin:todo">{todoCard}</TourTarget>
         {weekCard}
         {quick}
         <SectionHeader title="Kalendarz" />

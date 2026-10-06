@@ -32,6 +32,7 @@ import { builtInKeys, countRead } from '../../lib/wiedza'
 
 const WIEDZA_KEYS = builtInKeys()
 import { AppText, Avatar, Badge, Button, Card, HeaderChip, Icon, IconButton, SectionHeader } from '../../components/ui'
+import { TourTarget, tourRef } from '../../components/tour/TourTarget'
 
 type Ann = { id: string; title: string; created_at: string; author: { full_name: string } | null }
 
@@ -285,7 +286,7 @@ export default function HomeScreen() {
           <PendingCheckinsBanner offline={offline} />
           <HelperCard />
           <SwapInbox onChanged={refresh} />
-          {nextCard(true)}
+          <TourTarget id="home:next">{nextCard(true)}</TourTarget>
           {church}
         </View>
         <View style={styles.desktopRight}>
@@ -310,7 +311,7 @@ export default function HomeScreen() {
               {`Króluj nam Chryste,\n${firstName}`}
             </AppText>
             <NotificationBell tone="header" fg={pal.fg} />
-            <Pressable accessibilityRole="button" accessibilityLabel="Profil" onPress={() => router.push('/(tabs)/profile')}>
+            <Pressable ref={tourRef('profile')} accessibilityRole="button" accessibilityLabel="Profil" onPress={() => router.push('/(tabs)/profile')}>
               <Avatar name={profile?.full_name} avatarUrl={profile?.avatar_url} size={38} />
             </Pressable>
           </View>
@@ -326,7 +327,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.body}>
-          <View style={styles.overlap}>{nextCard(false)}</View>
+          <View ref={tourRef('home:next')} collapsable={false} style={styles.overlap}>{nextCard(false)}</View>
           <PendingCheckinsBanner offline={offline} />
           <HelperCard />
           <ChallengeCards />

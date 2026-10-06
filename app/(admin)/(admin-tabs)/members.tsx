@@ -13,6 +13,7 @@ import { useLiturgyHeader } from '../../../hooks/useLiturgyHeader'
 import {
   AppText, Avatar, Badge, Button, Card, HeaderChip, Icon, IconButton, ListRow, ScreenHeader, Segmented, Sheet, TextField,
 } from '../../../components/ui'
+import { TourTarget } from '../../../components/tour/TourTarget'
 
 type Member = {
   id: string
@@ -468,7 +469,7 @@ export default function MembersTab() {
           <View style={styles.deskSearch}>{search_(false)}</View>
           <View style={styles.deskSeg}>{segments}</View>
           <Badge label={`Kod: ${parish?.invite_code ?? '—'}`} tone="gold" />
-          <Button label="Dodaj / importuj" icon="account-multiple-plus" variant="secondary" compact onPress={() => router.push('/(admin)/import-members' as any)} />
+          <TourTarget id="members:import"><Button label="Dodaj / importuj" icon="account-multiple-plus" variant="secondary" compact onPress={() => router.push('/(admin)/import-members' as any)} /></TourTarget>
         </View>
         <View style={styles.cols}>
           <View style={styles.colMain}>
@@ -494,7 +495,7 @@ export default function MembersTab() {
         </ScreenHeader>
         <View style={styles.body}>
           {pendingBox}
-          <Button label="Dodaj / importuj ministrantów" icon="account-multiple-plus" variant="secondary" compact onPress={() => router.push('/(admin)/import-members' as any)} />
+          <TourTarget id="members:import"><Button label="Dodaj / importuj ministrantów" icon="account-multiple-plus" variant="secondary" compact onPress={() => router.push('/(admin)/import-members' as any)} /></TourTarget>
           {segments}
           {loading ? <ActivityIndicator color={c.primary} /> : filter === 'admin' ? adminList : peopleList}
         </View>

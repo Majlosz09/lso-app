@@ -23,7 +23,8 @@ import { BadgeGrid } from '../../components/BadgeGrid'
 import { useRealtimeTable } from '../../hooks/useRealtimeTable'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
-import { OnboardingModal } from '../../components/OnboardingModal'
+import { useTour } from '../../stores/tourStore'
+import { tourRoleFor } from '../../lib/tour'
 import { DeleteAccountButton } from '../../components/DeleteAccountButton'
 import { ExportMyDataButton } from '../../components/ExportMyDataButton'
 import { ForgotPasswordModal } from '../../components/ForgotPasswordModal'
@@ -354,7 +355,6 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
   }
   const { avatar, sheets } = useAvatarEditor()
   const [editing, setEditing] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(false)
   const [passwordOpen, setPasswordOpen] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
 
@@ -484,7 +484,7 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
         />
       </View>
       <ListRow icon="lock-reset" title="Zmień hasło" subtitle="Wyślemy link na Twój e-mail" onPress={() => setPasswordOpen(true)} />
-      <ListRow icon="school" title="Instruktaż aplikacji" subtitle="Powtórz samouczek" onPress={() => setShowOnboarding(true)} />
+      <ListRow icon="school" title="Instruktaż aplikacji" subtitle="Przewodnik po ekranach, krok po kroku" onPress={() => useTour.getState().start(tourRoleFor(profile))} />
     </Card>
     </>
   )
@@ -504,7 +504,6 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
       {sheets}
       <EditProfileSheet visible={editing} onClose={() => setEditing(false)} showRocznik={mode === 'member'} />
       <ForgotPasswordModal visible={passwordOpen} initialEmail={session?.user.email ?? ''} onClose={() => setPasswordOpen(false)} />
-      <OnboardingModal visible={showOnboarding} onClose={() => setShowOnboarding(false)} />
       <Sheet
         visible={!!unlinkChild}
         onClose={() => setUnlinkChild(null)}

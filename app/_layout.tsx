@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import Toast from 'react-native-toast-message'
@@ -23,7 +23,9 @@ import * as Notifications from 'expo-notifications'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { ThemeProvider } from '../lib/ThemeContext'
-import { OnboardingModal } from '../components/OnboardingModal'
+import { TourOverlay } from '../components/tour/TourOverlay'
+import { useTour } from '../stores/tourStore'
+import { tourRoleFor } from '../lib/tour'
 import { EnvBanner } from '../components/EnvBanner'
 import { WhatsNewModal } from '../components/WhatsNewModal'
 import { toastConfig } from '../components/ui/toastConfig'
@@ -100,7 +102,9 @@ function AuthGate() {
   usePushTapRouting()
   useCheckinQueueSync()
   const segments = useSegments()
-  const [showOnboarding, setShowOnboarding] = useState(false)
+  // interaktywny przewodnik przy pierwszym wejściu (profiles.onboarding_completed = false)
+  const tourActive = useTour(s => s.active)
+  const tourShown = useRef<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -162,10 +166,12 @@ function AuthGate() {
   }, [session, isLoading, profile, segments])
 
   useEffect(() => {
-    if (profile && profile.parish_id && profile.approved !== false && profile.onboarding_completed === false) {
-      setShowOnboarding(true)
-    }
-  }, [profile?.id, profile?.onboarding_completed])
+    if (!profile || !profile.parish_id || profile.approved === false || profile.onboarding_completed !== false) return
+    if (segments[0] === '(auth)' || (segments[0] as string) === 'g' || tourShown.current === profile.id) return
+    tourShown.current = profile.id
+    const t = setTimeout(() => useTour.getState().start(tourRoleFor(profile)), 900)
+    return () => clearTimeout(t)
+  }, [profile?.id, profile?.onboarding_completed, segments[0]])
 
   return (
     <>
@@ -184,14 +190,11 @@ function AuthGate() {
           <Stack.Screen name="g/[token]" options={{ headerShown: false }} />
         </Stack>
       </AppShell>
+      <TourOverlay />
       <Toast config={toastConfig} />
       <EnvBanner />
-      <OnboardingModal
-        visible={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-      />
       {/* „Co nowego” — nie w trakcie samouczka ani na ekranach logowania/rejestracji */}
-      <WhatsNewModal suppressed={showOnboarding || segments[0] === '(auth)'} />
+      <WhatsNewModal suppressed={tourActive || segments[0] === '(auth)'} />
     </>
   )
 }

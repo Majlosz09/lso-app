@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
 import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
 import { Avatar, Icon } from '../ui'
+import { tourRef } from '../tour/TourTarget'
 
 /** Avatar w prawym rogu nagłówka (telefon) → profil. */
 export function HeaderAvatar({ href }: { href: string }) {
@@ -11,6 +12,7 @@ export function HeaderAvatar({ href }: { href: string }) {
   const { palette } = useLiturgyHeader()
   return (
     <Pressable
+      ref={tourRef('profile')}
       accessibilityRole="button"
       accessibilityLabel="Profil"
       onPress={() => router.push(href as any)}

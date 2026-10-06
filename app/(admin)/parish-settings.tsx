@@ -16,6 +16,7 @@ import { useIsDesktop } from '../../hooks/useIsDesktop'
 import GpsLocationPicker from '../../components/GpsLocationPicker'
 import { ChoiceCard } from '../../components/auth/formParts'
 import { AppText, Button, Card, Chip, ListRow, ScreenHeader, Sheet, TextField } from '../../components/ui'
+import { TourTarget } from '../../components/tour/TourTarget'
 
 function ToggleRow({ value, onChange, title, sub }: { value: boolean; onChange: (v: boolean) => void; title: string; sub: string }) {
   const { colors: c } = useTheme()
@@ -294,11 +295,11 @@ https://app.lsoapp.com` })
         )}
         {isDesktop ? (
           <View style={styles.desktop}>
-            <View style={styles.col}>{dataCard}{codeCard}<PublicScheduleCard />{configCard}</View>
+            <View style={styles.col}>{dataCard}{codeCard}<TourTarget id="settings:public"><PublicScheduleCard /></TourTarget><TourTarget id="settings:config">{configCard}</TourTarget></View>
             <View style={styles.col}>{attendanceCard}{chatCard}</View>
           </View>
         ) : (
-          <View style={styles.body}>{dataCard}{codeCard}<PublicScheduleCard />{attendanceCard}{chatCard}{configCard}</View>
+          <View style={styles.body}>{dataCard}{codeCard}<TourTarget id="settings:public"><PublicScheduleCard /></TourTarget>{attendanceCard}{chatCard}<TourTarget id="settings:config">{configCard}</TourTarget></View>
         )}
       </ScrollView>
 

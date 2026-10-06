@@ -6,6 +6,7 @@ import { sans } from '../lib/theme'
 import { shadow } from '../lib/shadows'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { AppText } from './ui'
+import { tourRef } from './tour/TourTarget'
 
 type Props = BottomTabBarProps & {
   /** trasa wyświetlana jako złoty, wysunięty przycisk (np. „Obecność”) */
@@ -40,6 +41,7 @@ export function CustomTabBar({ state, descriptors, navigation, fabRouteName }: P
         const focused = state.index === state.routes.indexOf(route)
         const label = (options.title ?? route.name) as string
         const isFab = route.name === fabRouteName
+        const tourId = `nav:${route.name === 'index' ? 'home' : route.name}`
 
         const onPress = () => {
           const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })
@@ -50,6 +52,7 @@ export function CustomTabBar({ state, descriptors, navigation, fabRouteName }: P
           return (
             <Pressable
               key={route.key}
+              ref={tourRef(tourId)}
               accessibilityRole="tab"
               accessibilityState={{ selected: focused }}
               accessibilityLabel={label}
@@ -69,6 +72,7 @@ export function CustomTabBar({ state, descriptors, navigation, fabRouteName }: P
         return (
           <Pressable
             key={route.key}
+            ref={tourRef(tourId)}
             accessibilityRole="tab"
             accessibilityState={{ selected: focused }}
             accessibilityLabel={label}

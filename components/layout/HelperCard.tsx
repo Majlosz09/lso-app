@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { AppText, Button, Card } from '../ui'
+import { TourTarget } from '../tour/TourTarget'
 
 /** Ministrant-pomocnik opiekuna: skróty do grafiku, zgłoszeń i trybu zakrystii. */
 export function HelperCard() {
@@ -11,6 +12,7 @@ export function HelperCard() {
   const profile = useAuthStore(s => s.profile)
   if (!profile?.is_helper || profile.role !== 'member' || profile.is_admin) return null
   return (
+    <TourTarget id="helper:card">
     <Card style={styles.card}>
       <AppText variant="eyebrow" color={c.goldInk}>Pomocnik opiekuna</AppText>
       <AppText variant="small" muted>Układasz grafik, zaznaczasz obecność i rozpatrujesz zgłoszenia.</AppText>
@@ -20,6 +22,7 @@ export function HelperCard() {
         <Button compact label="Zakrystia" icon="tablet" variant="secondary" style={styles.flex} onPress={() => router.push('/(admin)/kiosk' as any)} />
       </View>
     </Card>
+    </TourTarget>
   )
 }
 

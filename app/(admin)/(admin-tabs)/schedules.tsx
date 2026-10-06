@@ -15,6 +15,7 @@ import { useIsDesktop } from '../../../hooks/useIsDesktop'
 import { useLiturgyHeader } from '../../../hooks/useLiturgyHeader'
 import { ChoiceCard } from '../../../components/auth/formParts'
 import { AppText, Button, Card, Icon, ScreenHeader, Sheet } from '../../../components/ui'
+import { TourTarget, tourRef } from '../../../components/tour/TourTarget'
 
 type Assignment = { status: string; profile: { full_name: string } | null }
 type WeekSchedule = {
@@ -182,11 +183,13 @@ export default function SchedulesTab() {
         <View style={styles.deskBar}>
           {weekNav(false)}
           <AppText variant="small" muted style={styles.flex}>{`${staffedCount} z ${allSlots.length} służb obsadzonych`}</AppText>
+          <TourTarget id="schedules:add" style={styles.deskActions}>
           <Button label="Drukuj" icon="printer" variant="secondary" compact onPress={() => setPrintOpen(true)} />
           <Button label="Ułóż grafik" icon="auto-fix" variant="secondary" compact onPress={() => router.push('/(admin)/auto-schedule' as any)} />
           <Button label="Stałe dyżury" icon="calendar-sync" variant="secondary" compact onPress={() => router.push('/(admin)/recurring-assignments')} />
           <Button label="Cykl służb" icon="calendar-multiple" variant="secondary" compact onPress={() => router.push('/(admin)/schedule-series')} />
           <Button label="Dodaj służbę" icon="plus" compact onPress={() => router.push('/(admin)/schedule-form')} />
+          </TourTarget>
         </View>
         {loading ? <ActivityIndicator color={c.primary} style={styles.loader} /> : (
           <ScrollView contentContainerStyle={styles.grid}>
@@ -253,7 +256,7 @@ export default function SchedulesTab() {
           title={weekLabel}
           subtitle={`${staffedCount} z ${allSlots.length} służb obsadzonych`}
           right={
-            <Pressable onPress={() => setAddOpen(true)} style={[styles.addBtn, { backgroundColor: c.gold }]} accessibilityRole="button">
+            <Pressable ref={tourRef('schedules:add')} onPress={() => setAddOpen(true)} style={[styles.addBtn, { backgroundColor: c.gold }]} accessibilityRole="button">
               <Icon name="plus" size={18} color="#071C3A" />
               <AppText style={styles.addText}>Dodaj</AppText>
             </Pressable>
@@ -311,6 +314,7 @@ export default function SchedulesTab() {
 }
 
 const styles = StyleSheet.create({
+  deskActions: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   flex: { flex: 1, minWidth: 0 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
   loader: { marginTop: 40 },
