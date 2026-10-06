@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Platform } from 'react-native'
-import * as Notifications from 'expo-notifications'
+import type { NotificationResponse } from 'expo-notifications'
+import { getNotifications } from '../lib/pushSupport'
 import { useRouter } from 'expo-router'
 import { useAuthStore } from '../stores/authStore'
 import { notificationHref } from '../stores/notificationsStore'
@@ -12,10 +13,11 @@ export function usePushTapRouting() {
   const handled = useRef<string | null>(null)
 
   useEffect(() => {
-    if (Platform.OS === 'web' || !profile?.id || !profile.approved) return
+    const Notifications = getNotifications()
+    if (!Notifications || !profile?.id || !profile.approved) return
     const role = profile.role === 'admin' || profile.is_admin ? 'admin' : profile.role === 'parent' ? 'parent' : 'member'
 
-    const open = (resp: Notifications.NotificationResponse | null) => {
+    const open = (resp: NotificationResponse | null) => {
       if (!resp) return
       const id = resp.notification.request.identifier
       if (handled.current === id) return

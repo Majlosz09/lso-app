@@ -19,7 +19,7 @@ import {
   Manrope_800ExtraBold,
 } from '@expo-google-fonts/manrope'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import * as Notifications from 'expo-notifications'
+import { getNotifications } from '../lib/pushSupport'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
 import { ThemeProvider } from '../lib/ThemeContext'
@@ -32,7 +32,9 @@ import { toastConfig } from '../components/ui/toastConfig'
 import { AppShell } from '../components/layout/AppShell'
 import '../lib/webAlert' // Alert.alert na webie (react-native-web go nie wyświetla)
 
-if (Platform.OS !== 'web') {
+// push wyłączony w Expo Go / na webie — moduł wtedy w ogóle się nie ładuje
+const Notifications = getNotifications()
+if (Notifications) {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
