@@ -28,6 +28,7 @@ import { useTour } from '../stores/tourStore'
 import { tourRoleFor } from '../lib/tour'
 import { EnvBanner } from '../components/EnvBanner'
 import { WhatsNewModal } from '../components/WhatsNewModal'
+import { ReleaseNotesModal } from '../components/ReleaseNotesModal'
 import { toastConfig } from '../components/ui/toastConfig'
 import { AppShell } from '../components/layout/AppShell'
 import '../lib/webAlert' // Alert.alert na webie (react-native-web go nie wyświetla)
@@ -106,6 +107,7 @@ function AuthGate() {
   const segments = useSegments()
   // interaktywny przewodnik przy pierwszym wejściu (profiles.onboarding_completed = false)
   const tourActive = useTour(s => s.active)
+  const [releaseOpen, setReleaseOpen] = useState(false)
   const tourShown = useRef<string | null>(null)
 
   useEffect(() => {
@@ -196,7 +198,9 @@ function AuthGate() {
       <Toast config={toastConfig} />
       <EnvBanner />
       {/* „Co nowego” — nie w trakcie samouczka ani na ekranach logowania/rejestracji */}
-      <WhatsNewModal suppressed={tourActive || segments[0] === '(auth)'} />
+      {/* „Co nowego” w nowej wersji (raz, dotychczasowi użytkownicy) — przed jednorazowymi komunikatami z bazy */}
+      <ReleaseNotesModal suppressed={tourActive || segments[0] === '(auth)' || (segments[0] as string) === 'g'} onVisibleChange={setReleaseOpen} />
+      <WhatsNewModal suppressed={tourActive || releaseOpen || segments[0] === '(auth)'} />
     </>
   )
 }
