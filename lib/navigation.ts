@@ -31,6 +31,7 @@ export const NAV: Record<NavRole, NavItem[]> = {
     { key: 'statistics', label: 'Statystyki', icon: 'chart-bar', href: '/(admin)/statistics', paths: ['/statistics', '/monthly-report'] },
     { key: 'announcements', label: 'Ogłoszenia', icon: 'bullhorn', href: '/(admin)/(admin-tabs)/announcements', paths: ['/announcements'] },
     { key: 'chat', label: 'Czat', icon: 'forum', href: '/(admin)/(admin-tabs)/chat', paths: ['/chat', '/chat-reports'], badge: 'chat' },
+    { key: 'wiedza', label: 'Wiedza', icon: 'book-open-variant', href: '/(admin)/wiedza', paths: ['/wiedza'] },
     { key: 'settings', label: 'Ustawienia parafii', icon: 'cog', href: '/(admin)/parish-settings', paths: ['/parish-settings', '/mass-schedule', '/churches', '/functions', '/point-rules', '/rank-management', '/wiedza-admin'] },
   ],
   helper: [
@@ -166,6 +167,8 @@ export const HELPER_PATHS = ['/schedules', '/schedule-detail', '/schedule-form',
 export const helperAllowed = (pathname: string) => HELPER_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
 
 export function equivalentRoute(role: NavRole, pathname: string): string {
+  // ekrany panelu opiekuna poza zakładkami, które mają odpowiednik u ministranta
+  if (role === 'admin' && pathname === '/wiedza') return '/(admin)/wiedza'
   const g = GROUP_ROUTES[role]
   return g.paths.includes(pathname) ? `${g.base}${pathname}` : g.base
 }

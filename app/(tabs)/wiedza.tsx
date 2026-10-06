@@ -55,6 +55,12 @@ export default function WiedzaScreen() {
   const { palette } = useLiturgyHeader()
   const parishId = useAuthStore(s => s.profile?.parish_id)
   const profileId = useAuthStore(s => s.profile?.id)
+  // opiekun / ksiądz: ten sam widok co ministranci + skrót do własnych wpisów parafii
+  const isStaff = useAuthStore(s => s.profile?.role === 'admin' || !!s.profile?.is_admin)
+  const home = isStaff ? '/(admin)/(admin-tabs)' : '/(tabs)'
+  const editParish = isStaff
+    ? <Button compact variant="secondary" icon="pencil" label="Wpisy parafii" onPress={() => router.push('/(admin)/wiedza-admin' as any)} />
+    : null
   const reads = useReadsStore(s => s.wiedza)
   const readsOn = useReadsStore(s => s.available)
   const markRead = useReadsStore(s => s.markRead)
@@ -140,6 +146,7 @@ export default function WiedzaScreen() {
       <View style={[styles.desktop, { backgroundColor: c.bg }]}>
         <ScrollView style={[styles.colCats, narrow && { width: 200 }]} contentContainerStyle={styles.colInner}>
           {search(false)}
+          {editParish}
           {query ? resultList(e => { setQuery(''); setCatId(e.categoryId); setItemId(e.id) }) : WIEDZA_DATA.map(w => {
             const active = w.id === cat.id
             return (
@@ -210,7 +217,8 @@ export default function WiedzaScreen() {
     <ScrollView style={{ backgroundColor: c.bg }} keyboardShouldPersistTaps="handled">
       <ScreenHeader
         title="Wiedza"
-        onBack={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+        onBack={() => (router.canGoBack() ? router.back() : router.replace(home as any))}
+        right={editParish}
       >
         {search(true)}
       </ScreenHeader>

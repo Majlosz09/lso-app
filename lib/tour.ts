@@ -51,6 +51,8 @@ const ADMIN: TourStep[] = [
     body: 'Ogłoszenia dla ministrantów i rodziców — z przypięciem i powiadomieniem w telefonie.' },
   { route: '/(admin)/(admin-tabs)/chat', target: 'nav:chat', title: 'Czat',
     body: 'Rozmowy z grupą i prywatne wiadomości. Zgłoszone wiadomości przeglądasz w Ustawieniach parafii.' },
+  { route: '/(admin)/wiedza', target: 'nav:wiedza', title: 'Wiedza',
+    body: 'To samo, co widzą ministranci: modlitwy, słowniczek, ceremoniał, części Mszy. Własne wpisy parafii dodasz przyciskiem „Wpisy parafii”.' },
   PROFILE_STEP('Wygląd aplikacji (jasny, ciemny albo jak w telefonie), grafik w kalendarzu telefonu, zmiana hasła i ten przewodnik.', ADMIN_HOME),
   { route: ADMIN_HOME, title: 'Gotowe!', body: 'Zacznij od Ustawień parafii → Rozkład Mszy Świętych — z rozkładu powstaje grafik. Szczęść Boże!' },
 ]

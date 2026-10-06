@@ -1,10 +1,10 @@
-import { activeNavItem, isRootPath, NAV, navRoleFor, topbarTitle } from '../../lib/navigation'
+import { activeNavItem, equivalentRoute, isRootPath, NAV, navRoleFor, topbarTitle } from '../../lib/navigation'
 
 describe('navigation', () => {
   it('menus per role match the handoff', () => {
     expect(NAV.member.map(i => i.label)).toEqual(['Pulpit', 'Grafik', 'Punkty', 'Czat', 'Ogłoszenia', 'Wiedza'])
     expect(NAV.admin.map(i => i.label)).toEqual([
-      'Pulpit', 'Grafik', 'Członkowie', 'Zgłoszenia', 'Punkty', 'Statystyki', 'Ogłoszenia', 'Czat', 'Ustawienia parafii',
+      'Pulpit', 'Grafik', 'Członkowie', 'Zgłoszenia', 'Punkty', 'Statystyki', 'Ogłoszenia', 'Czat', 'Wiedza', 'Ustawienia parafii',
     ])
     expect(NAV.parent.map(i => i.label)).toEqual(['Dom', 'Dyżury dzieci', 'Punkty', 'Ogłoszenia', 'Czat'])
   })
@@ -20,6 +20,10 @@ describe('navigation', () => {
   it('highlights parent menu item for sub-pages', () => {
     expect(activeNavItem('admin', '/member-detail')?.key).toBe('members')
     expect(activeNavItem('admin', '/point-rules')?.key).toBe('settings')
+    expect(activeNavItem('admin', '/wiedza')?.key).toBe('wiedza')
+    // opiekun pod adresem /wiedza trafia do swojego widoku Wiedzy, nie na Pulpit
+    expect(equivalentRoute('admin', '/wiedza')).toBe('/(admin)/wiedza')
+    expect(equivalentRoute('member', '/wiedza')).toBe('/(tabs)/wiedza')
     expect(activeNavItem('member', '/chat/abc-123')?.key).toBe('chat')
     expect(activeNavItem('member', '/wiedza/szaty')?.key).toBe('wiedza')
     expect(activeNavItem('member', '/')?.key).toBe('home')
