@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
   addText: { ...sans(700), fontSize: 13 },
   entry: { gap: 8, paddingTop: 10, marginTop: 4, borderTopWidth: StyleSheet.hairlineWidth },
-  time: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, minWidth: 64, alignItems: 'center' },
+  time: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, minWidth: 64, flexShrink: 0, alignItems: 'center' },
   timeText: { ...sans(800), fontSize: 15, color: '#FFFFFF' },
   label: { ...sans(500), flex: 1, minWidth: 0, fontSize: 14, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
   sep: { width: 1, height: 20, marginHorizontal: 4 },

@@ -24,6 +24,7 @@ import { AvatarImage } from '../../components/AvatarImage'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 import { ModalKeyboardAvoider } from '../../components/ui/ModalKeyboardAvoider'
+import { topGap } from '../../lib/safeTop'
 
 type MemberProfile = {
   id: string
@@ -366,7 +367,7 @@ export default function MemberDetailScreen() {
   return (
     <KeyboardScrollView style={styles.container} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 16 }}>
       <Stack.Screen options={{ headerShown: false, title: profile.full_name }} />
-      <View style={[heroStyles.hero, { backgroundColor: pal.bg, paddingTop: isDesktop ? 22 : insets.top + 8 }, isDesktop && heroStyles.heroDesktop]}>
+      <View style={[heroStyles.hero, { backgroundColor: pal.bg, paddingTop: isDesktop ? 22 : topGap(insets.top, 8) }, isDesktop && heroStyles.heroDesktop]}>
         <StatusBar style={pal.statusBar} />
         {!isDesktop && (
           <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/(admin)/(admin-tabs)/members'))} style={heroStyles.back} accessibilityRole="button">

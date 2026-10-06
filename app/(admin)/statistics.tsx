@@ -218,5 +218,5 @@ const styles = StyleSheet.create({
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 11, borderTopWidth: 1 },
   memberCell: { width: '50%' },
   memberName: { width: 150 },
-  memberRate: { ...sans(800), fontSize: 13, width: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  memberRate: { ...sans(800), fontSize: 13, minWidth: 44, flexShrink: 0, textAlign: 'right', fontVariant: ['tabular-nums'] },
 })

@@ -16,6 +16,7 @@ import { AppText, Button, Card, Chip, Icon } from '../../components/ui'
 import { PendingCheckinsBanner } from '../../components/services/PendingCheckinsBanner'
 import { ReportAttendanceSheet, reportable } from '../../components/services/ReportAttendanceSheet'
 import { ReportsStatus } from '../../components/services/ChildReports'
+import { topGap } from '../../lib/safeTop'
 
 const NAVY = '#071C3A'
 const MUTED = '#C9D3E3'
@@ -73,7 +74,7 @@ export default function AttendanceScreen() {
   return (
     <View style={[styles.flex, { backgroundColor: NAVY }]}>
       <StatusBar style="light" />
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 20 }, isDesktop && styles.desktop]}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: topGap(insets.top, 10), paddingBottom: insets.bottom + 20 }, isDesktop && styles.desktop]}>
         <View style={styles.top}>
           {!isDesktop && (
             <Pressable accessibilityRole="button" accessibilityLabel="Zamknij" onPress={close} style={styles.close}>

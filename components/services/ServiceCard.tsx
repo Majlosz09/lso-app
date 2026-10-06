@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 16, overflow: 'hidden', cursor: 'pointer' } as any,
   selBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
-  time: { ...sans(800), fontSize: 16, width: 48, fontVariant: ['tabular-nums'] },
+  time: { ...sans(800), fontSize: 16, minWidth: 48, flexShrink: 0, fontVariant: ['tabular-nums'] },
   catLine: { width: 3, alignSelf: 'stretch', borderRadius: 2 },
   flex: { flex: 1, minWidth: 0 },
   sub: { ...sans(600), fontSize: 12, marginTop: 1 },

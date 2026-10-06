@@ -19,6 +19,7 @@ import { AppText, Avatar, Badge, Card, Icon, SectionHeader } from '../../../comp
 import { useUnreadAnnouncements } from '../../../hooks/useUnreadAnnouncements'
 import { NotificationBell } from '../../../components/layout/NotificationBell'
 import { tourRef } from '../../../components/tour/TourTarget'
+import { topGap } from '../../../lib/safeTop'
 
 type Ann = { id: string; title: string; created_at: string; author: { full_name: string } | null }
 type DutyRow = ChildDuty & { child: string }
@@ -205,7 +206,7 @@ export default function ParentHome() {
     <View style={[styles.flex, { backgroundColor: c.bg }]}>
       <StatusBar style={pal.statusBar} />
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await reload(); setRefreshing(false) }} />}>
-        <View style={[styles.header, { backgroundColor: pal.bg, paddingTop: insets.top + 8 }]}>
+        <View style={[styles.header, { backgroundColor: pal.bg, paddingTop: topGap(insets.top, 8) }]}>
           <View style={styles.topRow}>
             <Image source={require('../../../assets/images/icon.png')} style={styles.logo} />
             <AppText style={[styles.greeting, { color: pal.fg }]}>{`Króluj nam Chryste,\n${firstName(profile?.full_name ?? '')}`}</AppText>
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
   nextTitle: { fontSize: 22, lineHeight: 26 },
   dutyRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
   dutyDate: { width: 62 },
-  dutyTime: { ...sans(800), fontSize: 14, width: 44, fontVariant: ['tabular-nums'] },
+  dutyTime: { ...sans(800), fontSize: 14, minWidth: 44, flexShrink: 0, fontVariant: ['tabular-nums'] },
   annRow: { paddingHorizontal: 16, paddingVertical: 12, gap: 2, borderTopWidth: 1, cursor: 'pointer' } as any,
   desktop: { flexDirection: 'row', gap: 20, padding: 28, paddingHorizontal: 32, alignItems: 'flex-start' },
   colMain: { flex: 1.6, gap: 18 },

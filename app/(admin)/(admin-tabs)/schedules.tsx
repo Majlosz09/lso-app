@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4 },
   mCard: { gap: 8 },
   mTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  mTime: { ...sans(800), fontSize: 16, width: 48, fontVariant: ['tabular-nums'] },
+  mTime: { ...sans(800), fontSize: 16, minWidth: 48, flexShrink: 0, fontVariant: ['tabular-nums'] },
   catLine: { width: 3, alignSelf: 'stretch', borderRadius: 2 },
   mStaff: { ...sans(600), fontSize: 12 },
   mNames: { marginLeft: 63 },

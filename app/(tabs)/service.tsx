@@ -10,6 +10,7 @@ import { useServices } from '../../hooks/useServices'
 import { useServiceActions } from '../../components/services/useServiceActions'
 import { ServiceDetail } from '../../components/services/ServiceDetail'
 import { AppText, Icon } from '../../components/ui'
+import { topGap } from '../../lib/safeTop'
 
 /** Szczegóły jednej służby (telefon). Na webie ten sam widok jest panelem w Grafiku. */
 export default function ServiceScreen() {
@@ -30,7 +31,7 @@ export default function ServiceScreen() {
   return (
     <View style={[styles.flex, { backgroundColor: c.bg }]}>
       <StatusBar style={pal.statusBar} />
-      <View style={{ backgroundColor: pal.bg, paddingTop: insets.top + 6, paddingHorizontal: 22 }}>
+      <View style={{ backgroundColor: pal.bg, paddingTop: topGap(insets.top, 6), paddingHorizontal: 22 }}>
         <Pressable accessibilityRole="button" accessibilityLabel="Wstecz" onPress={back} style={styles.back}>
           <Icon name="chevron-left" size={22} color={pal.fg} />
           <AppText style={[styles.backText, { color: pal.fg }]}>Wstecz</AppText>

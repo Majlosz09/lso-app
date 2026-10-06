@@ -15,6 +15,7 @@ import { MonthCalendar } from '../../../components/admin/MonthCalendar'
 import { AppText, Avatar, Card, Icon, ListRow, SectionHeader } from '../../../components/ui'
 import { NotificationBell } from '../../../components/layout/NotificationBell'
 import { TourTarget, tourRef } from '../../../components/tour/TourTarget'
+import { topGap } from '../../../lib/safeTop'
 
 export default function AdminHome() {
   const router = useRouter()
@@ -203,7 +204,7 @@ export default function AdminHome() {
   return (
     <ScrollView style={{ backgroundColor: c.bg }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
       <StatusBar style={pal.statusBar} />
-      <View style={[styles.header, { backgroundColor: pal.bg, paddingTop: insets.top + 10 }]}>
+      <View style={[styles.header, { backgroundColor: pal.bg, paddingTop: topGap(insets.top, 10) }]}>
         <View style={styles.rowBetween}>
           <AppText variant="eyebrow" color={pal.accent}>Panel opiekuna</AppText>
           <View style={styles.headActions}>
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
   colSide: { flex: 1, gap: 18 },
   upRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, cursor: 'pointer' } as any,
   upDate: { width: 64 },
-  upTime: { ...sans(800), fontSize: 14, width: 46, fontVariant: ['tabular-nums'] },
+  upTime: { ...sans(800), fontSize: 14, minWidth: 46, flexShrink: 0, fontVariant: ['tabular-nums'] },
   bar: { width: 110, height: 6, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 6, borderRadius: 3 },
   upPeople: { ...sans(700), fontSize: 12, width: 70, textAlign: 'right' },

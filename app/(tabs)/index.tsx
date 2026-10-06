@@ -33,6 +33,7 @@ import { builtInKeys, countRead } from '../../lib/wiedza'
 const WIEDZA_KEYS = builtInKeys()
 import { AppText, Avatar, Badge, Button, Card, HeaderChip, Icon, IconButton, SectionHeader } from '../../components/ui'
 import { TourTarget, tourRef } from '../../components/tour/TourTarget'
+import { topGap } from '../../lib/safeTop'
 
 type Ann = { id: string; title: string; created_at: string; author: { full_name: string } | null }
 
@@ -304,7 +305,7 @@ export default function HomeScreen() {
     <View style={[styles.flex, { backgroundColor: c.bg }]}>
       <StatusBar style={pal.statusBar} />
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        <View style={[styles.header, { backgroundColor: pal.bg, paddingTop: insets.top + 8 }]}>
+        <View style={[styles.header, { backgroundColor: pal.bg, paddingTop: topGap(insets.top, 8) }]}>
           <View style={styles.topRow}>
             <Image source={require('../../assets/images/icon.png')} style={styles.logo} />
             <AppText style={[styles.greeting, { color: pal.fg }]} numberOfLines={2}>
@@ -385,7 +386,7 @@ const styles = StyleSheet.create({
   churchHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   dayList: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
   dayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 13, cursor: 'pointer' } as any,
-  dayTime: { ...sans(800), fontSize: 15, width: 46, fontVariant: ['tabular-nums'] },
+  dayTime: { ...sans(800), fontSize: 15, minWidth: 46, flexShrink: 0, fontVariant: ['tabular-nums'] },
   dayBar: { width: 3, height: 30, borderRadius: 2 },
   dayEmpty: { padding: 14 },
   shortcuts: { flexDirection: 'row', gap: 12 },

@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet } from 'react-native'
+import { Platform, Text, View, StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { isProductionDb } from '../lib/supabase'
 
@@ -14,7 +14,8 @@ export function EnvBanner() {
   return (
     <View
       pointerEvents="none"
-      style={[styles.wrap, { top: insets.top }, prodInDev ? styles.prod : styles.dev]}
+      // telefon: w pasku statusu (środek), żeby nie zasłaniać nagłówków ekranu; web: u góry strony
+      style={[styles.wrap, { top: Platform.OS === 'web' ? insets.top : Math.max(insets.top - 15, 2) }, Platform.OS !== 'web' && styles.native, prodInDev ? styles.prod : styles.dev]}
     >
       <Text style={styles.text}>
         {prodInDev ? '⚠ PRODUKCJA — prawdziwe dane parafii' : 'DEV'}
@@ -28,6 +29,7 @@ const styles = StyleSheet.create({
     position: 'absolute', alignSelf: 'center', zIndex: 9999,
     paddingHorizontal: 10, paddingVertical: 2, borderRadius: 6,
   },
+  native: { paddingVertical: 0, paddingHorizontal: 6 },
   dev: { backgroundColor: '#2F7D4FCC' },
   prod: { backgroundColor: '#B3261E' },
   text: { color: '#fff', fontSize: 11, fontFamily: 'Manrope_700Bold' },

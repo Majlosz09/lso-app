@@ -12,6 +12,7 @@ import { isCheckInWindowOpen, localDateStr } from '../../lib/dates'
 import { Service, useServices } from '../../hooks/useServices'
 import { AppText, Avatar, Button, Icon, Sheet, TextField } from '../../components/ui'
 import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
+import { topGap } from '../../lib/safeTop'
 
 const NAVY = '#071C3A'
 const MUTED = '#C9D3E3'
@@ -114,7 +115,7 @@ export default function KioskScreen() {
   }
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 12 }]}>
+    <View style={[styles.root, { paddingTop: topGap(insets.top, 12), paddingBottom: insets.bottom + 12 }]}>
       <StatusBar style="light" />
       <View style={styles.top}>
         <View style={styles.flex}>

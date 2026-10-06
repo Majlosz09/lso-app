@@ -214,7 +214,7 @@ function createStyles(c: Colors) {
       gap: 8, borderLeftWidth: 4,
     },
     cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    timeBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, minWidth: 48, alignItems: 'center' },
+    timeBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, minWidth: 48, flexShrink: 0, alignItems: 'center' },
     timeText: { fontSize: 13, fontFamily: 'Manrope_700Bold' },
     cardTitle: { fontSize: 15, color: c.text, fontFamily: 'Manrope_600SemiBold' },
     categoryLabel: { fontSize: 11, marginTop: 1, fontFamily: 'Manrope_600SemiBold' },

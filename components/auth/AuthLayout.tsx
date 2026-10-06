@@ -9,6 +9,7 @@ import { sans, serif } from '../../lib/theme'
 import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { AppText, Icon } from '../ui'
 import { KeyboardScrollView } from '../ui/KeyboardScrollView'
+import { topGap } from '../../lib/safeTop'
 
 const LOGO = require('../../assets/images/icon.png')
 export const NAVY_DEEP = '#071C3A'
@@ -99,7 +100,7 @@ export function AuthLayout({
       <View style={[styles.flex, { backgroundColor: NAVY_DEEP }]}>
         <StatusBar style="light" />
         <KeyboardScrollView
-          contentContainerStyle={[styles.heroScroll, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 32 }]}
+          contentContainerStyle={[styles.heroScroll, { paddingTop: topGap(insets.top, 12), paddingBottom: insets.bottom + 32 }]}
           keyboardShouldPersistTaps="handled"
         >
           {back}
@@ -122,7 +123,7 @@ export function AuthLayout({
     >
       <StatusBar style="light" />
       <KeyboardScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-        <View style={[styles.formHeader, { backgroundColor: NAVY_DEEP, paddingTop: insets.top + 6 }]}>
+        <View style={[styles.formHeader, { backgroundColor: NAVY_DEEP, paddingTop: topGap(insets.top, 6) }]}>
           {back}
           {titleNode('#FFFFFF', 38)}
           {!!subtitle && <AppText style={styles.headerSubtitle}>{subtitle}</AppText>}

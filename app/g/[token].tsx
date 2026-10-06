@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   empty: { paddingLeft: 17 },
   svc: { gap: 4 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  time: { ...sans(800), fontSize: 16, width: 52 },
+  time: { ...sans(800), fontSize: 16, minWidth: 52, flexShrink: 0 },
   flex: { flex: 1, minWidth: 0 },
   foot: { textAlign: 'center', marginTop: 8 },
 })

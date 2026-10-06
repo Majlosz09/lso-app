@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   rowWrap: { paddingHorizontal: 14, paddingVertical: 12, gap: 6 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   action: { alignSelf: 'flex-start', marginLeft: 48 },
-  time: { ...sans(800), fontSize: 15, width: 48, fontVariant: ['tabular-nums'] },
+  time: { ...sans(800), fontSize: 15, minWidth: 48, flexShrink: 0, fontVariant: ['tabular-nums'] },
   childLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
   status: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   statusText: { ...sans(700), fontSize: 11 },

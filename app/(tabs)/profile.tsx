@@ -36,6 +36,7 @@ import {
 import { useWiedzaReads } from '../../hooks/useWiedzaReads'
 import { builtInKeys, countRead } from '../../lib/wiedza'
 import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
+import { topGap } from '../../lib/safeTop'
 
 const WIEDZA_KEYS = builtInKeys()
 
@@ -365,10 +366,10 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
   const back = () => (router.canGoBack() ? router.back() : router.replace(homeHref as any))
 
   const hero = (
-    <View style={[styles.hero, { backgroundColor: palette.bg }, isDesktop ? styles.heroDesktop : { paddingTop: insets.top + 40 }]}>
+    <View style={[styles.hero, { backgroundColor: palette.bg }, isDesktop ? styles.heroDesktop : { paddingTop: topGap(insets.top, 40) }]}>
       {!isDesktop && <StatusBar style={palette.statusBar} />}
       {!isDesktop && (
-        <View style={[styles.heroTop, { top: insets.top + 8 }]}>
+        <View style={[styles.heroTop, { top: topGap(insets.top, 8) }]}>
           <Pressable onPress={back} accessibilityRole="button" accessibilityLabel="Wstecz" style={styles.heroBack}>
             <Icon name="chevron-left" size={22} color={palette.fg} />
             <AppText style={[styles.heroLink, { color: palette.fg }]}>Wstecz</AppText>

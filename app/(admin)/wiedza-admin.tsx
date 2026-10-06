@@ -14,6 +14,7 @@ import { WIEDZA_DATA } from '../../lib/wiedza'
 import { useTheme } from '../../lib/ThemeContext'
 import { Colors } from '../../lib/theme'
 import { shadow } from '../../lib/shadows'
+import { topGap } from '../../lib/safeTop'
 
 type Entry = {
   id: string
@@ -222,7 +223,7 @@ export default function WiedzaAdminScreen() {
       {/* Formularz dodaj/edytuj */}
       <Modal visible={formVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setFormVisible(false)}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" enabled={Platform.OS !== 'web'}>
-          <View style={[styles.formModal, { paddingTop: insets.top + 16 }]}>
+          <View style={[styles.formModal, { paddingTop: topGap(insets.top, 16) }]}>
             <View style={styles.formHeader}>
               <TouchableOpacity onPress={() => setFormVisible(false)}>
                 <Text style={styles.formCancel}>Anuluj</Text>

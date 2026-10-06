@@ -6,6 +6,7 @@ import { HeaderPalette } from '../../lib/theme'
 import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
 import { AppText } from './AppText'
 import { Icon } from './Icon'
+import { topGap } from '../../lib/safeTop'
 
 type Props = {
   /** tytuł (Instrument Serif 36); można pominąć, gdy nagłówek ma własną treść (np. liczba punktów) */
@@ -43,7 +44,7 @@ export function ScreenHeader({
     <View
       style={[
         styles.header,
-        { backgroundColor: p.bg, paddingTop: insets.top + 6, paddingBottom: 20 + overlap },
+        { backgroundColor: p.bg, paddingTop: topGap(insets.top, 6), paddingBottom: 20 + overlap },
         style,
       ]}
     >

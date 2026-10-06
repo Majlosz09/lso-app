@@ -91,5 +91,5 @@ const styles = StyleSheet.create({
   list: { maxHeight: 420 },
   day: { gap: 6, marginBottom: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
-  time: { width: 52 },
+  time: { minWidth: 52, flexShrink: 0 },
 })
