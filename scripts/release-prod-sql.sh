@@ -61,6 +61,7 @@ MIGRATIONS=(
   "20261006000000_system_ranks_toggle.sql|EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='parishes' AND column_name='system_ranks_enabled')"
   "20261006010000_point_categories.sql|to_regclass('public.point_categories') IS NOT NULL"
   "20261006020000_formation_without_wiedza.sql|to_regclass('public.rank_requirements') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname='_formation_progress' AND prosrc ILIKE '%wiedza_keys%')"
+  "20261008000000_push_tokens.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='claim_push_token')"
 )
 
 banner() {
@@ -105,6 +106,13 @@ case "$MODE" in
     done
     echo "Kopia: $dir"
     ;;
+  query)
+    # tylko odczyt: bash scripts/release-prod-sql.sh query "select ..."
+    case "$(echo "${2:-}" | tr 'A-Z' 'a-z' | sed 's/^ *//')" in
+      select*|with*) q "$2" ;;
+      *) echo "Tylko zapytania SELECT/WITH."; exit 1 ;;
+    esac
+    ;;
   counts)
     q "select (select count(*) from profiles) profiles, (select count(*) from schedules) schedules, (select count(*) from schedule_assignments) assignments, (select count(*) from points) points, (select count(*) from attendance) attendance, (select count(*) from mass_templates) mass_templates, (select count(*) from parishes) parishes, (select count(*) from chat_messages) chat, (select count(*) from member_badges) badges, (select count(*) from churches) churches"
     ;;
@@ -136,10 +144,10 @@ case "$MODE" in
       f="${m%%|*}"; cond="${m#*|}"
       applied "$cond" || { echo "  [BRAKUJE] $f"; missing=1; }
     done
-    [ $missing = 0 ] && echo "  ✓ wszystkie 37 migracji są w bazie"
+    [ $missing = 0 ] && echo "  ✓ wszystkie migracje są w bazie"
     q "select jobname, schedule from cron.job where jobname='lso-monthly-report'"
     q "select count(*) filter (where system_ranks_enabled) as parafie_z_rangami_systemowymi, count(*) as parafie from parishes"
     q "select count(*) as kosciol_glowny_brak from parishes p where not exists (select 1 from churches c where c.parish_id=p.id and c.is_main)"
     ;;
-  *) echo "Użycie: bash scripts/release-prod-sql.sh check|backup|migrate|verify|counts"; exit 1 ;;
+  *) echo "Użycie: bash scripts/release-prod-sql.sh check|backup|migrate|verify|counts|query"; exit 1 ;;
 esac

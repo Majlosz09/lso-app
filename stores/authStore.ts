@@ -4,7 +4,7 @@ import { Platform } from 'react-native'
 import { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { Profile, Parish } from '../types/database'
-import { registerForPushNotificationsAsync } from '../lib/notifications'
+import { PushState, registerForPush, releasePushOnSignOut } from '../lib/notifications'
 
 let _coverageRunning = false
 let _profileChannel: ReturnType<typeof supabase.channel> | null = null
@@ -58,12 +58,16 @@ interface AuthState {
   profile: Profile | null
   parish: Parish | null
   isLoading: boolean
-  pushEnabled: boolean | null  // null = nieznane (nie sprawdzono)
+  /** stan powiadomień push na tym urządzeniu (null = jeszcze nie sprawdzono) */
+  pushState: PushState | null
+  setPushState: (s: PushState) => void
   // Akcje
   setSession: (session: Session | null) => void
   fetchProfile: () => Promise<void>
   signOut: () => Promise<void>
 }
+
+let _pushFor: string | null = null
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
@@ -71,7 +75,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   profile: null,
   parish: null,
   isLoading: true,
-  pushEnabled: null,
+  pushState: null,
+  setPushState: (pushState) => set({ pushState }),
 
   setSession: (session) => {
     if (session) {
@@ -125,21 +130,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ profile: profileData, parish: parishData, isLoading: false })
 
       if (parishData?.setup_done) ensureSchedulesCoverage(profileData.parish_id!).catch(() => {})
-      registerForPushNotificationsAsync(profileData.id)
-        .then(granted => set({ pushEnabled: granted }))
-        .catch(() => set({ pushEnabled: false }))
+      // raz na sesję i konto: przypnij telefon (zapyta o zgodę tylko przy pierwszym uruchomieniu)
+      if (_pushFor !== profileData.id) {
+        _pushFor = profileData.id
+        registerForPush(profileData.id, true)
+          .then(pushState => set({ pushState }))
+          .catch(() => set({ pushState: 'error' }))
+      }
     } else {
       set({ isLoading: false })
     }
   },
 
   signOut: async () => {
+    // telefon przestaje dostawać powiadomienia tego konta (zanim wygaśnie sesja)
+    await releasePushOnSignOut()
+    _pushFor = null
     if (_profileChannel) {
       supabase.removeChannel(_profileChannel)
       _profileChannel = null
     }
     await supabase.auth.signOut({ scope: 'local' })
-    set({ session: null, user: null, profile: null, parish: null })
+    set({ session: null, user: null, profile: null, parish: null, pushState: null })
     if (Platform.OS === 'web') {
       window.location.reload()
     }

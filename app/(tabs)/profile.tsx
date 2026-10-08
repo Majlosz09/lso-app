@@ -28,6 +28,7 @@ import { tourRoleFor } from '../../lib/tour'
 import { DeleteAccountButton } from '../../components/DeleteAccountButton'
 import { ExportMyDataButton } from '../../components/ExportMyDataButton'
 import { BlockedUsersButton } from '../../components/BlockedUsersButton'
+import { PushSettingsCard } from '../../components/PushSettingsCard'
 import { ForgotPasswordModal } from '../../components/ForgotPasswordModal'
 import { attendanceRate } from '../../lib/serviceRules'
 import { ChildSummary, useChildren } from '../../hooks/useChildren'
@@ -338,7 +339,7 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
   const { colors: c } = useTheme()
   const { palette } = useLiturgyHeader()
   const { themeOverride, setThemeOverride } = useThemeStore()
-  const { profile, session, signOut, parish, pushEnabled } = useAuthStore()
+  const { profile, session, signOut, parish } = useAuthStore()
   const { stats, allRanks, badges, parentName } = useProfileData(mode)
   const kids = useChildren(0)
   const [unlinkChild, setUnlinkChild] = useState<ChildSummary | null>(null)
@@ -389,15 +390,8 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
     </View>
   )
 
-  const pushCard = pushEnabled === false && (
-    <View style={[styles.push, { backgroundColor: c.goldSurface, borderColor: c.gold }]}>
-      <Icon name="bell-off" size={22} color={c.goldInk} />
-      <View style={styles.flex}>
-        <AppText variant="bodyStrong" color={c.goldText}>Powiadomienia wyłączone</AppText>
-        <AppText variant="small" color={c.goldText}>Włącz je w ustawieniach telefonu, aby dostawać przypomnienia o służbie.</AppText>
-      </View>
-    </View>
-  )
+  // ostrzeżenie na górze, gdy telefon blokuje powiadomienia; pełne ustawienia niżej (Powiadomienia)
+  const pushCard = <PushSettingsCard banner />
 
   const statTiles = stats && (
     <View style={styles.stats}>
@@ -468,6 +462,7 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
 
   const settings = (
     <>
+    <PushSettingsCard />
     <CalendarSubscribeCard who={admin || profile?.is_helper ? 'staff' : parent ? 'parent' : 'member'} />
     <Card flush>
       <View style={styles.themeBox}>
