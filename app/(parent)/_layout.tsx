@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { View, ActivityIndicator } from 'react-native'
 import { Stack, usePathname, useRouter } from 'expo-router'
-import { equivalentRoute, navRoleFor } from '../../lib/navigation'
+import { redirectForRole, navRoleFor } from '../../lib/navigation'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { useNavHeaderOptions } from '../../components/layout/navOptions'
@@ -18,7 +18,7 @@ export default function ParentLayout() {
   useEffect(() => {
     // profil wczytuje się chwilę po sesji — bez niego nie oceniamy dostępu (odświeżenie podstrony na webie)
     if (!isLoading && profile && !hasAccess) {
-      router.replace(equivalentRoute(navRoleFor(profile, false), pathname) as any)
+      router.replace(redirectForRole(navRoleFor(profile, false), pathname) as any)
     }
   }, [profile, isLoading])
 

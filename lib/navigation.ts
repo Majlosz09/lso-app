@@ -1,4 +1,5 @@
 // Nawigacja redesignu v2: menu sidebaru (web ≥ 1024 px) i tytuły topbaru per rola.
+import { Platform } from 'react-native'
 
 export type NavRole = 'member' | 'admin' | 'parent' | 'helper'
 export type BadgeKey = 'chat' | 'pending' | 'excuses' | 'announcements'
@@ -165,6 +166,28 @@ const GROUP_ROUTES: Record<NavRole, { base: string; paths: string[] }> = {
 /** Ekrany panelu opiekuna dostępne dla pomocnika. */
 export const HELPER_PATHS = ['/schedules', '/schedule-detail', '/schedule-form', '/schedule-series', '/schedule-day', '/recurring-assignments', '/auto-schedule', '/absence-requests', '/kiosk']
 export const helperAllowed = (pathname: string) => HELPER_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+
+/**
+ * Odpowiednik bieżącego adresu w panelu danej roli — do przekierowań w strażnikach paneli.
+ * Web: adresy jak /points, /chat, /profile są w kilku panelach naraz; po odświeżeniu expo-router 57
+ * dopasowuje je najpierw do innego panelu i przepisuje adres na „/”, zanim strażnik zadziała.
+ */
+// Adres strony w chwili jej otwarcia (web) — zapamiętany przy starcie, zanim expo-router go przepisze.
+const initialWebUrl: { path: string; search: string } | null =
+  Platform.OS === 'web' && typeof window !== 'undefined' && window.location
+    ? { path: window.location.pathname, search: window.location.search ?? '' }
+    : null
+let initialUsed = false
+
+export function redirectForRole(role: NavRole, pathname: string): string {
+  // pierwsze przekierowanie po otwarciu / odświeżeniu strony: adres, który wpisał użytkownik
+  if (initialWebUrl && !initialUsed) {
+    initialUsed = true
+    const target = equivalentRoute(role, initialWebUrl.path)
+    return target !== GROUP_ROUTES[role].base ? target + initialWebUrl.search : target
+  }
+  return equivalentRoute(role, pathname)
+}
 
 export function equivalentRoute(role: NavRole, pathname: string): string {
   // ekrany panelu opiekuna poza zakładkami, które mają odpowiednik u ministranta

@@ -1,7 +1,7 @@
 import type { ColorValue } from 'react-native'
 import { useEffect } from 'react'
 import { Tabs, usePathname, useRouter } from 'expo-router'
-import { equivalentRoute } from '../../lib/navigation'
+import { redirectForRole } from '../../lib/navigation'
 import { effectiveMode } from '../../lib/attendance'
 import { useAuthStore } from '../../stores/authStore'
 import { CustomTabBar } from '../../components/CustomTabBar'
@@ -20,10 +20,10 @@ export default function TabsLayout() {
 
   useEffect(() => {
     if (profile?.role === 'admin') {
-      router.replace(equivalentRoute('admin', pathname) as any)
+      router.replace(redirectForRole('admin', pathname) as any)
     }
     if (profile?.role === 'parent') {
-      router.replace(equivalentRoute('parent', pathname) as any)
+      router.replace(redirectForRole('parent', pathname) as any)
     }
   }, [profile])
 
