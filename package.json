@@ -7,14 +7,15 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "export:web": "expo export -p web && node scripts/patch-web-bundle.js && node scripts/fix-web-node-modules.js dist",
+    "export:web": "node scripts/export-web-prod.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "update:production": "eas update --channel production",
+    "update:production": "node scripts/update-production.js",
     "export:web:dev": "node scripts/export-web-dev.js",
     "deploy:web:dev": "node scripts/deploy-web-dev.js",
     "build:redesign": "eas build --profile redesign --platform android",
-    "update:redesign": "node scripts/update-redesign.js"
+    "update:redesign": "node scripts/update-redesign.js",
+    "deploy:web:prod": "node scripts/deploy-web-prod.js"
   },
   "dependencies": {
     "@expo-google-fonts/instrument-serif": "^0.4.1",

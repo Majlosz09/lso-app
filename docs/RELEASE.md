@@ -6,8 +6,8 @@ Aplikacja ma trzy części, każda wdrażana osobno. **Kolejność: baza → str
 |---|---|---|
 | Baza | Supabase projekt **LSO** (prod) | SQL Editor → nowe pliki z `supabase/migrations/` (najpierw zawsze na **LSO-dev**) |
 | Strona (lsoapp.com) | Cloudflare, repo `lso-landing` | `git push origin main` → wdraża się sama |
-| Web (app.lsoapp.com) | Cloudflare Pages (upload ręczny) | `npm run export:web` → Workers & Pages → projekt app.lsoapp.com → Create deployment → zawartość `dist/` |
-| Mobile — kod JS | EAS Update (bez sklepu) | `npm run update:production -- --message "opis"` |
+| Web (app.lsoapp.com) | Cloudflare Pages, projekt `lso-app-prod` | `npm run deploy:web:prod` (buduje z `.env` = produkcja, sprawdza adres bazy, wysyła wranglerem) |
+| Mobile — kod JS | EAS Update (bez sklepu) | `npm run update:production -- "opis"` (zmienne wyłącznie z `.env`) |
 | Mobile — natywne | EAS Build + sklep | `npx eas build -p android --profile production` → Play Console |
 
 ## Aktualizacja bez sklepu (EAS Update) — od wersji 1.1.0
