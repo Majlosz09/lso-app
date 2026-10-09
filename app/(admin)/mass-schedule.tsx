@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useLocalSearchParams } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
@@ -84,7 +85,8 @@ function presets(today: string) {
   const y = Number(today.slice(0, 4))
   const yr = (md: string) => `${y}-${md}`
   return [
-    { label: 'Październik', name: 'Październik — różaniec', from: yr('10-01'), to: yr('10-31'), yearly: true, days: MON_SAT },
+    { label: 'Październik', name: 'Październik — różaniec', from: yr('10-01'), to: yr('10-31'), yearly: true, days: MON_SAT,
+      hint: 'Poniżej są godziny ze stałego rozkładu. Zmień godzinę Mszy (np. 17:30 → 17:00) i dodaj różaniec jako nabożeństwo (np. 17:30). Msze w grafiku przesuną się same, a zapisy przejdą na nowe godziny.' },
     { label: 'Maj', name: 'Maj — nabożeństwa majowe', from: yr('05-01'), to: yr('05-31'), yearly: true, days: MON_SAT },
     { label: 'Czerwiec', name: 'Czerwiec — nabożeństwa czerwcowe', from: yr('06-01'), to: yr('06-30'), yearly: true, days: MON_SAT },
     { label: 'Wakacje', name: 'Wakacje', from: yr('07-01'), to: yr('08-31'), yearly: true, days: ALL_DAYS },
@@ -99,7 +101,9 @@ export default function MassScheduleScreen() {
   const { colors: c } = useTheme()
   const today = localDateStr()
 
-  const [tab, setTab] = useState<Tab>('base')
+  // wejście z Grafiku / cyklu służb: ?tab=periods (&preset=Październik — od razu otwarty formularz okresu)
+  const params = useLocalSearchParams<{ tab?: string; preset?: string }>()
+  const [tab, setTab] = useState<Tab>(params.tab === 'periods' ? 'periods' : 'base')
   const [loading, setLoading] = useState(true)
   const [templates, setTemplates] = useState<RozkladEntry[]>([])
   const [baseDraft, setBaseDraft] = useState<DraftEntry[]>([])
@@ -142,6 +146,16 @@ export default function MassScheduleScreen() {
     setLoading(false)
   }, [profile?.parish_id])
   useEffect(() => { load() }, [load])
+  const [presetDone, setPresetDone] = useState(false)
+  useEffect(() => {
+    if (loading || presetDone || !params.preset) return
+    setPresetDone(true)
+    const ps = presets(today).find(p => p.label === params.preset)
+    // okres już jest (np. październik) — pokaż go zamiast tworzyć drugi
+    const existing = ps && periods.find(p => p.name === ps.name)
+    if (existing) openPeriod(existing)
+    else if (ps) openPeriod(null, ps)
+  }, [loading, presetDone, params.preset, periods])
 
   const activeNow = (p: Partial<MassPeriod> & { date_from: string; date_to: string; repeat_yearly: boolean; days_of_week?: number[] }) => {
     const rule = p.rule ?? 'dates'
@@ -265,7 +279,7 @@ export default function MassScheduleScreen() {
       id: null, name: ps.name, date_from: ps.from, date_to: ps.to, repeat_yearly: ps.yearly, days: ps.days,
       entries: draftFromTemplates(templates, ps.days),
       rule: 'dates', feasts: [], season_from: 'advent_start', season_to: 'dec23', season_from_offset: 0, season_to_offset: 0, copy_dow: null,
-      church_ids: [],
+      church_ids: [], hint: 'hint' in ps ? ps.hint : undefined,
     })
   }
   /** Gotowa zmiana roku liturgicznego (daty liczą się co roku same). */
@@ -293,7 +307,7 @@ export default function MassScheduleScreen() {
   }
   const toggleFormDay = (d: number) => form && setFormDays(form.days.includes(d) ? form.days.filter(x => x !== d) : [...form.days, d])
   const applyPreset = (ps: ReturnType<typeof presets>[number]) => form && setForm({
-    ...form, rule: 'dates', hint: undefined, name: form.id ? form.name : ps.name, date_from: ps.from, date_to: ps.to, repeat_yearly: ps.yearly, days: ps.days,
+    ...form, rule: 'dates', hint: 'hint' in ps ? ps.hint : undefined, name: form.id ? form.name : ps.name, date_from: ps.from, date_to: ps.to, repeat_yearly: ps.yearly, days: ps.days,
     entries: form.id ? form.entries.filter(e => ps.days.includes(e.day_of_week)) : draftFromTemplates(templates, ps.days),
   })
   const savePeriod = () => {

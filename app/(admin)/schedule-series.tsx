@@ -38,6 +38,7 @@ function formatDate(d: string) {
 export default function ScheduleSeriesScreen() {
   const router = useRouter()
   const { profile } = useAuthStore()
+  const isAdmin = profile?.role === 'admin' || !!profile?.is_admin // pomocnik nie zmienia rozkładu Mszy
   const insets = useSafeAreaInsets()
   const { colors: c, isDark } = useTheme()
   const styles = useMemo(() => createStyles(c), [c])
@@ -152,6 +153,20 @@ export default function ScheduleSeriesScreen() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} enabled={false}>
       <KeyboardScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) }]} keyboardShouldPersistTaps="handled">
+
+        {isAdmin && (
+          <TouchableOpacity style={styles.periodHint} onPress={() => router.replace('/(admin)/mass-schedule?tab=periods&preset=Październik' as any)}>
+            <Ionicons name="time-outline" size={20} color={c.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.periodHintTitle}>Zmieniają się godziny Mszy na cały okres?</Text>
+              <Text style={styles.periodHintText}>
+                Np. w październiku Msza o 17:00 zamiast 17:30, a o 17:30 różaniec. Cykl tylko dodaje służby i Msz nie przesunie.
+                Użyj zmiany okresowej: Msze w grafiku przesuną się same, a zapisy przejdą na nowe godziny.
+              </Text>
+              <Text style={styles.periodHintLink}>Ustaw zmianę okresową →</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         <Text style={styles.label}>Tytuł *</Text>
         <TextInput
@@ -320,6 +335,10 @@ function createStyles(c: Colors) {
     content: { padding: 16, gap: 6 },
 
     label: { fontSize: 13, color: c.subtext, marginTop: 10, marginBottom: 2, fontFamily: 'Manrope_600SemiBold' },
+    periodHint: { flexDirection: 'row', gap: 10, padding: 14, borderRadius: 14, backgroundColor: c.primarySurface, alignItems: 'flex-start' },
+    periodHintTitle: { fontSize: 14, color: c.text, fontFamily: 'Manrope_700Bold' },
+    periodHintText: { fontSize: 12, color: c.subtext, lineHeight: 17, marginTop: 2, fontFamily: 'Manrope_500Medium' },
+    periodHintLink: { fontSize: 13, color: c.primary, marginTop: 6, fontFamily: 'Manrope_700Bold' },
     sublabel: { fontSize: 12, color: c.subtext, marginBottom: 4, fontFamily: 'Manrope_500Medium' },
     input: {
       backgroundColor: c.surface, borderRadius: 10, padding: 13,

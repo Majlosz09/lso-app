@@ -48,6 +48,8 @@ export default function SchedulesTab() {
   const router = useRouter()
   const isDesktop = useIsDesktop()
   const { profile } = useAuthStore()
+  // rozkład Mszy (zmiany okresowe) zmienia tylko opiekun, nie pomocnik
+  const isAdmin = profile?.role === 'admin' || !!profile?.is_admin
   const { colors: c } = useTheme()
   const { palette } = useLiturgyHeader()
   const [weekOffset, setWeekOffset] = useState(0)
@@ -156,8 +158,12 @@ export default function SchedulesTab() {
         onPress={() => { setAddOpen(false); router.push('/(admin)/auto-schedule' as any) }} />
       <ChoiceCard icon="calendar-plus" title="Jednorazowa służba" subtitle="Jeden termin: dzień, godzina, rodzaj"
         onPress={() => { setAddOpen(false); router.push('/(admin)/schedule-form') }} />
-      <ChoiceCard icon="calendar-multiple" title="Cykl służb" subtitle="Seria terminów, np. roraty albo różaniec"
+      <ChoiceCard icon="calendar-multiple" title="Cykl służb" subtitle="Seria dodatkowych terminów, np. roraty albo różaniec"
         onPress={() => { setAddOpen(false); router.push('/(admin)/schedule-series') }} />
+      {isAdmin && (
+        <ChoiceCard icon="calendar-clock" title="Zmiana godzin na okres" subtitle="Np. październik: Msza 17:00 zamiast 17:30, różaniec 17:30 — Msze i zapisy przesuną się same"
+          onPress={() => { setAddOpen(false); router.push('/(admin)/mass-schedule?tab=periods' as any) }} />
+      )}
       <ChoiceCard icon="calendar-sync" title="Stałe dyżury ministrantów" subtitle="Kto służy co tydzień o danej godzinie"
         onPress={() => { setAddOpen(false); router.push('/(admin)/recurring-assignments') }} />
     </Sheet>
@@ -187,6 +193,7 @@ export default function SchedulesTab() {
           <Button label="Drukuj" icon="printer" variant="secondary" compact onPress={() => setPrintOpen(true)} />
           <Button label="Ułóż grafik" icon="auto-fix" variant="secondary" compact onPress={() => router.push('/(admin)/auto-schedule' as any)} />
           <Button label="Stałe dyżury" icon="calendar-sync" variant="secondary" compact onPress={() => router.push('/(admin)/recurring-assignments')} />
+          {isAdmin && <Button label="Zmiany okresowe" icon="calendar-clock" variant="secondary" compact onPress={() => router.push('/(admin)/mass-schedule?tab=periods' as any)} />}
           <Button label="Cykl służb" icon="calendar-multiple" variant="secondary" compact onPress={() => router.push('/(admin)/schedule-series')} />
           <Button label="Dodaj służbę" icon="plus" compact onPress={() => router.push('/(admin)/schedule-form')} />
           </TourTarget>
