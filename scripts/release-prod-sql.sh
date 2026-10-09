@@ -62,6 +62,7 @@ MIGRATIONS=(
   "20261006010000_point_categories.sql|to_regclass('public.point_categories') IS NOT NULL"
   "20261006020000_formation_without_wiedza.sql|to_regclass('public.rank_requirements') IS NOT NULL AND NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname='_formation_progress' AND prosrc ILIKE '%wiedza_keys%')"
   "20261008000000_push_tokens.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='claim_push_token')"
+  "20261009000000_recurring_guard_points_edit.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='set_attendance_points')"
 )
 
 banner() {

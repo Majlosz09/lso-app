@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput,
   ActivityIndicator, Modal, Platform,
@@ -47,6 +47,30 @@ type Rule = {
 }
 type Member = { id: string; full_name: string }
 type Template = { day_of_week: number; time: string; label: string | null }
+/** Jeden tydzień stałego dyżuru wg rozkładu (z okresami) — z preview_recurring_assignments */
+type PreviewRow = {
+  day: string
+  slot_time: string
+  title: string | null
+  kind: 'ok' | 'moved' | 'skipped' | 'extra'
+  period_name: string | null
+}
+
+/** Tygodnie inne niż „zwykła Msza o tej godzinie”, zgrupowane po okresie rozkładu. */
+function previewGroups(rows: PreviewRow[], time: string) {
+  const map = new Map<string, { text: string; dates: string[]; skipped: boolean }>()
+  for (const r of rows) {
+    if (r.kind === 'ok' || r.kind === 'extra') continue
+    const where = r.period_name ? `„${r.period_name}”` : 'rozkład'
+    const text = r.kind === 'skipped'
+      ? `${where}: o ${time} nie ma Mszy — te dni zostaną pominięte`
+      : `${where}: Msza przeniesiona na ${r.slot_time} — dyżur pójdzie za nią`
+    const key = `${r.kind}_${r.period_name}_${r.slot_time}`
+    if (!map.has(key)) map.set(key, { text, dates: [], skipped: r.kind === 'skipped' })
+    map.get(key)!.dates.push(r.day)
+  }
+  return [...map.values()]
+}
 
 function dateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -88,6 +112,25 @@ export default function RecurringAssignmentsScreen() {
   const [saving, setSaving] = useState(false)
 
   const [pendingCancel, setPendingCancel] = useState<{ ids: string[]; label: string } | null>(null)
+  const [preview, setPreview] = useState<PreviewRow[] | null>(null)
+
+  // podgląd: na które Msze faktycznie trafi dyżur (zmiany okresowe, np. październik z różańcem)
+  useEffect(() => {
+    if (!formOpen || !time) { setPreview(null); return }
+    let alive = true
+    setPreview(null)
+    const start = new Date()
+    supabase.rpc('preview_recurring_assignments', {
+      p_day_of_week: day, p_time: `${time}:00`, p_start: dateStr(start), p_end: dateStr(periodEnd(period, start)),
+    }).then(({ data, error }) => {
+      if (alive) setPreview(error ? [] : ((data ?? []) as PreviewRow[]))
+    })
+    return () => { alive = false }
+  }, [formOpen, day, time, period])
+  const previewInfo = useMemo(() => (preview ? {
+    count: preview.filter(r => r.kind !== 'skipped').length,
+    groups: previewGroups(preview, time),
+  } : null), [preview, time])
 
   const load = useCallback(async () => {
     if (!parishId) return
@@ -163,11 +206,12 @@ export default function RecurringAssignmentsScreen() {
     })
     setSaving(false)
     if (error) { Toast.show({ type: 'error', text1: 'Nie udało się', text2: error.message }); return }
-    const res = data as { rules: number; assignments: number }
+    const res = data as { rules: number; assignments: number; skipped_days?: number }
     Toast.show({
       type: 'success',
       text1: 'Stały dyżur ustawiony',
-      text2: `${DAY_FULL[day]} ${time} — ${res.assignments} przydziałów do ${formatDate(dateStr(end))}`,
+      text2: `${DAY_FULL[day]} ${time} — ${res.assignments} przydziałów do ${formatDate(dateStr(end))}`
+        + (res.skipped_days ? ` (pominięto ${res.skipped_days} ${res.skipped_days === 1 ? 'dzień' : 'dni'} bez tej Mszy)` : ''),
     })
     setFormOpen(false)
     load()
@@ -320,6 +364,42 @@ export default function RecurringAssignmentsScreen() {
                 Od dziś do {formatDate(dateStr(periodEnd(period, new Date())))}
               </Text>
 
+              {!!time && (
+                <View style={styles.previewBox}>
+                  {!previewInfo ? (
+                    <ActivityIndicator size="small" color={c.primary} />
+                  ) : (
+                    <>
+                      <Text style={styles.previewTitle}>
+                        {`${previewInfo.count} ${previewInfo.count === 1 ? 'służba' : previewInfo.count < 5 && previewInfo.count > 1 ? 'służby' : 'służb'} wg rozkładu Mszy`}
+                      </Text>
+                      {previewInfo.groups.length === 0 ? (
+                        <Text style={styles.hint}>
+                          Co tydzień o {time}. Jeśli w jakimś okresie (np. w październiku) Msze są o innych godzinach,
+                          najpierw dodaj zmianę okresową w Rozkładzie Mszy — dyżur sam się do niej dopasuje.
+                        </Text>
+                      ) : previewInfo.groups.map(g => (
+                        <View key={g.text} style={styles.previewRow}>
+                          <Ionicons
+                            name={g.skipped ? 'remove-circle-outline' : 'swap-horizontal-outline'}
+                            size={16}
+                            color={g.skipped ? c.goldInk : c.primary}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.previewText}>{g.text}</Text>
+                            <Text style={styles.hint}>
+                              {g.dates.length > 6
+                                ? `${formatDate(g.dates[0])} – ${formatDate(g.dates[g.dates.length - 1])} (${g.dates.length})`
+                                : g.dates.map(d => formatDate(d).slice(0, 5)).join(', ')}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
+                    </>
+                  )}
+                </View>
+              )}
+
               <Text style={styles.label}>Ministranci ({selected.length})</Text>
               <View style={styles.searchBox}>
                 <Ionicons name="search-outline" size={16} color={c.textTertiary} />
@@ -418,6 +498,10 @@ function createStyles(c: Colors) {
     label: { fontSize: 13, color: c.subtext, textTransform: 'uppercase', letterSpacing: 0.4, fontFamily: 'Manrope_700Bold' },
     hint: { fontSize: 12, color: c.textTertiary, fontFamily: 'Manrope_500Medium' },
     chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    previewBox: { backgroundColor: c.bg, borderRadius: 12, padding: 12, gap: 8 },
+    previewTitle: { fontSize: 14, color: c.text, fontFamily: 'Manrope_700Bold' },
+    previewRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+    previewText: { fontSize: 13, color: c.text, fontFamily: 'Manrope_600SemiBold' },
     dayChip: { minWidth: 42, alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: c.primarySurface },
     chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: c.primarySurface },
     chipActive: { backgroundColor: c.primary },

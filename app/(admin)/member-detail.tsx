@@ -25,6 +25,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 import { ModalKeyboardAvoider } from '../../components/ui/ModalKeyboardAvoider'
 import { topGap } from '../../lib/safeTop'
+import { AttendancePointsSheet, AttendancePointsTarget } from '../../components/admin/AttendancePointsSheet'
 
 type MemberProfile = {
   id: string
@@ -55,6 +56,8 @@ type PointRow = {
   amount: number
   reason: string
   created_at: string
+  source: string
+  schedule: { id: string; title: string; date: string; time: string } | null
 }
 
 type BadgeRow = {
@@ -95,6 +98,8 @@ export default function MemberDetailScreen() {
   const [upcoming, setUpcoming] = useState<AssignmentRow[]>([])
   const [history, setHistory] = useState<AssignmentRow[]>([])
   const [points, setPoints] = useState<PointRow[]>([])
+  const [pointsTarget, setPointsTarget] = useState<AttendancePointsTarget | null>(null)
+  const canEditPoints = adminProfile?.role === 'admin' || !!adminProfile?.is_admin
   const [loading, setLoading] = useState(true)
   const [ranksList, setRanksList] = useState<RankRow[]>([])
   const [rankModalVisible, setRankModalVisible] = useState(false)
@@ -136,7 +141,7 @@ export default function MemberDetailScreen() {
         .order('schedule(date)', { ascending: false })
         .limit(10),
       supabase.from('points')
-        .select('id, amount, reason, created_at')
+        .select('id, amount, reason, created_at, source, schedule:schedules(id, title, date, time)')
         .eq('profile_id', id)
         .eq('parish_id', adminProfile?.parish_id)
         .order('created_at', { ascending: false })
@@ -598,7 +603,17 @@ export default function MemberDetailScreen() {
             <EmptyRow text="Brak przyznanych punktów" styles={styles} />
           ) : (
             points.map((p, i) => (
-              <View key={p.id} style={[styles.pointRow, i < points.length - 1 && styles.rowBorder]}>
+              <Pressable
+                key={p.id}
+                style={[styles.pointRow, i < points.length - 1 && styles.rowBorder]}
+                disabled={!canEditPoints || p.source !== 'checkin' || !p.schedule}
+                accessibilityRole={canEditPoints && p.source === 'checkin' && p.schedule ? 'button' : undefined}
+                onPress={() => p.schedule && setPointsTarget({
+                  scheduleId: p.schedule.id, profileId: profile.id, name: profile.full_name,
+                  service: `${p.schedule.title} · ${p.schedule.date.split('-').reverse().join('.')} ${p.schedule.time.slice(0, 5)}`,
+                  amount: p.amount,
+                })}
+              >
                 <View style={[styles.pointAmount, { backgroundColor: (p.amount >= 0 ? '#2F7D4F' : '#B3261E') + '18' }]}>
                   <Text style={[styles.pointAmountText, { color: p.amount >= 0 ? '#2F7D4F' : '#B3261E' }]}>
                     {p.amount >= 0 ? '+' : ''}{p.amount}
@@ -610,7 +625,10 @@ export default function MemberDetailScreen() {
                     {new Date(p.created_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </Text>
                 </View>
-              </View>
+                {canEditPoints && p.source === 'checkin' && !!p.schedule && (
+                  <Ionicons name="pencil-outline" size={16} color={c.subtext} />
+                )}
+              </Pressable>
             ))
           )}
         </Section>
@@ -638,6 +656,24 @@ export default function MemberDetailScreen() {
           </TouchableOpacity>
         </Section>
       )}
+
+      <AttendancePointsSheet
+        target={pointsTarget}
+        onClose={() => setPointsTarget(null)}
+        onSaved={amount => {
+          const t = pointsTarget
+          setPointsTarget(null)
+          if (!t) return
+          const diff = amount - t.amount
+          // 0 pkt = wiersz znika z historii; inaczej nowa wartość (wiersze za tę służbę scalone w jeden)
+          setPoints(prev => {
+            const rows = prev.filter(p => !(p.source === 'checkin' && p.schedule?.id === t.scheduleId))
+            const first = prev.find(p => p.source === 'checkin' && p.schedule?.id === t.scheduleId)
+            return amount === 0 || !first ? rows : [...rows, { ...first, amount }].sort((a, b) => b.created_at.localeCompare(a.created_at))
+          })
+          setSummary(s => (s ? { ...s, total_points: s.total_points + diff } : s))
+        }}
+      />
 
       <ConfirmDialog
         visible={pendingRole !== null}

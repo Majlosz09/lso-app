@@ -19,6 +19,7 @@ import { churchLabel, useChurches } from '../../hooks/useChurches'
 import { AdminRolesCard } from '../../components/services/RolesCard'
 import { KeyboardScrollView } from '../../components/ui/KeyboardScrollView'
 import { topGap } from '../../lib/safeTop'
+import { AttendancePointsSheet, AttendancePointsTarget } from '../../components/admin/AttendancePointsSheet'
 
 type Assignment = {
   id: string
@@ -58,6 +59,10 @@ export default function ScheduleDetailScreen() {
   const [loading, setLoading] = useState(true)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const [attendanceIds, setAttendanceIds] = useState<Set<string>>(new Set())
+  // punkty za obecność na tej służbie (profile_id → suma); poprawia tylko opiekun, nie pomocnik
+  const [pointsBy, setPointsBy] = useState<Record<string, number>>({})
+  const [pointsTarget, setPointsTarget] = useState<AttendancePointsTarget | null>(null)
+  const canEditPoints = adminProfile?.role === 'admin' || !!adminProfile?.is_admin
   const [togglingAttendance, setTogglingAttendance] = useState<string | null>(null)
   const [statusModalAssignment, setStatusModalAssignment] = useState<Assignment | null>(null)
   const [addModalVisible, setAddModalVisible] = useState(false)
@@ -81,7 +86,7 @@ export default function ScheduleDetailScreen() {
   }
 
   const fetchSchedule = async () => {
-    const [scheduleRes, attendanceRes] = await Promise.all([
+    const [scheduleRes, attendanceRes, pointsRes] = await Promise.all([
       supabase
         .from('schedules')
         .select(`
@@ -98,10 +103,18 @@ export default function ScheduleDetailScreen() {
         .from('attendance')
         .select('profile_id')
         .eq('schedule_id', id),
+      supabase
+        .from('points')
+        .select('profile_id, amount')
+        .eq('schedule_id', id)
+        .eq('source', 'checkin'),
     ])
 
     if (scheduleRes.data) setSchedule(scheduleRes.data as any)
     setAttendanceIds(new Set((attendanceRes.data ?? []).map(a => a.profile_id)))
+    const sums: Record<string, number> = {}
+    for (const p of pointsRes.data ?? []) sums[p.profile_id] = (sums[p.profile_id] ?? 0) + p.amount
+    setPointsBy(sums)
     setLoading(false)
   }
 
@@ -138,6 +151,8 @@ export default function ScheduleDetailScreen() {
       setAttendanceIds(prev => new Set([...prev, profileId]))
       if (assignment && assignment.status !== 'present') {
         await handleChangeStatus(assignment.id, 'present')
+      } else {
+        fetchSchedule()
       }
     }
     setTogglingAttendance(null)
@@ -391,6 +406,24 @@ export default function ScheduleDetailScreen() {
                       </AppText>
                     </View>
                   </Pressable>
+                  {present && canEditPoints && (
+                    <Pressable
+                      onPress={() => setPointsTarget({
+                        scheduleId: schedule.id, profileId: a.profile_id, name: a.profile.full_name,
+                        service: `${schedule.title} · ${longDate(schedule.date)} ${schedule.time?.slice(0, 5)}`,
+                        amount: pointsBy[a.profile_id] ?? 0,
+                      })}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Punkty za obecność: ${a.profile.full_name}, ${pointsBy[a.profile_id] ?? 0}. Zmień`}
+                      style={[styles.pointsPill, { backgroundColor: c.goldSurface }]}
+                    >
+                      <AppText style={[styles.pointsText, { color: c.goldInk }]}>
+                        {`${(pointsBy[a.profile_id] ?? 0) > 0 ? '+' : ''}${pointsBy[a.profile_id] ?? 0} pkt`}
+                      </AppText>
+                      <Icon name="pencil" size={12} color={c.goldInk} />
+                    </Pressable>
+                  )}
                   {schedule.service_mode === 'none' && !present ? null : togglingAttendance === a.profile_id ? (
                     <ActivityIndicator size="small" color={c.success} />
                   ) : (
@@ -416,10 +449,21 @@ export default function ScheduleDetailScreen() {
             })}
           </Card>
           <AppText variant="small" muted style={styles.hint}>
-            Kółko przy osobie zaznacza obecność (z punktami wg reguł). Dotknij statusu, aby go zmienić.
+            {canEditPoints
+              ? 'Kółko przy osobie zaznacza obecność (z punktami wg reguł). Dotknij punktów, aby je poprawić, a statusu — aby go zmienić.'
+              : 'Kółko przy osobie zaznacza obecność (z punktami wg reguł). Dotknij statusu, aby go zmienić.'}
           </AppText>
         </View>
       </KeyboardScrollView>
+
+      <AttendancePointsSheet
+        target={pointsTarget}
+        onClose={() => setPointsTarget(null)}
+        onSaved={amount => {
+          if (pointsTarget) setPointsBy(prev => ({ ...prev, [pointsTarget.profileId]: amount }))
+          setPointsTarget(null)
+        }}
+      />
 
       {/* Status */}
       <Sheet
@@ -578,6 +622,8 @@ const styles = StyleSheet.create({
   person: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
   statusPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   statusText: { ...sans(700), fontSize: 11 },
+  pointsPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 999 },
+  pointsText: { ...sans(800), fontSize: 11, fontVariant: ['tabular-nums'] },
   statusDot: { width: 12, height: 12, borderRadius: 6 },
   hint: { paddingHorizontal: 4 },
 })
