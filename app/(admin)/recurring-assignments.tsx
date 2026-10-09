@@ -113,6 +113,7 @@ export default function RecurringAssignmentsScreen() {
 
   const [pendingCancel, setPendingCancel] = useState<{ ids: string[]; label: string } | null>(null)
   const [preview, setPreview] = useState<PreviewRow[] | null>(null)
+  const [previewFailed, setPreviewFailed] = useState(false)
 
   // podgląd: na które Msze faktycznie trafi dyżur (zmiany okresowe, np. październik z różańcem)
   useEffect(() => {
@@ -123,7 +124,9 @@ export default function RecurringAssignmentsScreen() {
     supabase.rpc('preview_recurring_assignments', {
       p_day_of_week: day, p_time: `${time}:00`, p_start: dateStr(start), p_end: dateStr(periodEnd(period, start)),
     }).then(({ data, error }) => {
-      if (alive) setPreview(error ? [] : ((data ?? []) as PreviewRow[]))
+      // bez podglądu w bazie (np. przed migracją) formularz działa jak dawniej
+      if (alive) setPreview(error ? null : ((data ?? []) as PreviewRow[]))
+      if (alive && error) setPreviewFailed(true)
     })
     return () => { alive = false }
   }, [formOpen, day, time, period])
@@ -364,7 +367,7 @@ export default function RecurringAssignmentsScreen() {
                 Od dziś do {formatDate(dateStr(periodEnd(period, new Date())))}
               </Text>
 
-              {!!time && (
+              {!!time && !previewFailed && (
                 <View style={styles.previewBox}>
                   {!previewInfo ? (
                     <ActivityIndicator size="small" color={c.primary} />
