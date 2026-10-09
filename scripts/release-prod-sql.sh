@@ -118,7 +118,15 @@ case "$MODE" in
     q "select (select count(*) from profiles) profiles, (select count(*) from schedules) schedules, (select count(*) from schedule_assignments) assignments, (select count(*) from points) points, (select count(*) from attendance) attendance, (select count(*) from mass_templates) mass_templates, (select count(*) from parishes) parishes, (select count(*) from chat_messages) chat, (select count(*) from member_badges) badges, (select count(*) from churches) churches"
     ;;
   migrate)
-    if ! applied "EXISTS (SELECT 1 FROM pg_extension WHERE extname='pg_cron')"; then
+    # bezpiecznik: gdy zapytania nie działają, każda kontrola dałaby „brakuje” i stare migracje poszłyby drugi raz
+    out="$(q "select true as applied" 2>&1 || true)"
+    if ! echo "$out" | grep -q '"applied": true'; then
+      echo "STOP: nie mogę odpytać bazy PROD (nic nie uruchomiono). Odpowiedź CLI:"; echo "$out"
+      exit 1
+    fi
+    # pg_cron potrzebny tylko migracji raportu miesięcznego — gdy już jest w bazie, nie blokuj kolejnych
+    if ! applied "EXISTS (SELECT 1 FROM pg_proc WHERE proname='monthly_report')" \
+       && ! applied "EXISTS (SELECT 1 FROM pg_extension WHERE extname='pg_cron')"; then
       echo "STOP: brak rozszerzenia pg_cron. Włącz: Supabase → Database → Extensions → pg_cron, potem uruchom ponownie."
       exit 1
     fi

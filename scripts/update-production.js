@@ -18,4 +18,6 @@ if (!String(env.EXPO_PUBLIC_SUPABASE_URL || '').includes(PROD_REF)) {
   process.exit(1)
 }
 const message = process.argv.slice(2).filter(a => a !== '--message').join(' ') || 'aktualizacja'
-execSync(`npx eas-cli update --channel production --message ${JSON.stringify(message)} --non-interactive`, { cwd: root, env, stdio: 'inherit' })
+// --environment wymagane przez nowe eas-cli; zmienne produkcji w EAS są sekretne (nieczytelne lokalnie),
+// więc adres bazy i tak pochodzi z .env (sprawdzony wyżej)
+execSync(`npx eas-cli update --channel production --environment production --message ${JSON.stringify(message)} --non-interactive`, { cwd: root, env, stdio: 'inherit' })
