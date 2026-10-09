@@ -210,6 +210,37 @@ export default function MassScheduleScreen() {
     setPending(req)
   }
 
+  // ── porządkowanie grafiku (służby spoza rozkładu, duplikaty) ──
+  const [tidy, setTidy] = useState<TidyResult | null>(null)
+  const [tidyLoading, setTidyLoading] = useState(false)
+  const previewTidy = async (p: RozkladPolicy) => {
+    setTidyLoading(true)
+    const { data, error } = await supabase.rpc('tidy_schedules', { p_policy: p, p_dry_run: true })
+    setTidyLoading(false)
+    if (error) { Toast.show({ type: 'error', text1: 'Nie udało się sprawdzić grafiku', text2: error.message }); return }
+    setTidy({ policy: p, changes: (data as any)?.changes ?? [], merged: (data as any)?.merged ?? 0 })
+  }
+  const commitTidy = async () => {
+    if (!tidy) return
+    if (!tidy.changes.length && !tidy.merged) { setTidy(null); return }
+    setTidyLoading(true)
+    const { data, error } = await supabase.rpc('tidy_schedules', { p_policy: tidy.policy, p_dry_run: false })
+    setTidyLoading(false)
+    if (error) { Toast.show({ type: 'error', text1: 'Nie uporządkowano', text2: error.message }); return }
+    setTidy(null)
+    const r = data as any
+    Toast.show({
+      type: 'success',
+      text1: 'Grafik uporządkowany',
+      text2: [
+        r.moved ? `przeniesiono ${r.moved} ${pl(r.moved, ['zapis', 'zapisy', 'zapisów'])}` : '',
+        r.cancelled ? `odwołano ${r.cancelled}` : '',
+        r.removed ? `usunięto ${r.removed} ${pl(r.removed, ['służbę', 'służby', 'służb'])}` : '',
+        r.merged ? `scalono ${r.merged}` : '',
+      ].filter(Boolean).join(', ') || undefined,
+    })
+  }
+
   const changePolicy = async (p: RozkladPolicy) => {
     setPolicy(p)
     if (!pending) return
@@ -551,6 +582,19 @@ export default function MassScheduleScreen() {
             <Button label="Nowa zmiana okresowa" icon="plus" onPress={() => openPeriod(null)} />
           </>
         )}
+
+        <Card large style={styles.card}>
+          <View style={styles.row}>
+            <Icon name="broom" size={20} color={c.goldInk} />
+            <AppText variant="eyebrow" color={c.goldInk} style={styles.flex}>Porządek w grafiku</AppText>
+          </View>
+          <AppText variant="small" muted>
+            Starsze wersje aplikacji same tworzyły niektóre służby (np. 17:00 w październiku) i czasem podwójne. Rozkład o nich nie wie,
+            więc zmiany okresowe ich nie ruszają. Tu przeniesiesz zapisy z takich służb na Msze z rozkładu i usuniesz puste.
+            Służby dodane ręcznie i cykle zostają.
+          </AppText>
+          <Button label="Uporządkuj grafik według rozkładu" icon="broom" variant="secondary" loading={tidyLoading} onPress={() => previewTidy('move')} />
+        </Card>
       </KeyboardScrollView>
 
       {tab === 'base' && baseDirty && (
@@ -563,8 +607,41 @@ export default function MassScheduleScreen() {
 
       <RozkladPreviewSheet visible={!!pending} changes={changes} policy={policy} onPolicy={changePolicy}
         loading={saving} onConfirm={() => pending && commit(pending, policy)} onClose={() => setPending(null)} />
+
+      <RozkladPreviewSheet
+        visible={!!tidy}
+        changes={(tidy?.changes ?? []).filter(ch => ch.people.length > 0)}
+        policy={tidy?.policy ?? 'move'}
+        onPolicy={p => previewTidy(p)}
+        loading={tidyLoading}
+        onConfirm={commitTidy}
+        onClose={() => setTidy(null)}
+        eyebrow="Porządek w grafiku"
+        title={tidyTitle(tidy)}
+        summary={tidySummary(tidy)}
+        confirmLabel="Uporządkuj"
+      />
     </View>
   )
+}
+
+type TidyResult = { policy: RozkladPolicy; changes: (RozkladChange & { action: RozkladChange['action'] | 'remove' })[]; merged: number }
+
+function tidyTitle(t: TidyResult | null): string {
+  if (!t) return ''
+  const people = t.changes.reduce((n, ch) => n + ch.people.length, 0)
+  if (people) return `${people} ${pl(people, ['zapis', 'zapisy', 'zapisów'])} na służbach spoza rozkładu`
+  return t.changes.length || t.merged ? 'Do uporządkowania' : 'Grafik zgodny z rozkładem'
+}
+
+function tidySummary(t: TidyResult | null): string {
+  if (!t) return ''
+  const removed = t.changes.filter(ch => ch.people.length === 0).length
+  const parts = [
+    removed ? `${removed} ${pl(removed, ['pusta służba spoza rozkładu zostanie usunięta', 'puste służby spoza rozkładu zostaną usunięte', 'pustych służb spoza rozkładu zostanie usuniętych'])}` : '',
+    t.merged ? `${t.merged} ${pl(t.merged, ['podwójna służba zostanie scalona', 'podwójne służby zostaną scalone', 'podwójnych służb zostanie scalonych'])} (zapisy zostają)` : '',
+  ].filter(Boolean)
+  return parts.length ? parts.join('. ') + '.' : (t.changes.length ? '' : 'Nie ma nic do poprawienia.')
 }
 
 const styles = StyleSheet.create({

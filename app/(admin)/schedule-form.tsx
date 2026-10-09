@@ -89,6 +89,7 @@ export default function ScheduleForm() {
       notes: notes.trim() || null,
       created_by: profile?.id,
       parish_id: profile?.parish_id,
+      manual: true, // porządkowanie grafiku wg rozkładu nie rusza służb dodanych ręcznie
     }).select('id').single()
     setSubmitting(false)
 

@@ -27,26 +27,32 @@ type Props = {
   loading: boolean
   onConfirm: () => void
   onClose: () => void
+  /** inne użycie (np. porządkowanie grafiku): własne nagłówki i podsumowanie nad listą */
+  eyebrow?: string
+  title?: string
+  summary?: string
+  confirmLabel?: string
 }
 
 /** Podgląd skutków zmiany rozkładu: kogo dotyczy i co się stanie z zapisami. */
-export function RozkladPreviewSheet({ visible, changes, policy, onPolicy, loading, onConfirm, onClose }: Props) {
+export function RozkladPreviewSheet({ visible, changes, policy, onPolicy, loading, onConfirm, onClose, eyebrow, title, summary, confirmLabel }: Props) {
   const { colors: c } = useTheme()
   const people = changes.reduce((n, ch) => n + ch.people.length, 0)
   return (
     <Sheet
       visible={visible}
       onClose={onClose}
-      eyebrow="Zmiana rozkładu"
-      title={`${people} ${pl(people, ['zapis', 'zapisy', 'zapisów'])} na godzinach, które się zmieniają`}
-      footer={<Button label="Zapisz zmiany" icon="check" onPress={onConfirm} loading={loading} />}
+      eyebrow={eyebrow ?? 'Zmiana rozkładu'}
+      title={title ?? `${people} ${pl(people, ['zapis', 'zapisy', 'zapisów'])} na godzinach, które się zmieniają`}
+      footer={<Button label={confirmLabel ?? 'Zapisz zmiany'} icon="check" onPress={onConfirm} loading={loading} />}
     >
-      <Segmented<RozkladPolicy>
+      {!!summary && <AppText muted>{summary}</AppText>}
+      {changes.length > 0 && <Segmented<RozkladPolicy>
         options={[{ value: 'move', label: 'Przenieś' }, { value: 'cancel', label: 'Odwołaj' }, { value: 'keep', label: 'Zostaw' }]}
         value={policy}
         onChange={onPolicy}
-      />
-      <AppText variant="small" muted>{POLICY_HINT[policy]}</AppText>
+      />}
+      {changes.length > 0 && <AppText variant="small" muted>{POLICY_HINT[policy]}</AppText>}
       <View style={styles.list}>
         {changes.map((ch, i) => (
           <View key={`${ch.date}-${ch.time}-${i}`} style={[styles.item, i > 0 && { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
