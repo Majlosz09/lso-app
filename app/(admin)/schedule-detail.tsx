@@ -260,9 +260,22 @@ export default function ScheduleDetailScreen() {
 
   const doDeleteSchedule = async () => {
     setDeleting(true)
-    const { error } = await supabase.from('schedules').delete().eq('id', id)
+    // odwołanie, nie samo usunięcie: Msza z rozkładu nie może wrócić jako „wolne miejsce”,
+    // a zapisani dostają powiadomienie
+    let { data, error } = await supabase.rpc('cancel_service', { p_schedule_id: id })
+    if (error?.code === 'PGRST202') {
+      // baza bez funkcji odwołania (migracja jeszcze nie wgrana) — zwykłe usunięcie jak dotąd
+      ;({ error } = await supabase.from('schedules').delete().eq('id', id))
+      data = null
+    }
     setDeleting(false)
     if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    const notified = (data as any)?.notified ?? 0
+    Toast.show({
+      type: 'success',
+      text1: (data as any)?.from_rozklad ? 'Msza odwołana w tym dniu' : 'Służba usunięta',
+      text2: notified ? `Powiadomiono zapisanych: ${notified}` : undefined,
+    })
     router.back()
   }
 
@@ -530,7 +543,7 @@ export default function ScheduleDetailScreen() {
           <AppText muted>Znikną WSZYSTKIE terminy z tego cyklu razem z zapisami. Tej operacji nie można cofnąć.</AppText>
         ) : (
           <Card flush>
-            <ListRow first icon="delete" destructive title="Usuń tę służbę" subtitle="Tylko ten jeden termin" onPress={() => { setDeleteSheetVisible(false); doDeleteSchedule() }} />
+            <ListRow first icon="delete" destructive title="Odwołaj / usuń tę służbę" subtitle="Tylko ten termin — nie wróci z rozkładu Mszy; zapisani dostaną powiadomienie" onPress={() => { setDeleteSheetVisible(false); doDeleteSchedule() }} />
             {schedule.series_id && (
               <ListRow icon="delete-sweep" destructive title="Usuń cały cykl" subtitle="Wszystkie terminy z tej serii" onPress={() => setConfirmSeries(true)} />
             )}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { supabase } from '../../../lib/supabase'
@@ -37,6 +37,8 @@ type SlotItem = {
   mode: string
   churchId: string | null
   isTemplate: boolean
+  /** pozycja rozkładu odwołana w tym dniu (Msza się nie odbywa) */
+  cancelled: boolean
   schedule: WeekSchedule | null
   names: string[]
 }
@@ -55,6 +57,9 @@ export default function SchedulesTab() {
   const [weekOffset, setWeekOffset] = useState(0)
   const [schedules, setSchedules] = useState<WeekSchedule[]>([])
   const [slots, setSlots] = useState<any[]>([])
+  const [cancels, setCancels] = useState<any[]>([])
+  const [restoreSlot, setRestoreSlot] = useState<{ date: string; slot: SlotItem } | null>(null)
+  const [restoring, setRestoring] = useState(false)
   const { main, byId: churchById, multi } = useChurches()
   const [loading, setLoading] = useState(true)
   const [creatingSlotKey, setCreatingSlotKey] = useState<string | null>(null)
@@ -64,11 +69,15 @@ export default function SchedulesTab() {
   const days = useMemo(() => weekOf(weekOffset), [weekOffset])
   const today = localDateStr()
 
-  // obowiązujący rozkład tygodnia (stały + zmiany okresowe)
-  useEffect(() => {
+  // obowiązujący rozkład tygodnia (stały + zmiany okresowe) i odwołane w nim Msze — przy każdym wejściu,
+  // bo po odwołaniu służby w szczegółach pozycja nie może wrócić jako „wolne miejsce”
+  const loadSlots = useCallback(() => {
     if (!profile?.parish_id) return
     supabase.rpc('mass_slots', { p_parish: profile.parish_id, p_from: days[0], p_to: days[6] })
       .then(({ data }) => { if (data) setSlots(data as any[]) })
+    supabase.from('mass_cancellations').select('date, time, church_id, category, title')
+      .eq('parish_id', profile.parish_id).gte('date', days[0]).lte('date', days[6])
+      .then(({ data, error }) => { if (!error) setCancels(data ?? []) })
   }, [profile?.parish_id, days])
 
   const loadSchedules = useCallback(() => {
@@ -88,7 +97,7 @@ export default function SchedulesTab() {
       })
   }, [days, profile?.parish_id])
 
-  useFocusEffect(useCallback(() => { loadSchedules() }, [loadSchedules]))
+  useFocusEffect(useCallback(() => { loadSchedules(); loadSlots() }, [loadSchedules, loadSlots]))
 
   const grouped = useMemo(() => days.map(date => {
     const scheduled: SlotItem[] = schedules.filter(s => s.date === date).map(s => ({
@@ -99,6 +108,7 @@ export default function SchedulesTab() {
       mode: s.service_mode ?? 'signup',
       churchId: s.church_id ?? null,
       isTemplate: false,
+      cancelled: false,
       schedule: s,
       names: s.schedule_assignments.filter(a => !INACTIVE.includes(a.status)).map(a => a.profile?.full_name ?? '').filter(Boolean),
     }))
@@ -107,12 +117,18 @@ export default function SchedulesTab() {
       .filter(t => t.slot_date === date && !times.has(`${String(t.slot_time).slice(0, 5)}_${t.church_id ?? main?.id ?? ''}`))
       .map(t => ({
         key: `tpl-${date}-${t.entry_id}`, time: String(t.slot_time).slice(0, 5), title: slotTitle(t),
-        category: t.category as ScheduleCategory, mode: t.service_mode, churchId: t.church_id ?? null, isTemplate: true, schedule: null, names: [],
+        category: t.category as ScheduleCategory, mode: t.service_mode, churchId: t.church_id ?? null, isTemplate: true, cancelled: false, schedule: null, names: [],
       }))
-    return { date, slots: [...scheduled, ...tpl].sort((a, b) => a.time.localeCompare(b.time)) }
-  }), [days, schedules, slots, main?.id])
+    const off: SlotItem[] = cancels
+      .filter(x => x.date === date && !times.has(`${String(x.time).slice(0, 5)}_${x.church_id ?? main?.id ?? ''}`))
+      .map(x => ({
+        key: `off-${date}-${x.time}-${x.church_id}-${x.category}`, time: String(x.time).slice(0, 5), title: x.title ?? 'Msza',
+        category: x.category as ScheduleCategory, mode: 'none', churchId: x.church_id ?? null, isTemplate: false, cancelled: true, schedule: null, names: [],
+      }))
+    return { date, slots: [...scheduled, ...tpl, ...off].sort((a, b) => a.time.localeCompare(b.time)) }
+  }), [days, schedules, slots, cancels, main?.id])
 
-  const allSlots = grouped.flatMap(g => g.slots).filter(s => s.mode !== 'none')
+  const allSlots = grouped.flatMap(g => g.slots).filter(s => s.mode !== 'none' && !s.cancelled)
   const staffedCount = allSlots.filter(s => s.names.length > 0).length
 
   // Wolne miejsce z rozkładu Mszy → tworzy służbę i otwiera jej szczegóły (jak dotąd)
@@ -132,7 +148,34 @@ export default function SchedulesTab() {
   }
 
   const open = (date: string, slot: SlotItem) =>
-    slot.schedule ? router.push(`/(admin)/schedule-detail?id=${slot.schedule.id}`) : handleEmptySlot(date, slot)
+    slot.cancelled ? setRestoreSlot({ date, slot })
+    : slot.schedule ? router.push(`/(admin)/schedule-detail?id=${slot.schedule.id}`) : handleEmptySlot(date, slot)
+
+  const doRestore = async () => {
+    if (!restoreSlot) return
+    setRestoring(true)
+    const { error } = await supabase.rpc('restore_mass_slot', {
+      p_date: restoreSlot.date, p_time: restoreSlot.slot.time + ':00', p_church_id: restoreSlot.slot.churchId, p_category: restoreSlot.slot.category,
+    })
+    setRestoring(false)
+    setRestoreSlot(null)
+    if (!error) loadSlots()
+  }
+
+  const restoreSheet = (
+    <Sheet
+      visible={!!restoreSlot}
+      onClose={() => setRestoreSlot(null)}
+      eyebrow={restoreSlot ? `${shortDate(restoreSlot.date)} · ${restoreSlot.slot.time}` : undefined}
+      title="Msza odwołana"
+      footer={<>
+        <Button label={restoring ? 'Przywracam…' : 'Przywróć do grafiku'} onPress={doRestore} />
+        <Button label="Zostaw odwołaną" variant="secondary" onPress={() => setRestoreSlot(null)} />
+      </>}
+    >
+      <AppText muted>{`${restoreSlot?.slot.title ?? ''} w tym dniu się nie odbywa. Po przywróceniu wróci do grafiku jako wolne miejsce z rozkładu.`}</AppText>
+    </Sheet>
+  )
 
   const weekLabel = `${shortDate(days[0])} – ${shortDate(days[6])}`
 
@@ -151,6 +194,7 @@ export default function SchedulesTab() {
   const addSheet = (
     <>
     <PrintScheduleSheet visible={printOpen} onClose={() => setPrintOpen(false)} />
+    {restoreSheet}
     <Sheet visible={addOpen} onClose={() => setAddOpen(false)} title="Dodaj służbę">
       <ChoiceCard icon="printer" title="Drukuj grafik" subtitle="Tydzień albo miesiąc na A4 do zakrystii (z kodem QR)"
         onPress={() => { setAddOpen(false); setPrintOpen(true) }} />
@@ -175,12 +219,13 @@ export default function SchedulesTab() {
     const ch = s.churchId ? churchById[s.churchId] : null
     return multi && ch && !ch.is_main ? churchLabel(ch) : ''
   }
-  const staffText = (s: SlotItem) => s.mode === 'none' && !s.names.length
+  const staffText = (s: SlotItem) => s.cancelled ? 'odwołana — dotknij, aby przywrócić'
+    : s.mode === 'none' && !s.names.length
     ? 'bez punktów'
     : s.isTemplate
     ? 'wolne miejsce z rozkładu'
     : s.names.length ? `${s.names.length} ${pl(s.names.length, ['ministrant', 'ministrantów', 'ministrantów'])}` : 'bez obsady'
-  const staffColor = (s: SlotItem) => (s.names.length ? c.success : s.mode === 'none' ? c.subtext : s.isTemplate ? c.goldInk : c.dangerStrong)
+  const staffColor = (s: SlotItem) => (s.cancelled ? c.subtext : s.names.length ? c.success : s.mode === 'none' ? c.subtext : s.isTemplate ? c.goldInk : c.dangerStrong)
 
   // ── Web: siatka tygodnia ─────────────────────────────────────────────────
   if (isDesktop) {
@@ -225,14 +270,16 @@ export default function SchedulesTab() {
                     <View style={[styles.noSvc, { borderColor: c.iconMuted }]}><AppText variant="small" muted>Brak służb</AppText></View>
                   )}
                   {slots.map(s => (
-                    <Card key={s.key} style={styles.gCard} onPress={() => open(date, s)}>
+                    <Card key={s.key} style={[styles.gCard, s.cancelled && styles.offCard]} onPress={() => open(date, s)}>
                       <View style={styles.rowBetween}>
                         <AppText style={[styles.gTime, { color: c.text }]}>{s.time}</AppText>
                         {creatingSlotKey === s.key
                           ? <ActivityIndicator size="small" color={c.primary} />
+                          : s.cancelled
+                          ? <AppText style={[styles.gCount, { color: c.subtext }]}>odwołana</AppText>
                           : <AppText style={[styles.gCount, { color: staffColor(s) }]}>{s.names.length}</AppText>}
                       </View>
-                      <AppText variant="bodyStrong" numberOfLines={2}>{s.title}</AppText>
+                      <AppText variant="bodyStrong" numberOfLines={2} style={s.cancelled ? styles.strike : undefined}>{s.title}</AppText>
                       {!!churchTag(s) && <AppText variant="small" color={c.goldInk} numberOfLines={1}>{churchTag(s)}</AppText>}
                       {s.names.map(n => (
                         <View key={n} style={[styles.person, { backgroundColor: c.borderLight }]}>
@@ -240,7 +287,7 @@ export default function SchedulesTab() {
                           <AppText style={[styles.personName, { color: c.text }]} numberOfLines={1}>{n}</AppText>
                         </View>
                       ))}
-                      {s.names.length === 0 && (
+                      {s.names.length === 0 && !s.cancelled && (
                         <View style={[styles.person, styles.assign, { borderColor: c.gold, backgroundColor: c.highlight }]}>
                           <AppText style={[styles.personName, { color: c.goldInk }]}>+ Przydziel</AppText>
                         </View>
@@ -255,6 +302,7 @@ export default function SchedulesTab() {
           </ScrollView>
         )}
         <PrintScheduleSheet visible={printOpen} onClose={() => setPrintOpen(false)} />
+        {restoreSheet}
       </View>
     )
   }
@@ -295,23 +343,23 @@ export default function SchedulesTab() {
                 {slots.map(s => {
                   const cat = CATEGORY_CONFIG[s.category] ?? CATEGORY_CONFIG.msza
                   return (
-                    <Card key={s.key} onPress={() => open(date, s)} style={styles.mCard}>
+                    <Card key={s.key} onPress={() => open(date, s)} style={[styles.mCard, s.cancelled && styles.offCard]}>
                       <View style={styles.mTop}>
                         <AppText style={[styles.mTime, { color: c.text }]}>{s.time}</AppText>
                         <View style={[styles.catLine, { backgroundColor: cat.color }]} />
                         <View style={styles.flex}>
-                          <AppText variant="bodyStrong" numberOfLines={1}>{s.title}</AppText>
+                          <AppText variant="bodyStrong" numberOfLines={1} style={s.cancelled ? styles.strike : undefined}>{s.title}</AppText>
                           {!!churchTag(s) && <AppText variant="small" color={c.goldInk} numberOfLines={1}>{churchTag(s)}</AppText>}
                           <AppText style={[styles.mStaff, { color: staffColor(s) }]}>{staffText(s)}</AppText>
                         </View>
-                        {creatingSlotKey === s.key ? <ActivityIndicator size="small" color={c.primary} /> : <Icon name="chevron-right" size={22} color={c.iconMuted} />}
+                        {creatingSlotKey === s.key ? <ActivityIndicator size="small" color={c.primary} /> : <Icon name={s.cancelled ? 'restore' : 'chevron-right'} size={22} color={c.iconMuted} />}
                       </View>
                       {s.names.length > 0 && (
                         <AppText variant="small" muted numberOfLines={2} style={styles.mNames}>{s.names.join(', ')}</AppText>
                       )}
-                      <View style={[styles.mBar, { backgroundColor: c.borderLight }]}>
+                      {!s.cancelled && <View style={[styles.mBar, { backgroundColor: c.borderLight }]}>
                         <View style={[styles.mBarFill, { width: s.names.length ? '100%' : '0%', backgroundColor: c.successStrong }]} />
-                      </View>
+                      </View>}
                     </Card>
                   )
                 })}
@@ -364,4 +412,6 @@ const styles = StyleSheet.create({
   personRole: { ...sans(800), fontSize: 9, letterSpacing: 0.8 },
   personName: { ...sans(700), fontSize: 12 },
   assign: { borderWidth: 1 },
+  offCard: { opacity: 0.6 },
+  strike: { textDecorationLine: 'line-through' },
 })

@@ -64,6 +64,7 @@ MIGRATIONS=(
   "20261008000000_push_tokens.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='claim_push_token')"
   "20261009000000_recurring_guard_points_edit.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='set_attendance_points')"
   "20261009010000_tidy_schedules.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='tidy_schedules')"
+  "20261026000000_mass_cancellations.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='cancel_service')"
 )
 
 banner() {
