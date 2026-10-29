@@ -75,14 +75,22 @@ const byName = Object.fromEntries(members.map(m => [m.full_name, m.id]))
 const roster = MINISTERS.map(m => byName[m[0]]).filter(Boolean)
 console.log(`Ministranci: ${roster.length} (nowych ${created})`)
 
-// Stopnie: kolejne z listy parafii (jeśli są)
-const ranks = must('stopnie', await s.from('ranks').select('id, "order"')
+// Stopnie: kolejne z listy parafii (jeśli są). Rangi systemowe (Kandydat…Ceremoniarz) są widoczne tylko
+// przy włączonym przełączniku parafii — świeża parafia bez własnych rang dostaje go włączonego (jak w „Stopniach”).
+let ranks = must('stopnie', await s.from('ranks').select('id, "order"')
   .or(`parish_id.is.null,parish_id.eq.${parishId}`).order('order'))
+if (!ranks.length) {
+  must('rangi systemowe', await s.from('parishes').update({ system_ranks_enabled: true }).eq('id', parishId))
+  ranks = must('stopnie', await s.from('ranks').select('id, "order"')
+    .or(`parish_id.is.null,parish_id.eq.${parishId}`).order('order'))
+  console.log(`Włączono rangi systemowe parafii (${ranks.length})`)
+}
 if (ranks.length) {
   const rankIdx = [2, 4, 3, 3, 1, 1, 2, 0, 0, 0]
   for (const [i, [name]] of MINISTERS.entries()) {
     if (!byName[name]) continue
-    await s.from('profiles').update({ rank_id: ranks[Math.min(rankIdx[i], ranks.length - 1)].id }).eq('id', byName[name])
+    const { error } = await s.from('profiles').update({ rank_id: ranks[Math.min(rankIdx[i], ranks.length - 1)].id }).eq('id', byName[name])
+    if (error) console.warn('  stopień:', error.message)
   }
 }
 
