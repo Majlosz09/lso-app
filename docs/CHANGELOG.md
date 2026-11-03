@@ -4,6 +4,8 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+## 2026-11-03 — OTA + web (wersja 1.2.0, bdf066f)
+
 ### Dla użytkowników
 - Import punktów z poprzednich okresów (Punkty → „Import”): opiekun wkleja z Excela imię i nazwisko + punkty (opcjonalnie powód), aplikacja dopasowuje osoby (bez polskich znaków, też „Nazwisko Imię”), nierozpoznane można wskazać ręcznie, a wpisy dostają wybraną datę (np. ostatni dzień przed startem aplikacji).
 - Rejestracja: kod parafii jest sprawdzany przed założeniem konta — zły kod można poprawić i wysłać ponownie (wcześniej powstawało konto bez parafii, a druga próba kończyła się „email już zarejestrowany”).
