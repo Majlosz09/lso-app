@@ -5,9 +5,12 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 ## Nieopublikowane
 
 ### Dla użytkowników
+- Import punktów z poprzednich okresów (Punkty → „Import”): opiekun wkleja z Excela imię i nazwisko + punkty (opcjonalnie powód), aplikacja dopasowuje osoby (bez polskich znaków, też „Nazwisko Imię”), nierozpoznane można wskazać ręcznie, a wpisy dostają wybraną datę (np. ostatni dzień przed startem aplikacji).
+- Rejestracja: kod parafii jest sprawdzany przed założeniem konta — zły kod można poprawić i wysłać ponownie (wcześniej powstawało konto bez parafii, a druga próba kończyła się „email już zarejestrowany”).
 - Usunięcie Mszy z grafiku (np. wyjątkowo się nie odbywa) odwołuje ją w tym dniu: nie wraca już jako „wolne miejsce z rozkładu”, zapisani dostają powiadomienie. Opiekun widzi ją w grafiku jako „odwołana” i może ją przywrócić.
 
 ### Techniczne
+- `lib/importPoints.ts` (+ testy) i ekran `app/(admin)/import-points.tsx`: zwykły insert do `points` (`source = manual`, `created_at` = wybrana data, 12:00), bez zmian w bazie.
 - Skrypt `scripts/seed-promotor-demo.mjs`: wypełnia świeżą parafię testową przykładowymi danymi (10 ministrantów bez konta, grafik −3/+2 tyg. z obsadą, obecności z punktami, ogłoszenia). Działa jako opiekun (klucz anon, RLS), odmawia przy innych kontach w parafii, można go uruchamiać wielokrotnie. Gdy parafia nie widzi żadnych stopni, włącza `system_ranks_enabled` (jak przełącznik w „Stopniach”). Użyty 2026-10-29 dla parafii demo promotora (prod) i na LSO-dev.
 - Migracja `20261026000000_mass_cancellations.sql`: tabela `mass_cancellations`, `mass_slots()` pomija odwołane pozycje, RPC `cancel_service` / `cancel_mass_slot` / `restore_mass_slot`, trigger `trg_a_schedules_uncancel` (ręczne dodanie służby w odwołanym terminie przywraca pozycję rozkładu).
 - Włączono automatyczne pilnowanie dokumentacji (hook Auto-docs).

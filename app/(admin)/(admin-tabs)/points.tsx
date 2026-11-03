@@ -91,6 +91,7 @@ export default function PointsTab() {
     <Card flush>
       <View style={[styles.cardHead, { borderBottomColor: c.borderLight }]}>
         <AppText variant="eyebrow" color={c.goldInk} style={styles.flex}>Ranking · szybkie przyznawanie</AppText>
+        <Button label="Import" icon="table-arrow-up" variant="secondary" compact onPress={() => router.push('/(admin)/import-points' as any)} />
         <Button label="Z powodem…" icon="star-circle" compact onPress={() => router.push('/(admin)/award-points')} />
       </View>
       {loading ? <ActivityIndicator color={c.primary} style={styles.pad} /> : ranking.length === 0 ? (

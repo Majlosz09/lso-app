@@ -70,6 +70,7 @@ function ChooseScreen({ onMember, onAdmin }: { onMember: () => void; onAdmin: ()
 
 function MemberForm({ onBack }: { onBack: () => void }) {
   const { setSession } = useAuthStore()
+  const router = useRouter()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -148,6 +149,21 @@ function MemberForm({ onBack }: { onBack: () => void }) {
     if (err) { showError('Błąd', err); return }
 
     setLoading(true)
+    // Kod parafii sprawdzamy PRZED założeniem konta — inaczej konto powstawało bez parafii,
+    // a ponowna próba kończyła się „email już zarejestrowany”
+    const { data: parishCheck, error: checkErr } = await supabase
+      .rpc('get_parish_by_invite_code', { code: inviteCode.trim().toUpperCase() })
+    if (checkErr) {
+      showError('Błąd połączenia', 'Nie udało się sprawdzić kodu parafii. Spróbuj ponownie.')
+      setLoading(false)
+      return
+    }
+    if (!parishCheck) {
+      showError('Nieznany kod parafii', 'Sprawdź kod u opiekuna ministrantów i popraw go.')
+      setLoading(false)
+      return
+    }
+
     // Metadane trafiają do profilu przez trigger handle_new_user — profil jest kompletny
     // nawet gdy sesja powstaje dopiero po potwierdzeniu maila
     const { data, error } = await supabase.auth.signUp({
@@ -193,8 +209,11 @@ function MemberForm({ onBack }: { onBack: () => void }) {
       .rpc('get_parish_by_invite_code', { code: inviteCode.trim().toUpperCase() })
 
     if (rpcError || !parishId) {
-      showError('Błąd', 'Nieznany kod parafii. Sprawdź kod i spróbuj ponownie.')
+      // konto już istnieje — przechodzimy dalej, aplikacja pokaże ekran „Dołącz z kodem”
+      showError('Konto utworzone', 'Nie udało się dołączyć do parafii — wpisz kod parafii jeszcze raz.')
       setLoading(false)
+      setSession(activeSession)
+      router.replace('/(auth)/parish-setup')
       return
     }
 

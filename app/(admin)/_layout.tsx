@@ -45,6 +45,7 @@ export default function AdminLayout() {
       <Stack.Screen name="schedule-detail" options={{ title: 'Szczegóły służby' }} />
       <Stack.Screen name="schedule-form" options={{ title: 'Nowa służba' }} />
       <Stack.Screen name="award-points" options={{ title: 'Przyznaj punkty' }} />
+      <Stack.Screen name="import-points" options={{ title: 'Import punktów' }} />
       <Stack.Screen name="member-detail" options={{ title: 'Profil członka' }} />
       <Stack.Screen name="rank-management" options={{ title: 'Zarządzaj rangami' }} />
       <Stack.Screen name="parish-settings" options={{ title: 'Ustawienia parafii' }} />
