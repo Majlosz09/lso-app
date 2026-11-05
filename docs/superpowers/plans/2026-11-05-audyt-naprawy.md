@@ -57,7 +57,7 @@ Migracja `20261105010000_parent_link_requests.sql`, test `scripts/parent-link-sm
 - [x] Pomiar przed/po: `EXPLAIN ANALYZE` grafiku tygodnia i listy punktów jako ministrant na LSO-dev (parafia demo). Kuba, `count(*)`: notifications 2,7 → 1,7 ms, swap_offers 4,7 → 1,4 ms, content_reads 1,3 → 0,2 ms (mało danych na dev — zysk rośnie z liczbą wierszy).
 - [~] **Odłożone:** Świeży zrzut schematu z produkcji do `supabase/dev/` (pliki migracji ≠ baza po dynamicznej podmianie w `helper_role`). Wymaga dostępu właściciela do produkcji; `schema-from-prod.sql` to punkt startowy pod migracje — podmiana zmieniłaby odtwarzanie LSO-dev.
 
-## Etap 6 — telefon: pamięć i zapytania — 6a ✅ LSO-dev + prod SQL + OTA eb5a29e9 + web 2026-11-05; 6b ✅ LSO-dev (web testowy) 2026-11-05, OTA + web: czeka
+## Etap 6 — telefon: pamięć i zapytania — 6a ✅ LSO-dev + prod SQL + OTA eb5a29e9 + web 2026-11-05; 6b ✅ OTA 531b7c37 + web 2026-11-05
 
 - [x] (6a) Cache grafiku: jeden klucz na osobę (ostatni odczyt dla bieżącego tygodnia ± 2 dni), przy starcie usunąć stare klucze `services-cache:v1:*`.
 - [x] (6b) `useServices` przez React Query (klucz = parafia + zakres), żeby Pulpit, Grafik i Obecność dzieliły dane; `staleTime` w `QueryClient`.

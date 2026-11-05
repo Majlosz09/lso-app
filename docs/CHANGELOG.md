@@ -4,6 +4,10 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+## 2026-11-05 — OTA + web (wersja 1.2.0, 9d77bc0; audyt Etap 6b, bez zmian w bazie)
+
+OTA grupa 531b7c37 (runtime 1.2.0, iOS + Android), web app.lsoapp.com (wdrożenie a2944dbc).
+
 ### Dla użytkowników
 - Grafik nie pobiera się od nowa przy każdym przejściu między Pulpitem, Grafikiem i Obecnością; zmiany od opiekuna (np. „Ułóż grafik”) odświeżają ekran raz, zamiast wielokrotnie.
 
