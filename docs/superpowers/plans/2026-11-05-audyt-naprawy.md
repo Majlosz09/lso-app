@@ -43,7 +43,7 @@ Migracja `20261105010000_parent_link_requests.sql`, test `scripts/parent-link-sm
 - [x] Usunąć martwy kod `recordAttendance` / `checkInGps` / `checkInQr` / `checkInButton` z `lib/checkin.ts` (zostają `validateGps`, `validateParishQr`, `buildParishQrValue`).
 - [x] `docs/ARCHITEKTURA.md` → „Znane ograniczenia”: zaktualizować (zostaje: GPS i QR sprawdza telefon, QR stały — decyzja).
 
-## Etap 4 — grafik bez duplikatów — ✅ LSO-dev 2026-11-05 (dev: 0 duplikatów; migracja ma bezpiecznik), prod + OTA + web: czeka
+## Etap 4 — grafik bez duplikatów — ✅ LSO-dev + prod SQL 2026-11-05 (prod: 1 duplikat z 8.09 oznaczony manual), OTA + web: czeka
 
 - [x] Uruchomić `tidy_schedules` w trybie próbnym na dev/prod — lista duplikatów.
 - [x] Częściowy unikalny indeks `schedules (parish_id, date, time, church_id, category) WHERE NOT manual` (po scaleniu duplikatów).
