@@ -4,8 +4,10 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+## 2026-11-05 — SQL na produkcji (audyt Etap 5, migracja 20261105040000_rls_initplan; bez zmian w aplikacji)
+
 ### Techniczne
-- Migracja `20261105040000_rls_initplan.sql` (audyt Etap 5): w politykach RLS funkcje bez argumentów (`auth.uid()`, `my_parish_id()`, `is_parish_admin()`, `can_manage_services()` …) opakowane w `( SELECT … )` — liczone raz na zapytanie, nie dla każdego wiersza (13 wywołań: `notifications_*`, `content_reads_*`, `swap_offers_select`, `schedule_role_slots_select`, `chat_messages/polls/poll_votes_insert`, `attendance_reports_select/delete`). Znaczenie polityk bez zmian; bez zmian w aplikacji. Na LSO-dev 2026-11-05.
+- Migracja `20261105040000_rls_initplan.sql` (audyt Etap 5): w politykach RLS funkcje bez argumentów (`auth.uid()`, `my_parish_id()`, `is_parish_admin()`, `can_manage_services()` …) opakowane w `( SELECT … )` — liczone raz na zapytanie, nie dla każdego wiersza (13 wywołań: `notifications_*`, `content_reads_*`, `swap_offers_select`, `schedule_role_slots_select`, `chat_messages/polls/poll_votes_insert`, `attendance_reports_select/delete`). Znaczenie polityk bez zmian; bez zmian w aplikacji. Na LSO-dev i produkcji 2026-11-05.
 - `scripts/attendance-reports-smoke-dev.mjs`: sprzątanie przez `dev-sql.sh` (ministrant usuwa tylko oczekujące zgłoszenia, więc przyjęte / odrzucone blokowały kolejny przebieg testu).
 
 ## 2026-11-05 — SQL + OTA + web (wersja 1.2.0, d037e05; audyt Etap 4 + aplikacyjna część Etapu 3)
