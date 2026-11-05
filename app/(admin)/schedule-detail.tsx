@@ -162,41 +162,14 @@ export default function ScheduleDetailScreen() {
     if (!schedule || !adminProfile?.parish_id) return
     setSaving(true)
 
-    for (const profileId of draftIds) {
-      if (!attendanceIds.has(profileId)) {
-        const { error } = await supabase.rpc('check_in_and_award_points', {
-          p_schedule_id: id,
-          p_profile_id: profileId,
-          p_parish_id: adminProfile.parish_id,
-        })
-        if (error) {
-          Toast.show({ type: 'error', text1: 'Błąd zapisu', text2: error.message })
-          setSaving(false)
-          fetchSchedule()
-          return
-        }
-        await supabase.from('schedule_assignments')
-          .update({ status: 'present' })
-          .eq('profile_id', profileId)
-          .eq('schedule_id', id)
-      }
-    }
-
-    for (const profileId of attendanceIds) {
-      if (!draftIds.has(profileId)) {
-        const { error } = await supabase.from('attendance').delete()
-          .eq('schedule_id', id).eq('profile_id', profileId)
-        if (error) {
-          Toast.show({ type: 'error', text1: 'Błąd zapisu', text2: error.message })
-          setSaving(false)
-          fetchSchedule()
-          return
-        }
-        await supabase.from('schedule_assignments')
-          .update({ status: 'absent' })
-          .eq('profile_id', profileId)
-          .eq('schedule_id', id)
-      }
+    // jedno wywołanie, jedna transakcja (migracja 20261105050000): dopisuje brakujące obecności z punktami,
+    // usuwa odznaczone (punkty cofa trigger) i ustawia przydziały na obecny / nieobecny
+    const { error } = await supabase.rpc('set_service_attendance', { p_schedule_id: id, p_present: [...draftIds] })
+    if (error) {
+      Toast.show({ type: 'error', text1: 'Błąd zapisu', text2: error.message })
+      setSaving(false)
+      fetchSchedule()
+      return
     }
 
     setAttendanceIds(new Set(draftIds))

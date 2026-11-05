@@ -41,7 +41,7 @@ export default function WelcomeScreen() {
       subtitle="Grafik dyżurów, obecność, punkty i czat parafii — dla ministrantów, opiekunów i rodziców."
       heroTop={
         <View style={styles.heroTop}>
-          <Image source={require('../../assets/images/icon.png')} style={styles.logo} />
+          <Image source={require('../../assets/images/logo.png')} style={styles.logo} />
           <AppText variant="eyebrow" color={c.gold} style={styles.eyebrow}>Liturgiczna Służba Ołtarza</AppText>
         </View>
       }

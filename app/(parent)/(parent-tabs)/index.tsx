@@ -208,7 +208,7 @@ export default function ParentHome() {
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await reload(); setRefreshing(false) }} />}>
         <View style={[styles.header, { backgroundColor: pal.bg, paddingTop: topGap(insets.top, 8) }]}>
           <View style={styles.topRow}>
-            <Image source={require('../../../assets/images/icon.png')} style={styles.logo} />
+            <Image source={require('../../../assets/images/logo.png')} style={styles.logo} />
             <AppText style={[styles.greeting, { color: pal.fg }]}>{`Króluj nam Chryste,\n${firstName(profile?.full_name ?? '')}`}</AppText>
             <NotificationBell tone="header" fg={pal.fg} />
             <Pressable ref={tourRef('profile')} onPress={() => router.push('/(parent)/(parent-tabs)/profile')} accessibilityRole="button" accessibilityLabel="Profil">

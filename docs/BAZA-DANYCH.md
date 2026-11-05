@@ -99,11 +99,13 @@ Wszystkie poniżej są `SECURITY DEFINER` (omijają RLS) i same sprawdzają upra
 
 **Zapisy, zamiany, nieobecności**: `sign_up_for_slot` (jednorazowo lub „co tydzień”, także za dziecko), `unsign_child`, `request_swap` / `respond_swap` / `cancel_swap`, `reject_absence_request` (odrzucenie usprawiedliwienia z karą z ustawień parafii), `report_child_absence` / `withdraw_child_absence`.
 
-**Obecność i punkty**: `check_in_and_award_points` (sprawdza parafię, uprawnienia, tryb służby, samodzielne meldowanie i — dla osoby bez uprawnień opiekuna — okno −30/+90 min od godziny służby w Europe/Warsaw (+5 min zapasu), potem `..._impl` zapisuje obecność, status `present` i punkty (jeden wiersz `checkin` na osobę i służbę — indeks `points_one_checkin_per_service`) według kategorii), `check_in_offline` (meldunek z kolejki offline, okno −40…+100 min względem godziny z telefonu, ≤ 48 h; własne sprawdzenia i wprost `..._impl`), `report_attendance` + `decide_attendance_report` (zgłoszenie po fakcie), `set_attendance_points` (korekta punktów za obecność), `formation_progress` / `formation_ready`, `challenge_board` / `challenge_count` / `recount_challenge`, `rank_available`.
+**Obecność i punkty**: `check_in_and_award_points` (sprawdza parafię, uprawnienia, tryb służby, samodzielne meldowanie i — dla osoby bez uprawnień opiekuna — okno −30/+90 min od godziny służby w Europe/Warsaw (+5 min zapasu), potem `..._impl` zapisuje obecność, status `present` i punkty (jeden wiersz `checkin` na osobę i służbę — indeks `points_one_checkin_per_service`) według kategorii), `check_in_offline` (meldunek z kolejki offline, okno −40…+100 min względem godziny z telefonu, ≤ 48 h; własne sprawdzenia i wprost `..._impl`), `report_attendance` + `decide_attendance_report` (zgłoszenie po fakcie), `set_attendance_points` (korekta punktów za obecność), `set_service_attendance` (opiekun: pełna lista obecnych na służbie w jednej transakcji), `formation_progress` / `formation_ready`, `challenge_board` / `challenge_count` / `recount_challenge`, `rank_available`.
 
 **Raporty i udostępnianie**: `monthly_report(miesiąc)`, `notify_monthly_reports` (cron), `set_public_schedule` + `public_schedule(token, od, do)` (grafik bez logowania, dostępny dla `anon`), `my_calendar_token` + `calendar_feed(token)` (plik ICS dla kalendarza w telefonie, dostępny dla `anon`).
 
 **Powiadomienia**: `add_notification`, `add_notification_admins`, `add_notification_with_parent`, `notify_push`, `claim_push_token`, `release_push_token`, `send_test_push`.
+
+**Czat**: `open_dm(osoba)` (znajdź lub załóż rozmowę prywatną w jednej transakcji, blokada na parę osób; opiekun zawsze, inni gdy parafia pozwala na DM), `chat_can_post`, `chat_channel_parish`, `chat_channel_member_count`.
 
 ## Triggery (co dzieje się automatycznie)
 

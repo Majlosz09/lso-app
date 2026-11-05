@@ -68,7 +68,7 @@ export const useCheckinQueue = create<QueueState>((set, get) => ({
   },
 }))
 
-/** AuthGate: wysyła kolejkę przy starcie, powrocie do aplikacji i co minutę, dopóki coś czeka. */
+/** AuthGate: wysyła kolejkę przy starcie, powrocie do aplikacji, odzyskaniu sieci (web) i co 15 s, dopóki coś czeka (na telefonie bez paczki natywnej NetInfo nie ma zdarzenia „sieć wróciła”). */
 export function useCheckinQueueSync() {
   const profileId = useAuthStore(s => s.profile?.id)
   const pending = useCheckinQueue(s => s.items.some(x => x.profileId === profileId))
@@ -84,7 +84,7 @@ export function useCheckinQueueSync() {
   }, [profileId])
   useEffect(() => {
     if (!profileId || !pending) return
-    const t = setInterval(() => useCheckinQueue.getState().flush(profileId), 60_000)
+    const t = setInterval(() => useCheckinQueue.getState().flush(profileId), 15_000)
     return () => clearInterval(t)
   }, [profileId, pending])
 }

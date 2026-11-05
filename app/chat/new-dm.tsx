@@ -6,6 +6,7 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
+import Toast from 'react-native-toast-message'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
@@ -41,6 +42,7 @@ export default function NewDmScreen() {
         .select('id, full_name, role')
         .eq('parish_id', profile.parish_id)
         .eq('is_active', true)
+        .eq('approved', true)
         .neq('id', profile.id)
         .order('full_name')
       if (data) setUsers(data)
@@ -53,42 +55,14 @@ export default function NewDmScreen() {
     if (!profile?.id || !profile?.parish_id || creating) return
     setCreating(targetId)
 
-    // Sprawdź czy DM już istnieje
-    const { data: myChannels } = await supabase
-      .from('chat_members')
-      .select('channel_id, channel:chat_channels!inner(id, type)')
-      .eq('user_id', profile.id)
-      .eq('chat_channels.type', 'dm')
-
-    if (myChannels) {
-      for (const m of myChannels) {
-        const { count } = await supabase
-          .from('chat_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('channel_id', m.channel_id)
-          .eq('user_id', targetId)
-        if (count && count > 0) {
-          router.replace(`/chat/${m.channel_id}`)
-          return
-        }
-      }
+    // znajdź albo załóż rozmowę — jedno wywołanie w bazie (migracja 20261105060000)
+    const { data: channelId, error } = await supabase.rpc('open_dm', { p_target: targetId })
+    if (error || !channelId) {
+      setCreating(null)
+      Toast.show({ type: 'error', text1: 'Nie udało się otworzyć rozmowy', text2: error?.message })
+      return
     }
-
-    // Utwórz nowy kanał DM
-    const { data: newChannel, error } = await supabase
-      .from('chat_channels')
-      .insert({ parish_id: profile.parish_id, type: 'dm', name: null })
-      .select()
-      .single()
-
-    if (error || !newChannel) { setCreating(null); return }
-
-    await supabase.from('chat_members').insert([
-      { channel_id: newChannel.id, user_id: profile.id },
-      { channel_id: newChannel.id, user_id: targetId },
-    ])
-
-    router.replace(`/chat/${newChannel.id}`)
+    router.replace(`/chat/${channelId}`)
   }
 
   if (loading) {

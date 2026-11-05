@@ -302,7 +302,7 @@ export default function HomeScreen() {
       <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         <View style={[styles.header, { backgroundColor: pal.bg, paddingTop: topGap(insets.top, 8) }]}>
           <View style={styles.topRow}>
-            <Image source={require('../../assets/images/icon.png')} style={styles.logo} />
+            <Image source={require('../../assets/images/logo.png')} style={styles.logo} />
             <AppText style={[styles.greeting, { color: pal.fg }]} numberOfLines={2}>
               {`Króluj nam Chryste,\n${firstName}`}
             </AppText>

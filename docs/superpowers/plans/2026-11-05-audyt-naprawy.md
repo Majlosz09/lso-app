@@ -57,15 +57,15 @@ Migracja `20261105010000_parent_link_requests.sql`, test `scripts/parent-link-sm
 - [x] Pomiar przed/po: `EXPLAIN ANALYZE` grafiku tygodnia i listy punktów jako ministrant na LSO-dev (parafia demo). Kuba, `count(*)`: notifications 2,7 → 1,7 ms, swap_offers 4,7 → 1,4 ms, content_reads 1,3 → 0,2 ms (mało danych na dev — zysk rośnie z liczbą wierszy).
 - [~] **Odłożone:** Świeży zrzut schematu z produkcji do `supabase/dev/` (pliki migracji ≠ baza po dynamicznej podmianie w `helper_role`). Wymaga dostępu właściciela do produkcji; `schema-from-prod.sql` to punkt startowy pod migracje — podmiana zmieniłaby odtwarzanie LSO-dev.
 
-## Etap 6 — telefon: pamięć i zapytania
+## Etap 6 — telefon: pamięć i zapytania — 6a ✅ LSO-dev 2026-11-05 (prod SQL + OTA + web: czeka); 6b (React Query + realtime) do zrobienia
 
-- [ ] Cache grafiku: jeden klucz na osobę (ostatni odczyt dla bieżącego tygodnia ± 2 dni), przy starcie usunąć stare klucze `services-cache:v1:*`.
+- [x] (6a) Cache grafiku: jeden klucz na osobę (ostatni odczyt dla bieżącego tygodnia ± 2 dni), przy starcie usunąć stare klucze `services-cache:v1:*`.
 - [ ] `useServices` przez React Query (klucz = parafia + zakres), żeby Pulpit, Grafik i Obecność dzieliły dane; `staleTime` w `QueryClient`.
 - [ ] Realtime: jedna subskrypcja na parafię (store), odświeżanie z opóźnieniem ~1–2 s zamiast przeładowania każdej kopii przy każdej zmianie.
-- [ ] Zapis obecności przez opiekuna: jedno RPC z listą osób (w transakcji) zamiast pętli w `schedule-detail.tsx`.
-- [ ] `new-dm.tsx`: RPC „znajdź lub utwórz DM” (koniec N zapytań i duplikatów rozmów).
-- [ ] Kolejka offline na telefonie: wysyłka po odzyskaniu sieci (NetInfo albo `AppState` + próba) — dziś tylko co 60 s.
-- [ ] Logo: mniejszy plik (np. 256 px) zamiast 1,7 MB ikony sklepu w 5 miejscach.
+- [x] (6a) Zapis obecności przez opiekuna: jedno RPC z listą osób (w transakcji) zamiast pętli w `schedule-detail.tsx`.
+- [x] (6a) `new-dm.tsx`: RPC „znajdź lub utwórz DM” (koniec N zapytań i duplikatów rozmów).
+- [x] (6a, bez NetInfo — paczka natywna; ponawianie co 15 s) Kolejka offline na telefonie: wysyłka po odzyskaniu sieci (NetInfo albo `AppState` + próba) — dziś tylko co 60 s.
+- [x] (6a) Logo: mniejszy plik (np. 256 px) zamiast 1,7 MB ikony sklepu w 5 miejscach.
 
 ## Etap 7 — web
 

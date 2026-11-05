@@ -4,6 +4,20 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+### Dla użytkowników
+- Zapis listy obecności na zbiórce jest natychmiastowy i „wszystko albo nic” — wcześniej przy słabym zasięgu mógł zapisać się w połowie.
+- „Nowa wiadomość” od razu otwiera istniejącą rozmowę z tą osobą i nie zakłada drugiej; na liście są tylko osoby zatwierdzone w parafii.
+- Meldunki zapisane bez zasięgu wysyłają się szybciej po powrocie sieci (próba co 15 s zamiast co minutę).
+- Aplikacja ładuje się lżej: logo to mały plik zamiast 1,7 MB ikony sklepu; telefon sprząta stare kopie grafiku z pamięci.
+
+### Techniczne
+- Migracja `20261105050000_service_attendance_rpc.sql`: RPC `set_service_attendance(schedule, present[])` — pełna lista obecnych w jednej transakcji (dopisuje przez `check_in_and_award_points`, odznaczonym usuwa obecność i ustawia `absent`); `schedule-detail.tsx` zamiast pętli 2 zapytań na osobę.
+- Migracja `20261105060000_open_dm_rpc.sql`: RPC `open_dm(target)` — znajdź lub załóż DM (blokada doradcza na parę, kanał + obaj członkowie w jednej transakcji; uprawnienia jak w politykach czatu). `app/chat/new-dm.tsx` zamiast N zapytań i dwóch kroków (zostawał pusty kanał, gdy dopisanie członków się nie udało — na LSO-dev 3 takie DM).
+- `lib/servicesCache.ts` (+ test): klucze grafiku offline, sprzątanie raz na uruchomienie (minione zakresy, inne konta, stare formaty).
+- `stores/checkinQueueStore.ts`: ponawianie kolejki offline co 15 s, gdy coś czeka (NetInfo wymaga paczki natywnej = nowy build).
+- `assets/images/logo.png` (256 px, 115 KB) w 5 miejscach zamiast `icon.png` (1024 px, 1,7 MB); ikona aplikacji w `app.json` bez zmian.
+- Test dymny `scripts/phone-rpc-smoke-dev.mjs` (12 OK). Sprawdzone na lso-app-dev (web): logo, nowa rozmowa (ta sama przy ponownym otwarciu), lista obecności na zbiórce (zapis i odznaczenie).
+
 ## 2026-11-05 — SQL na produkcji (audyt Etap 5, migracja 20261105040000_rls_initplan; bez zmian w aplikacji)
 
 ### Techniczne

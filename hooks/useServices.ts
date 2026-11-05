@@ -5,6 +5,8 @@ import { useRealtimeTable } from './useRealtimeTable'
 import type { AssignmentStatus, ScheduleCategory } from '../types/database'
 import { ServiceMode, slotTitle } from '../lib/massSchedule'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { pruneServicesCache, servicesCacheKey } from '../lib/servicesCache'
+import { localDateStr } from '../lib/dates'
 import { isNetworkError, queueKey } from '../lib/offlineQueue'
 import { useCheckinQueue } from '../stores/checkinQueueStore'
 
@@ -73,7 +75,7 @@ export function useServices(from: string, to: string) {
       supabase.rpc('mass_slots', { p_parish: profile.parish_id, p_from: from, p_to: to }),
       supabase.from('churches').select('id, name, short_name, is_main, lat, lng, gps_radius').eq('parish_id', profile.parish_id),
     ])
-    const cacheKey = `services-cache:v1:${profile.id}:${from}:${to}`
+    const cacheKey = servicesCacheKey(profile.id, from, to)
     if (schedRes.error && isNetworkError(schedRes.error)) {
       // bez zasięgu: ostatnio pobrany grafik (żeby dało się zameldować w zakrystii bez sieci)
       try {
@@ -163,6 +165,7 @@ export function useServices(from: string, to: string) {
     setOffline(false)
     setLoading(false)
     try { await Promise.resolve(AsyncStorage.setItem(cacheKey, JSON.stringify(list))) } catch { /* bez pamięci */ }
+    pruneServicesCache(profile.id, localDateStr(new Date()))
   }, [profile?.id, profile?.parish_id, from, to])
 
   useEffect(() => { setLoading(true); load() }, [load])

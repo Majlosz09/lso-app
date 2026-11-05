@@ -10,7 +10,7 @@ import { NavBadges } from '../../hooks/useNavBadges'
 import { AppText, Avatar, Button, Icon, Sheet } from '../ui'
 import { tourRef } from '../tour/TourTarget'
 
-const LOGO = require('../../assets/images/icon.png')
+const LOGO = require('../../assets/images/logo.png')
 
 type Props = {
   role: NavRole

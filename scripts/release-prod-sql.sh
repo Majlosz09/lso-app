@@ -70,6 +70,8 @@ MIGRATIONS=(
   "20261105020000_checkin_window.sql|NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'attendance' AND policyname = 'attendance_insert' AND with_check ILIKE '%auth.uid()%')"
   "20261105030000_schedules_unique.sql|to_regclass('public.schedules_one_per_slot') IS NOT NULL"
   "20261105040000_rls_initplan.sql|EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'notifications_select' AND qual ILIKE '%SELECT auth.uid()%')"
+  "20261105050000_service_attendance_rpc.sql|to_regprocedure('public.set_service_attendance(uuid,uuid[])') IS NOT NULL"
+  "20261105060000_open_dm_rpc.sql|to_regprocedure('public.open_dm(uuid)') IS NOT NULL"
 )
 
 banner() {

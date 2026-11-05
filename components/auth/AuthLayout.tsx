@@ -11,7 +11,7 @@ import { AppText, Icon } from '../ui'
 import { KeyboardScrollView } from '../ui/KeyboardScrollView'
 import { topGap } from '../../lib/safeTop'
 
-const LOGO = require('../../assets/images/icon.png')
+const LOGO = require('../../assets/images/logo.png')
 export const NAVY_DEEP = '#071C3A'
 const MUTED_ON_NAVY = '#C9D3E3'
 export const GOLD_ITALIC = '#E3C98E'
