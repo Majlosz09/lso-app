@@ -2,6 +2,8 @@
 // Uwaga: rozpatrzonych zgłoszeń ministrant nie usunie — po teście: bash scripts/dev-sql.sh "delete from attendance_reports where title like 'TEST%'"
 import { createClient } from '@supabase/supabase-js'
 import fs from 'fs'
+import { execSync } from 'child_process'
+const sql = (q) => execSync(`bash scripts/dev-sql.sh "${q.replace(/"/g, '\\"')}" --yes`, { cwd: new URL('..', import.meta.url), stdio: 'pipe' }).toString()
 const env = JSON.parse(fs.readFileSync(new URL('../eas.json', import.meta.url))).build.redesign.env
 if (!env.EXPO_PUBLIC_SUPABASE_URL.includes('phwoxylvcazcnaifcqab')) throw new Error('Tylko LSO-dev')
 const ok = (c, m) => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + m); if (!c) process.exitCode = 1 }
@@ -67,6 +69,8 @@ try {
       await admin.sb.from('schedules').delete().eq('id', x.schedule_id)
     }
   }
-  await kuba.sb.from('attendance_reports').delete().in('id', ids.filter(Boolean))
+  // ministrant usuwa tylko oczekujące — przyjęte / odrzucone sprząta dev-sql (inaczej blokują kolejny przebieg)
+  const left = ids.filter(Boolean).map(i => `'${i}'`).join(',')
+  if (left) sql(`delete from attendance_reports where id in (${left})`)
   for (const u of [admin, kuba]) await u.sb.from('notifications').delete().in('type', ['attendance_report', 'attendance_report_decision'])
 }

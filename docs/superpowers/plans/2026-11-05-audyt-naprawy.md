@@ -50,12 +50,12 @@ Migracja `20261105010000_parent_link_requests.sql`, test `scripts/parent-link-sm
 - [x] `_slot_schedule` / `materialize_slot` / `generate_schedules_from_templates`: `INSERT … ON CONFLICT DO NOTHING` + ponowny odczyt id.
 - [x] Generowanie grafiku na rok przenieść z telefonu (`ensureSchedulesCoverage` w `stores/authStore.ts`, odpala każdy członek przy logowaniu) do pg_cron (raz na dobę, wszystkie parafie z `setup_done`). Uwaga: **nie usuwać bez zastępstwa** — publiczny grafik, ICS, wydruk, kalendarz miesiąca i pulpit opiekuna czytają tylko z `schedules`.
 
-## Etap 5 — wydajność RLS
+## Etap 5 — wydajność RLS — ✅ LSO-dev 2026-11-05, prod SQL: czeka (bez OTA/web)
 
-- [ ] **Korekta 2026-11-05:** na żywej bazie bez `(SELECT …)` jest tylko 14 polityk (migracja `chat_perf_rodo` przepisała resztę dynamicznie; liczba 79 pochodziła z samych plików). Zostały: `attendance_insert`, `attendance_reports_select/delete`, `chat_messages_insert`, `chat_poll_votes_insert`, `chat_polls_insert`, `content_reads_*`, `notifications_*`, `schedule_role_slots_select`, `swap_offers_select` — opakować przy okazji, niski priorytet.
-- [ ] Starsze polityki z podzapytaniem do `profiles` (`groups`, `member_badges`, `badge_definitions`, `wiedza_entries`, `recurring_commitments`) → funkcje pomocnicze.
-- [ ] Pomiar przed/po: `EXPLAIN ANALYZE` grafiku tygodnia i listy punktów jako ministrant na LSO-dev (parafia demo).
-- [ ] Świeży zrzut schematu z produkcji do `supabase/dev/` (pliki migracji ≠ baza po dynamicznej podmianie w `helper_role`).
+- [x] **Korekta 2026-11-05:** na żywej bazie bez `(SELECT …)` jest tylko 14 polityk (migracja `chat_perf_rodo` przepisała resztę dynamicznie; liczba 79 pochodziła z samych plików). Zostały: `attendance_insert`, `attendance_reports_select/delete`, `chat_messages_insert`, `chat_poll_votes_insert`, `chat_polls_insert`, `content_reads_*`, `notifications_*`, `schedule_role_slots_select`, `swap_offers_select` — opakować przy okazji, niski priorytet. → `20261105040000_rls_initplan.sql` (13 wywołań, 0 zostało).
+- [~] **Odłożone (decyzja):** Starsze polityki z podzapytaniem do `profiles` (`groups`, `member_badges`, `badge_definitions`, `wiedza_entries`, `recurring_commitments`) → funkcje pomocnicze. Wydajność OK (auth.uid() już opakowane); zamiana zmieniłaby uprawnienia (approved, is_admin, pomocnik) — osobna decyzja, opis w ARCHITEKTURA.md.
+- [x] Pomiar przed/po: `EXPLAIN ANALYZE` grafiku tygodnia i listy punktów jako ministrant na LSO-dev (parafia demo). Kuba, `count(*)`: notifications 2,7 → 1,7 ms, swap_offers 4,7 → 1,4 ms, content_reads 1,3 → 0,2 ms (mało danych na dev — zysk rośnie z liczbą wierszy).
+- [~] **Odłożone:** Świeży zrzut schematu z produkcji do `supabase/dev/` (pliki migracji ≠ baza po dynamicznej podmianie w `helper_role`). Wymaga dostępu właściciela do produkcji; `schema-from-prod.sql` to punkt startowy pod migracje — podmiana zmieniłaby odtwarzanie LSO-dev.
 
 ## Etap 6 — telefon: pamięć i zapytania
 
