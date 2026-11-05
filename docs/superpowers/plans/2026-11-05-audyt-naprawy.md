@@ -43,12 +43,12 @@ Migracja `20261105010000_parent_link_requests.sql`, test `scripts/parent-link-sm
 - [x] Usunąć martwy kod `recordAttendance` / `checkInGps` / `checkInQr` / `checkInButton` z `lib/checkin.ts` (zostają `validateGps`, `validateParishQr`, `buildParishQrValue`).
 - [x] `docs/ARCHITEKTURA.md` → „Znane ograniczenia”: zaktualizować (zostaje: GPS i QR sprawdza telefon, QR stały — decyzja).
 
-## Etap 4 — grafik bez duplikatów
+## Etap 4 — grafik bez duplikatów — ✅ LSO-dev 2026-11-05 (dev: 0 duplikatów; migracja ma bezpiecznik), prod + OTA + web: czeka
 
-- [ ] Uruchomić `tidy_schedules` w trybie próbnym na dev/prod — lista duplikatów.
-- [ ] Częściowy unikalny indeks `schedules (parish_id, date, time, church_id, category) WHERE NOT manual` (po scaleniu duplikatów).
-- [ ] `_slot_schedule` / `materialize_slot` / `generate_schedules_from_templates`: `INSERT … ON CONFLICT DO NOTHING` + ponowny odczyt id.
-- [ ] Generowanie grafiku na rok przenieść z telefonu (`ensureSchedulesCoverage` w `stores/authStore.ts`, odpala każdy członek przy logowaniu) do pg_cron (raz na dobę, wszystkie parafie z `setup_done`). Uwaga: **nie usuwać bez zastępstwa** — publiczny grafik, ICS, wydruk, kalendarz miesiąca i pulpit opiekuna czytają tylko z `schedules`.
+- [x] Uruchomić `tidy_schedules` w trybie próbnym na dev/prod — lista duplikatów.
+- [x] Częściowy unikalny indeks `schedules (parish_id, date, time, church_id, category) WHERE NOT manual` (po scaleniu duplikatów).
+- [x] `_slot_schedule` / `materialize_slot` / `generate_schedules_from_templates`: `INSERT … ON CONFLICT DO NOTHING` + ponowny odczyt id.
+- [x] Generowanie grafiku na rok przenieść z telefonu (`ensureSchedulesCoverage` w `stores/authStore.ts`, odpala każdy członek przy logowaniu) do pg_cron (raz na dobę, wszystkie parafie z `setup_done`). Uwaga: **nie usuwać bez zastępstwa** — publiczny grafik, ICS, wydruk, kalendarz miesiąca i pulpit opiekuna czytają tylko z `schedules`.
 
 ## Etap 5 — wydajność RLS
 

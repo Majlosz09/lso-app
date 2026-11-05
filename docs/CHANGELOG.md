@@ -4,6 +4,13 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+### Dla użytkowników
+- Koniec zdublowanych Mszy w grafiku (pojawiały się, gdy dwie osoby jednocześnie otwierały tę samą służbę albo meldowały się na nią). Logowanie trochę szybsze — telefon nie układa już grafiku na rok do przodu.
+
+### Techniczne
+- Migracja `20261105030000_schedules_unique.sql` (audyt Etap 4): unikalny indeks `schedules_one_per_slot` (parafia, dzień, godzina, rodzaj, kościół; bez służb ręcznych i cykli), `_slot_schedule` / `generate_schedules_from_templates` / `create_recurring_assignments` z `ON CONFLICT DO NOTHING`, funkcja `extend_schedule_coverage()` + pg_cron `lso-extend-schedules` (codziennie 02:20 UTC). Migracja przerywa się, jeśli w grafiku są już duplikaty. Na LSO-dev 2026-11-05.
+- `stores/authStore.ts`: usunięte `ensureSchedulesCoverage` (przedłużanie grafiku przy logowaniu każdego członka) — robi to cron. Stara wersja aplikacji dalej je woła, bez szkody (bez duplikatów dzięki indeksowi).
+- Test dymny `scripts/schedules-unique-smoke-dev.mjs` (9 OK: 8 równoległych `materialize_slot` → jedna służba).
 - `lib/checkin.ts`: usunięty martwy kod bezpośredniego zapisu obecności (`recordAttendance`, `checkInButton`, `checkInGps`, `checkInQr`) — pojedzie z najbliższym OTA/web.
 
 ## 2026-11-05 — SQL na produkcji (audyt Etap 3, migracja 20261105020000_checkin_window; bez zmian w działaniu aplikacji)
