@@ -5,6 +5,7 @@
 //  - próby wejścia w cudze dane są blokowane
 import { createClient } from '@supabase/supabase-js'
 import fs from 'node:fs'
+import { warsawAt } from './_warsaw-time.mjs'
 
 const env = Object.fromEntries(
   fs.readFileSync(new URL('../.env.development.local', import.meta.url), 'utf8')
@@ -97,7 +98,7 @@ ok('admin B nie widzi kodów zaproszeń innych parafii', (parishesSeen ?? []).ev
 console.log('\n3. Normalna praca admina A')
 const today = new Date().toISOString().slice(0, 10)
 const { data: sched, error: schedErr } = await adminA.c.from('schedules').insert({
-  title: 'Msza test', date: today, time: '18:00:00', category: 'msza', location: '', gps_radius: 100,
+  ...warsawAt(0), title: 'Msza test', category: 'msza', location: '', gps_radius: 100,
   created_by: adminA.id, parish_id: adminA.parishId,
 }).select('id').single()
 ok('admin tworzy służbę', !schedErr, schedErr?.message)

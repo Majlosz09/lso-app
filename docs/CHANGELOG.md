@@ -4,6 +4,14 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+### Dla użytkowników
+- Meldowanie „Obecny” działa od 30 minut przed do 90 minut po rozpoczęciu służby — teraz pilnuje tego też serwer (tak działał przycisk w aplikacji). Opiekun zaznacza obecność bez ograniczeń czasu, meldunki zapisane bez zasięgu nadal przechodzą po powrocie sieci.
+
+### Techniczne
+- Migracja `20261105020000_checkin_window.sql` (audyt Etap 3): `check_in_and_award_points` — okno −30/+90 min (+5 min zapasu na zegar telefonu, Europe/Warsaw) dla osoby bez uprawnień opiekuna; `check_in_offline` — własne sprawdzenia (samodzielne meldowanie w parafii, tryb służby `none`) i wprost `check_in_and_award_points_impl`; polityka `attendance_insert` bez gałęzi własnej obecności (meldowanie tylko przez RPC). Na LSO-dev 2026-11-05.
+- `lib/checkin.ts`: usunięty martwy kod bezpośredniego zapisu obecności (`recordAttendance`, `checkInButton`, `checkInGps`, `checkInQr`).
+- Test dymny `scripts/checkin-window-smoke-dev.mjs` (9 OK); `security`, `admin-tools`, `points-approval` tworzą służby o bieżącej godzinie (`scripts/_warsaw-time.mjs`) zamiast stałej.
+
 ## 2026-11-05 — SQL + OTA + web (wersja 1.2.0, a77bdb2; audyt Etap 2)
 
 ### Dla użytkowników

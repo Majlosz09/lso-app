@@ -1,6 +1,7 @@
 // Test narzędzi admina na LSO-dev (NIGDY na produkcji).
 // Uruchom: node scripts/admin-tools-smoke-dev.mjs
 // Wymaga migracji 20260928000000_admin_tools.sql na LSO-dev.
+import { warsawAt } from './_warsaw-time.mjs'
 import { createClient } from '@supabase/supabase-js'
 import fs from 'node:fs'
 
@@ -100,7 +101,7 @@ ok('przydziały drugiego ministranta zostają', (m2After ?? []).length >= 12)
 console.log('\n4. Tryb obecności „Tylko admin”')
 await admin.c.from('parishes').update({ attendance_mode: 'admin' }).eq('id', parish.id)
 const { data: sched } = await admin.c.from('schedules').insert({
-  title: 'Msza', date: iso(today), time: '06:30:00', category: 'msza', location: '', gps_radius: 100, parish_id: parish.id, created_by: admin.id,
+  ...warsawAt(-1), title: 'Msza', category: 'msza', location: '', gps_radius: 100, parish_id: parish.id, created_by: admin.id,
 }).select('id').single()
 const { error: selfCheck } = await m2.c.rpc('check_in_and_award_points', { p_schedule_id: sched.id, p_profile_id: m2.id, p_parish_id: parish.id })
 ok('ministrant nie melduje się sam', !!selfCheck)
@@ -110,7 +111,7 @@ const { error: adminCheck } = await admin.c.rpc('check_in_and_award_points', { p
 ok('admin zaznacza obecność ministranta', !adminCheck, adminCheck?.message)
 await admin.c.from('parishes').update({ attendance_mode: 'button' }).eq('id', parish.id)
 const { data: sched2 } = await admin.c.from('schedules').insert({
-  title: 'Msza 2', date: iso(today), time: '07:30:00', category: 'msza', location: '', gps_radius: 100, parish_id: parish.id, created_by: admin.id,
+  ...warsawAt(-2), title: 'Msza 2', category: 'msza', location: '', gps_radius: 100, parish_id: parish.id, created_by: admin.id,
 }).select('id').single()
 const { error: selfOk } = await m2.c.rpc('check_in_and_award_points', { p_schedule_id: sched2.id, p_profile_id: m2.id, p_parish_id: parish.id })
 ok('w trybie „Przycisk” ministrant melduje się sam', !selfOk, selfOk?.message)

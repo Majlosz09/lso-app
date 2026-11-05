@@ -1,6 +1,7 @@
 import * as Location from 'expo-location'
-import { supabase } from './supabase'
 
+// Sprawdzenia po stronie telefonu (GPS, kod QR parafii). Samo meldowanie: RPC check_in_and_award_points
+// (okno służby pilnuje serwer) albo check_in_offline z kolejki bez zasięgu.
 export type CheckInResult =
   | { success: true }
   | { success: false; message: string }
@@ -15,43 +16,6 @@ function getDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: numbe
     Math.cos((lat2 * Math.PI) / 180) *
     Math.sin(dLng / 2) ** 2
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
-async function recordAttendance(
-  scheduleId: string,
-  profileId: string,
-  parishId: string,
-  method: 'manual' | 'qr' | 'gps',
-  lat?: number,
-  lng?: number,
-): Promise<CheckInResult> {
-  const { error: insErr } = await supabase.from('attendance').insert({
-    schedule_id: scheduleId,
-    profile_id: profileId,
-    method,
-    checked_at: new Date().toISOString(),
-    parish_id: parishId,
-    lat: lat ?? null,
-    lng: lng ?? null,
-  })
-  if (insErr) return { success: false, message: insErr.message }
-
-  const { error: updErr } = await supabase
-    .from('schedule_assignments')
-    .update({ status: 'present' })
-    .eq('schedule_id', scheduleId)
-    .eq('profile_id', profileId)
-  if (updErr) return { success: false, message: updErr.message }
-
-  return { success: true }
-}
-
-export async function checkInButton(
-  scheduleId: string,
-  profileId: string,
-  parishId: string,
-): Promise<CheckInResult> {
-  return recordAttendance(scheduleId, profileId, parishId, 'manual')
 }
 
 const GPS_TIMEOUT_MS = 15_000
@@ -86,29 +50,8 @@ export async function validateGps(params: {
   return { success: true }
 }
 
-export async function checkInGps(params: {
-  scheduleId: string
-  profileId: string
-  parishId: string
-  parishLat: number
-  parishLng: number
-  parishRadius: number
-}): Promise<CheckInResult> {
-  const gpsResult = await validateGps(params)
-  if (!gpsResult.success) return gpsResult
-  return recordAttendance(params.scheduleId, params.profileId, params.parishId, 'gps')
-}
-
 export function validateParishQr(scannedValue: string, parishId: string): boolean {
   return scannedValue === `lso-checkin:${parishId}`
-}
-
-export async function checkInQr(
-  scheduleId: string,
-  profileId: string,
-  parishId: string,
-): Promise<CheckInResult> {
-  return recordAttendance(scheduleId, profileId, parishId, 'qr')
 }
 
 export function buildParishQrValue(parishId: string): string {

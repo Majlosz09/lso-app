@@ -1,6 +1,7 @@
 // Test punktów, akceptacji członków i doszczelnień na LSO-dev (NIGDY na produkcji).
 // Uruchom: node scripts/points-approval-smoke-dev.mjs
 // Wymaga migracji 20260928010000_points_approval_hardening.sql na LSO-dev.
+import { warsawAt } from './_warsaw-time.mjs'
 import { createClient } from '@supabase/supabase-js'
 import fs from 'node:fs'
 
@@ -81,7 +82,7 @@ await admin.c.from('point_rules').upsert([
   { parish_id: parish.id, service_type: 'msza_assigned', points: 10 },
   { parish_id: parish.id, service_type: 'msza_extra', points: 10 },
 ], { onConflict: 'parish_id,service_type' })
-const { data: s1 } = await admin.c.from('schedules').insert({ title: 'Msza', date: today, time: '06:00:00', category: 'msza', location: '', gps_radius: 100, parish_id: parish.id, created_by: admin.id }).select('id').single()
+const { data: s1 } = await admin.c.from('schedules').insert({ ...warsawAt(-1), title: 'Msza', category: 'msza', location: '', gps_radius: 100, parish_id: parish.id, created_by: admin.id }).select('id').single()
 const { data: r1 } = await kid.c.rpc('check_in_and_award_points', { p_schedule_id: s1.id, p_profile_id: kid.id, p_parish_id: parish.id })
 const sum1 = (await admin.c.from('points_summary').select('total_points, services_count').eq('profile_id', kid.id).single()).data
 ok('reguła 10 pkt → ranking +10 (nie 15)', r1?.points_awarded === 10 && sum1?.total_points === 10 && sum1?.services_count === 1, JSON.stringify({ r1, sum1 }))
@@ -89,7 +90,7 @@ await admin.c.from('attendance').delete().eq('schedule_id', s1.id).eq('profile_i
 const sum2 = (await admin.c.from('points_summary').select('total_points, services_count').eq('profile_id', kid.id).single()).data
 ok('odznaczenie obecności cofa punkty', sum2?.total_points === 0 && sum2?.services_count === 0, JSON.stringify(sum2))
 await admin.c.from('point_rules').delete().eq('parish_id', parish.id)
-const { data: s2 } = await admin.c.from('schedules').insert({ title: 'Nabożeństwo', date: today, time: '06:30:00', category: 'nabozenstwo', location: '', gps_radius: 100, parish_id: parish.id, created_by: admin.id }).select('id').single()
+const { data: s2 } = await admin.c.from('schedules').insert({ ...warsawAt(-2), title: 'Nabożeństwo', category: 'nabozenstwo', location: '', gps_radius: 100, parish_id: parish.id, created_by: admin.id }).select('id').single()
 const { data: r2 } = await kid.c.rpc('check_in_and_award_points', { p_schedule_id: s2.id, p_profile_id: kid.id, p_parish_id: parish.id })
 ok('bez reguł: domyślnie 5 pkt (jak dotąd w rankingu)', r2?.points_awarded === 5, JSON.stringify(r2))
 const { error: manualErr } = await admin.c.from('points').insert({ profile_id: kid.id, amount: 3, reason: 'Pomoc', parish_id: parish.id, awarded_by: admin.id })
@@ -104,7 +105,7 @@ const { error: nameOk } = await kid.c.from('profiles').update({ phone: '60099999
 ok('ministrant nadal edytuje swoje dane (telefon)', !nameOk, nameOk?.message)
 const { error: adminRank } = await admin.c.from('profiles').update({ rank_id: rank.id }).eq('id', kid.id)
 ok('admin nadaje rangę', !adminRank, adminRank?.message)
-const { data: s3 } = await admin.c.from('schedules').insert({ title: 'Msza 3', date: today, time: '20:00:00', category: 'msza', location: '', gps_radius: 100, parish_id: parish.id, created_by: admin.id }).select('id').single()
+const { data: s3 } = await admin.c.from('schedules').insert({ ...warsawAt(180), title: 'Msza 3', category: 'msza', location: '', gps_radius: 100, parish_id: parish.id, created_by: admin.id }).select('id').single()
 const { data: asg } = await admin.c.from('schedule_assignments').insert({ schedule_id: s3.id, profile_id: kid.id, role: 'ministrant', status: 'assigned' }).select('id').single()
 const { error: fakePresent } = await kid.c.from('schedule_assignments').update({ status: 'present' }).eq('id', asg.id)
 ok('ministrant nie ustawi „obecny” bez zameldowania', !!fakePresent)
