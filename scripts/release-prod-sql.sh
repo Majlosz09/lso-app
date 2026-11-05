@@ -72,6 +72,7 @@ MIGRATIONS=(
   "20261105040000_rls_initplan.sql|EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'notifications' AND policyname = 'notifications_select' AND qual ILIKE '%SELECT auth.uid()%')"
   "20261105050000_service_attendance_rpc.sql|to_regprocedure('public.set_service_attendance(uuid,uuid[])') IS NOT NULL"
   "20261105060000_open_dm_rpc.sql|to_regprocedure('public.open_dm(uuid)') IS NOT NULL"
+  "20261105070000_schedules_realtime.sql|EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'schedules')"
 )
 
 banner() {

@@ -4,6 +4,12 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+### Dla użytkowników
+- Nowa, zmieniona albo odwołana służba pojawia się u innych od razu (wcześniej dopiero po odświeżeniu ekranu).
+
+### Techniczne
+- Migracja `20261105070000_schedules_realtime.sql` (audyt Etap 7, decyzja właściciela): `schedules` w publikacji `supabase_realtime` (aplikacja już słuchała tej tabeli). Na LSO-dev 2026-11-05.
+
 ## 2026-11-05 — OTA + web (wersja 1.2.0, 9d77bc0; audyt Etap 6b, bez zmian w bazie)
 
 OTA grupa 531b7c37 (runtime 1.2.0, iOS + Android), web app.lsoapp.com (wdrożenie a2944dbc).
