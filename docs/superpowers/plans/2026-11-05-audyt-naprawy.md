@@ -35,7 +35,7 @@ Migracja `20261105010000_parent_link_requests.sql`, test `scripts/parent-link-sm
 - [x] UI: karta oczekującego rodzica w `members.tsx` pokazuje „Wskazane dzieci: …”; ekran rodzica „czeka na zatwierdzenie” mówi, że dzieci pojawią się po zatwierdzeniu.
 - [x] Istniejące połączenia zostają (bez migracji danych); opcjonalnie lista rodziców połączonych przed zatwierdzeniem do ręcznego przejrzenia.
 
-## Etap 3 — meldowanie sprawdzane przez serwer — ✅ LSO-dev + prod SQL 2026-11-05 (zmiana w lib/checkin.ts = martwy kod, pojedzie z następnym OTA/web)
+## Etap 3 — meldowanie sprawdzane przez serwer — ✅ LSO-dev + prod SQL 2026-11-05 + OTA 16be78b4 + web (martwy kod)
 
 - [x] `check_in_and_award_points`: dla osoby bez uprawnień opiekuna okno **−30/+90 min** od godziny służby (strefa Europe/Warsaw), jak w `lib/serviceRules.ts`; opiekun/pomocnik bez okna (zaznacza obecność po fakcie).
 - [x] `check_in_offline`: zostaje okno −40…+100 względem godziny meldowania z telefonu i ≤ 48 h, ale woła `_impl` po własnych sprawdzeniach (wrapper odrzucałby spóźnione meldunki offline).
@@ -43,7 +43,7 @@ Migracja `20261105010000_parent_link_requests.sql`, test `scripts/parent-link-sm
 - [x] Usunąć martwy kod `recordAttendance` / `checkInGps` / `checkInQr` / `checkInButton` z `lib/checkin.ts` (zostają `validateGps`, `validateParishQr`, `buildParishQrValue`).
 - [x] `docs/ARCHITEKTURA.md` → „Znane ograniczenia”: zaktualizować (zostaje: GPS i QR sprawdza telefon, QR stały — decyzja).
 
-## Etap 4 — grafik bez duplikatów — ✅ LSO-dev + prod SQL 2026-11-05 (prod: 1 duplikat z 8.09 oznaczony manual), OTA + web: czeka
+## Etap 4 — grafik bez duplikatów — ✅ LSO-dev + prod SQL 2026-11-05 (prod: 1 duplikat z 8.09 oznaczony manual) + OTA 16be78b4 + web
 
 - [x] Uruchomić `tidy_schedules` w trybie próbnym na dev/prod — lista duplikatów.
 - [x] Częściowy unikalny indeks `schedules (parish_id, date, time, church_id, category) WHERE NOT manual` (po scaleniu duplikatów).

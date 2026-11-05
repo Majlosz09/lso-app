@@ -4,6 +4,10 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+## 2026-11-05 — SQL + OTA + web (wersja 1.2.0, d037e05; audyt Etap 4 + aplikacyjna część Etapu 3)
+
+OTA grupa 16be78b4 (runtime 1.2.0, iOS + Android), web app.lsoapp.com (wdrożenie 1a5a3f95).
+
 ### Dla użytkowników
 - Koniec zdublowanych Mszy w grafiku (pojawiały się, gdy dwie osoby jednocześnie otwierały tę samą służbę albo meldowały się na nią). Logowanie trochę szybsze — telefon nie układa już grafiku na rok do przodu.
 
@@ -12,7 +16,7 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 - `scripts/release-prod-sql.sh`: migracje Etapu 3 i 4 w kolejności dat.
 - `stores/authStore.ts`: usunięte `ensureSchedulesCoverage` (przedłużanie grafiku przy logowaniu każdego członka) — robi to cron. Stara wersja aplikacji dalej je woła, bez szkody (bez duplikatów dzięki indeksowi).
 - Test dymny `scripts/schedules-unique-smoke-dev.mjs` (9 OK: 8 równoległych `materialize_slot` → jedna służba).
-- `lib/checkin.ts`: usunięty martwy kod bezpośredniego zapisu obecności (`recordAttendance`, `checkInButton`, `checkInGps`, `checkInQr`) — pojedzie z najbliższym OTA/web.
+- `lib/checkin.ts`: usunięty martwy kod bezpośredniego zapisu obecności (`recordAttendance`, `checkInButton`, `checkInGps`, `checkInQr`).
 
 ## 2026-11-05 — SQL na produkcji (audyt Etap 3, migracja 20261105020000_checkin_window; bez zmian w działaniu aplikacji)
 
