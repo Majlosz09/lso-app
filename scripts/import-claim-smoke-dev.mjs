@@ -13,7 +13,7 @@ const login = async (key) => {
   const { data, error } = await sb.auth.signInWithPassword({ email: `${key}@lso-demo.test`, password: 'DemoLSO123!' }); if (error) throw error
   return { sb, uid: data.user.id }
 }
-const sql = (q) => execSync(`bash scripts/dev-sql.sh "${q.replace(/"/g, '\\"')}"`, { cwd: new URL('..', import.meta.url), stdio: 'pipe' }).toString()
+const sql = (q) => execSync(`bash scripts/dev-sql.sh "${q.replace(/"/g, '\\"')}" --yes`, { cwd: new URL('..', import.meta.url), stdio: 'pipe' }).toString()
 const admin = await login('opiekun'), kuba = await login('kuba')
 const parish = (await admin.sb.from('profiles').select('parish_id').eq('id', admin.uid).single()).data.parish_id
 const email = `claim-test-${Date.now()}@lso-dev.test`
@@ -35,7 +35,9 @@ try {
   ok(/^[A-HJ-NP-Z2-9]{8}$/.test(antek?.claim_code ?? ''), 'kod osobisty 8 znaków bez mylących liter')
 
   const p = (await admin.sb.from('profiles').select('full_name, rocznik, managed, approved, rank_id').eq('id', antek.id).single()).data
-  ok(p?.full_name === 'TEST Antoni Nowak' && p.rocznik === 2016 && p.managed && p.approved && p.rank_id, 'profil bez konta: imię, rocznik, ranga, zatwierdzony')
+  // stopień systemowy tylko gdy parafia ma włączone rangi systemowe (parishes.system_ranks_enabled)
+  const sysRanks = (await admin.sb.from('parishes').select('system_ranks_enabled').eq('id', parish).single()).data?.system_ranks_enabled
+  ok(p?.full_name === 'TEST Antoni Nowak' && p.rocznik === 2016 && p.managed && p.approved && (!!p.rank_id || !sysRanks), 'profil bez konta: imię, rocznik, ranga, zatwierdzony')
   const fns = (await admin.sb.from('member_functions').select('function_id').eq('profile_id', antek.id)).data ?? []
   ok(fns.length === 1, 'funkcja Lektor nadana (nieznana pominięta)')
   const chat = sql(`select count(*) n from chat_members where user_id = '${antek.id}'`)
@@ -58,7 +60,7 @@ try {
   r = await kid.rpc('claim_member_profile', { p_code: antek.claim_code })
   ok(!r.error, 'nowe konto przejmuje profil ' + (r.error?.message ?? ''))
   const me = (await kid.from('profiles').select('approved, parish_id, rocznik, rank_id').eq('id', kidId).single()).data
-  ok(me?.approved && me.parish_id === parish && me.rocznik === 2016 && me.rank_id, 'konto zatwierdzone, z rocznikiem i rangą')
+  ok(me?.approved && me.parish_id === parish && me.rocznik === 2016 && (!!me.rank_id || !sysRanks), 'konto zatwierdzone, z rocznikiem i rangą')
   const att = (await admin.sb.from('attendance').select('profile_id').eq('schedule_id', sch)).data ?? []
   const pts = (await admin.sb.from('points').select('profile_id').eq('schedule_id', sch)).data ?? []
   ok(att[0]?.profile_id === kidId && pts[0]?.profile_id === kidId, 'obecność i punkty przeszły na konto')

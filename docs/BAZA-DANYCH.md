@@ -79,12 +79,12 @@ Widok: `points_summary` (sumy punktów, `security_invoker`). Storage: kubeł `av
 | Parafia | swoją (i założoną przez siebie) | opiekun; nową zakłada osoba bez parafii (max 5) |
 | Profile | siebie + zatwierdzonych z parafii (opiekun także byłych członków — imiona w historii; oczekujących pobiera przez `get_pending_members`) | siebie (bez pól chronionych) i opiekun w parafii |
 | Grafik, rozkład, kościoły, funkcje | wszyscy z parafii | grafik i obsadę: opiekun + pomocnik; rozkład, kościoły, funkcje: opiekun (rozkład zapisuje `save_rozklad`) |
-| Przydziały | wszyscy z parafii | własne (status, rezygnacja) + opiekun/pomocnik; zapis na służbę przez `sign_up_for_slot` |
+| Przydziały | wszyscy z parafii | własne: rezygnacja tylko ze statusem „zapisany”, w trybie zapisów i przed godziną służby; nieobecność do 30 min przed służbą + opiekun/pomocnik; zapis na służbę przez `sign_up_for_slot` |
 | Obecność | wszyscy z parafii | opiekun/pomocnik; ministrant tylko swoją i tylko gdy parafia pozwala na samodzielne meldowanie |
 | Punkty, rangi, kategorie, wyzwania | wszyscy z parafii | opiekun (punkty za obecność dopisuje funkcja meldowania) |
 | Zgłoszenia obecności | autor, rodzic dziecka, opiekun/pomocnik | autor wycofuje oczekujące; decyduje `decide_attendance_report` |
 | Ogłoszenia | parafia | opiekun |
-| Czat | członkowie kanału; opiekun dodatkowo kanały parafii i zgłoszone wiadomości | autor (edycja/usunięcie), opiekun moderuje; zablokowani znikają z widoku (polityka RESTRICTIVE) |
+| Czat | członkowie kanału; opiekun dodatkowo kanały parafii i zgłoszone wiadomości | autor (edycja/usunięcie — usuniętej nie przywróci ani nie edytuje), opiekun moderuje; członek zmienia w swoim członkostwie tylko „przeczytane do” (prawo pisania ustawia opiekun); zablokowani znikają z widoku (polityka RESTRICTIVE) |
 | Powiadomienia, przeczytane, blokady | tylko własne | tylko własne |
 | Słowo na dziś, komunikaty aplikacji | wszyscy zalogowani | nikt z aplikacji |
 
@@ -98,7 +98,7 @@ Wszystkie poniżej są `SECURITY DEFINER` (omijają RLS) i same sprawdzają upra
 
 **Zapisy, zamiany, nieobecności**: `sign_up_for_slot` (jednorazowo lub „co tydzień”, także za dziecko), `unsign_child`, `request_swap` / `respond_swap` / `cancel_swap`, `reject_absence_request` (odrzucenie usprawiedliwienia z karą z ustawień parafii), `report_child_absence` / `withdraw_child_absence`.
 
-**Obecność i punkty**: `check_in_and_award_points` (sprawdza parafię, uprawnienia, tryb służby i samodzielne meldowanie, potem `..._impl` zapisuje obecność, status `present` i punkty według kategorii), `check_in_offline` (meldunek z kolejki offline, okno −40…+100 min, ≤ 48 h), `report_attendance` + `decide_attendance_report` (zgłoszenie po fakcie), `set_attendance_points` (korekta punktów za obecność), `formation_progress` / `formation_ready`, `challenge_board` / `challenge_count` / `recount_challenge`, `rank_available`.
+**Obecność i punkty**: `check_in_and_award_points` (sprawdza parafię, uprawnienia, tryb służby i samodzielne meldowanie, potem `..._impl` zapisuje obecność, status `present` i punkty (jeden wiersz `checkin` na osobę i służbę — indeks `points_one_checkin_per_service`) według kategorii), `check_in_offline` (meldunek z kolejki offline, okno −40…+100 min, ≤ 48 h), `report_attendance` + `decide_attendance_report` (zgłoszenie po fakcie), `set_attendance_points` (korekta punktów za obecność), `formation_progress` / `formation_ready`, `challenge_board` / `challenge_count` / `recount_challenge`, `rank_available`.
 
 **Raporty i udostępnianie**: `monthly_report(miesiąc)`, `notify_monthly_reports` (cron), `set_public_schedule` + `public_schedule(token, od, do)` (grafik bez logowania, dostępny dla `anon`), `my_calendar_token` + `calendar_feed(token)` (plik ICS dla kalendarza w telefonie, dostępny dla `anon`).
 
@@ -108,7 +108,8 @@ Wszystkie poniżej są `SECURITY DEFINER` (omijają RLS) i same sprawdzają upra
 
 - **Nowy użytkownik** (`auth.users`) → profil (`handle_new_user`); usunięcie konta → usunięcie profilu (`trg_auth_user_deleted`; klucz obcy `profiles.id → auth.users` celowo zdjęty, bo profile zarządzane nie mają konta). Operacje systemowe ustawiają zmienną `lso.sys`, która omija ochronę pól profilu i przydziałów.
 - **Nowa parafia** → kanały czatu, kościół główny, domyślne funkcje liturgiczne.
-- **Profil** → dodanie do kanałów czatu, powiadomienie opiekuna o nowym członku, ochrona pól wrażliwych, zapis daty zmiany stopnia.
+- **Profil** → dodanie do kanałów czatu, powiadomienie opiekuna o nowym członku, ochrona pól wrażliwych (także rola po dołączeniu do parafii, `rank_since`, `managed`, `claim_code`, `former_parish_id`), zapis daty zmiany stopnia.
+- **Czat** → `trg_chat_members_protect`, `trg_chat_messages_protect` (ochrona członkostwa, prawa pisania i usuniętych wiadomości).
 - **Przydział** → powiadomienia (przydział, nieobecność, decyzja), ochrona statusu, dopasowanie roli, zdjęcie kary po zmianie statusu.
 - **Obecność** → czyszczenie GPS, przeliczenie wyzwań, cofnięcie punktów po usunięciu obecności.
 - **Punkty, ogłoszenia, zamiany** → wpis w `notifications`.

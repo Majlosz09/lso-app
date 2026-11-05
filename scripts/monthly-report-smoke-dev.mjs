@@ -10,7 +10,7 @@ const login = async (key) => {
   const { data, error } = await sb.auth.signInWithPassword({ email: `${key}@lso-demo.test`, password: 'DemoLSO123!' }); if (error) throw error
   return { sb, uid: data.user.id }
 }
-const sql = (q) => execSync(`bash scripts/dev-sql.sh "${q.replace(/"/g, '\\"')}"`, { cwd: new URL('..', import.meta.url), stdio: 'pipe' }).toString()
+const sql = (q) => execSync(`bash scripts/dev-sql.sh "${q.replace(/"/g, '\\"')}" --yes`, { cwd: new URL('..', import.meta.url), stdio: 'pipe' }).toString()
 const admin = await login('opiekun'), kuba = await login('kuba'), filip = await login('filip')
 
 try {

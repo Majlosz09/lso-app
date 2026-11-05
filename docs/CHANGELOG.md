@@ -4,6 +4,16 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+### Dla użytkowników
+- Po Mszy nie da się już wypisać ze służby ani zgłosić nieobecności wstecz — nieobecność zgłaszasz najpóźniej 30 minut przed służbą, później pisz do opiekuna (tak działały przyciski w aplikacji; teraz pilnuje tego też serwer).
+- Rolę w parafii (ministrant ↔ rodzic) zmienia opiekun.
+- Wyciszenie na czacie i usunięcie wiadomości przez opiekuna są trwałe.
+
+### Techniczne
+- Migracja `20261105000000_audit_hardening.sql` (audyt 2026-11-05, Etap 1): triggery `trg_chat_members_protect` (członek zmienia u siebie tylko `last_read_at`) i `trg_chat_messages_protect` (bez przywracania / edycji usuniętej wiadomości i zmiany kanału, nadawcy, typu, ankiety, odpowiedzi, daty); `trg_profiles_protect_sensitive_fields` blokuje samodzielną zmianę `role` po dołączeniu do parafii oraz `rank_since`, `managed`, `claim_code`, `former_parish_id`; polityka `schedule_assignments_delete` — własny przydział tylko `assigned`, w trybie `signup`, przed godziną służby; `trg_assignments_protect` — `assigned → excused` najpóźniej 30 min przed służbą; unikalny indeks `points_one_checkin_per_service` + `check_in_and_award_points_impl` przyznaje punkty tylko gdy obecność faktycznie została wstawiona (koniec podwójnych punktów przy równoległym meldowaniu); 7 indeksów kluczy obcych. Migracja przerywa się, jeśli w bazie są już zdublowane punkty za meldowanie. Na LSO-dev wgrana 2026-11-05.
+- Test dymny `scripts/audit-hardening-smoke-dev.mjs`. Testy `import-claim` i `monthly-report`: `dev-sql.sh` z `--yes` (CLI w trybie agenta wymaga potwierdzenia, przez co sprzątanie nie działało); `import-claim` uwzględnia wyłączone rangi systemowe.
+- Plan napraw po audycie: `docs/superpowers/plans/2026-11-05-audyt-naprawy.md`.
+
 ## 2026-11-03 — OTA + web (wersja 1.2.0, bdf066f)
 
 ### Dla użytkowników
