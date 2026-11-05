@@ -24,7 +24,7 @@ Migracja `20261105000000_audit_hardening.sql`, test `scripts/audit-hardening-smo
 - [x] Indeksy kluczy obcych: `points.schedule_id`, `swap_offers.schedule_id`, `attendance_reports.schedule_id`, `chat_messages.sender_id`, `chat_messages.reply_to_id`, `challenge_completions.profile_id`, `recurring_commitments.profile_id`.
 - [x] Test dymny: każda z powyższych prób jako ministrant → błąd; zwykłe ścieżki aplikacji (wypis, nieobecność, odczyt czatu, edycja wiadomości) → działają.
 
-## Etap 2 — rodzic łączy się z dzieckiem za zgodą opiekuna — ✅ LSO-dev 2026-11-05, prod + OTA + web: czeka
+## Etap 2 — rodzic łączy się z dzieckiem za zgodą opiekuna — ✅ LSO-dev + prod SQL + OTA 9680c025 + web 2026-11-05
 
 Migracja `20261105010000_parent_link_requests.sql`, test `scripts/parent-link-smoke-dev.mjs` (13 OK). Przy okazji naprawione „Odłącz dziecko” rodzica (RPC `unlink_my_child`).
 
