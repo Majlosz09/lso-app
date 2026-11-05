@@ -4,6 +4,10 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+## 2026-11-05 — SQL + OTA + web (wersja 1.2.0, bd5bacf; audyt Etap 6a)
+
+OTA grupa eb5a29e9 (runtime 1.2.0, iOS + Android), web app.lsoapp.com (wdrożenie 4d4b9a9e).
+
 ### Dla użytkowników
 - Zapis listy obecności na zbiórce jest natychmiastowy i „wszystko albo nic” — wcześniej przy słabym zasięgu mógł zapisać się w połowie.
 - „Nowa wiadomość” od razu otwiera istniejącą rozmowę z tą osobą i nie zakłada drugiej; na liście są tylko osoby zatwierdzone w parafii.
