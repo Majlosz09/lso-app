@@ -305,6 +305,7 @@ function MemberForm({ onBack }: { onBack: () => void }) {
         {role === 'parent' && codeComplete && (
           <View style={styles.group}>
             <AppText variant="label" muted>Twoje dziecko (opcjonalnie)</AppText>
+            <AppText variant="small" muted>Połączenie z dzieckiem potwierdzi opiekun, gdy zatwierdzi Twoje konto.</AppText>
             {loadingMembers ? (
               <ActivityIndicator color={c.primary} />
             ) : membersList.length === 0 ? (

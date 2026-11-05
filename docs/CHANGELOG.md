@@ -4,6 +4,15 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+### Dla użytkowników
+- Rodzic zakładający konto wskazuje swoje dzieci, ale połączenie z nimi pojawia się dopiero po zatwierdzeniu konta przez opiekuna. Opiekun widzi wskazane dzieci w karcie oczekującej osoby („dzieci (połączy po zatwierdzeniu)”).
+- Naprawione „Odłącz dziecko” w profilu rodzica — wcześniej pokazywało „Odłączono”, ale dziecko zostawało połączone.
+
+### Techniczne
+- Migracja `20261105010000_parent_link_requests.sql` (audyt Etap 2): tabela `parent_link_requests` (RLS: rodzic swoje, opiekun swojej parafii; zapis tylko przez RPC), `link_parent_to_children` (opiekun — od razu; rodzic oczekujący — prośby; zatwierdzony rodzic — błąd „poproś opiekuna”), `approve_member` łączy rodzica z dziećmi z próśb, `get_pending_members` pokazuje dzieci z próśb, trigger `trg_profiles_clear_link_requests` (zmiana parafii rodzica czyści prośby), RPC `unlink_my_child`. Zgodna wstecz: stara wersja aplikacji przy rejestracji też tylko tworzy prośby. Na LSO-dev 2026-11-05.
+- `app/(tabs)/profile.tsx`: odłączanie dziecka przez `unlink_my_child` (bezpośredni update cudzego profilu blokował RLS bez błędu). Teksty w `register.tsx`, `pending.tsx`, `members.tsx`.
+- Test dymny `scripts/parent-link-smoke-dev.mjs` (13 OK); `security-smoke-dev` dostosowany do nowego przepływu (33 OK).
+
 ## 2026-11-05 — SQL na produkcji (audyt Etap 1, migracja 20261105000000_audit_hardening; bez zmian w aplikacji)
 
 ### Dla użytkowników

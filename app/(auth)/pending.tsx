@@ -49,7 +49,7 @@ export default function PendingApprovalScreen() {
       variant="hero"
       title="Czekamy na"
       titleAccent="zatwierdzenie"
-      subtitle={`Opiekun ${parish?.name ? `parafii ${parish.name} ` : 'parafii '}dostał Twoje zgłoszenie. Damy znać powiadomieniem, gdy konto będzie aktywne. Dzięki temu do danych ministrantów mają dostęp tylko osoby z parafii.`}
+      subtitle={`Opiekun ${parish?.name ? `parafii ${parish.name} ` : 'parafii '}dostał Twoje zgłoszenie. Damy znać powiadomieniem, gdy konto będzie aktywne.${profile?.role === 'parent' ? ' Wskazane dzieci pojawią się na Twoim koncie po zatwierdzeniu.' : ''} Dzięki temu do danych ministrantów mają dostęp tylko osoby z parafii.`}
       heroTop={
         <View style={[styles.hourglass, { borderColor: c.gold }]}>
           <Icon name="timer-sand" size={36} color={c.gold} />

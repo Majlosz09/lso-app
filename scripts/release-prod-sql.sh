@@ -66,6 +66,7 @@ MIGRATIONS=(
   "20261009010000_tidy_schedules.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='tidy_schedules')"
   "20261026000000_mass_cancellations.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='cancel_service')"
   "20261105000000_audit_hardening.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='trg_chat_members_protect')"
+  "20261105010000_parent_link_requests.sql|to_regclass('public.parent_link_requests') IS NOT NULL"
 )
 
 banner() {

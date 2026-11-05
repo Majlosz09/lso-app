@@ -243,7 +243,7 @@ export default function MembersTab() {
           <View style={styles.flex}>
             <AppText variant="bodyStrong">{p.full_name}</AppText>
             <AppText variant="small" muted numberOfLines={2}>
-              {`${p.role === 'parent' ? 'Rodzic' : `Ministrant${p.rocznik ? `, rocznik ${p.rocznik}` : ''}`}${p.children ? ` · dzieci: ${p.children}` : ''}`}
+              {`${p.role === 'parent' ? 'Rodzic' : `Ministrant${p.rocznik ? `, rocznik ${p.rocznik}` : ''}`}${p.children ? (p.role === 'parent' ? ` · dzieci (połączy po zatwierdzeniu): ${p.children}` : ` · dzieci: ${p.children}`) : ''}`}
             </AppText>
             {!!(p.email || p.phone) && <AppText variant="small" muted>{[p.email, p.phone].filter(Boolean).join(' · ')}</AppText>}
           </View>

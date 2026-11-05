@@ -347,7 +347,8 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
     const child = unlinkChild
     if (!child) return
     setUnlinkChild(null)
-    const { error } = await supabase.from('profiles').update({ parent_id: null }).eq('id', child.id)
+    // RPC: bezpośredni update cudzego profilu blokuje RLS bez błędu (0 wierszy)
+    const { error } = await supabase.rpc('unlink_my_child', { p_child_id: child.id })
     if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
     kids.setChildren(prev => prev.filter(k => k.id !== child.id))
     Toast.show({ type: 'success', text1: `Odłączono ${child.full_name}` })

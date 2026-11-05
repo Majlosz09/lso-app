@@ -24,14 +24,16 @@ Migracja `20261105000000_audit_hardening.sql`, test `scripts/audit-hardening-smo
 - [x] Indeksy kluczy obcych: `points.schedule_id`, `swap_offers.schedule_id`, `attendance_reports.schedule_id`, `chat_messages.sender_id`, `chat_messages.reply_to_id`, `challenge_completions.profile_id`, `recurring_commitments.profile_id`.
 - [x] Test dymny: każda z powyższych prób jako ministrant → błąd; zwykłe ścieżki aplikacji (wypis, nieobecność, odczyt czatu, edycja wiadomości) → działają.
 
-## Etap 2 — rodzic łączy się z dzieckiem za zgodą opiekuna
+## Etap 2 — rodzic łączy się z dzieckiem za zgodą opiekuna — ✅ LSO-dev 2026-11-05, prod + OTA + web: czeka
 
-- [ ] Tabela `parent_link_requests (parent_id, child_id, created_at)` + RLS (rodzic widzi swoje, opiekun swojej parafii).
-- [ ] `link_parent_to_children`: zamiast ustawiać `parent_id` — zapisuje prośby; bezpośrednie łączenie tylko dla opiekuna.
-- [ ] `approve_member` (rodzic): po zatwierdzeniu łączy z dziećmi z próśb (tylko dzieci nadal bez rodzica); odrzucenie usuwa prośby.
-- [ ] `get_pending_members`: zwraca wskazane dzieci, żeby opiekun widział je w karcie zatwierdzania.
-- [ ] UI: karta oczekującego rodzica w `members.tsx` pokazuje „Wskazane dzieci: …”; ekran rodzica „czeka na zatwierdzenie” mówi, że dzieci pojawią się po zatwierdzeniu.
-- [ ] Istniejące połączenia zostają (bez migracji danych); opcjonalnie lista rodziców połączonych przed zatwierdzeniem do ręcznego przejrzenia.
+Migracja `20261105010000_parent_link_requests.sql`, test `scripts/parent-link-smoke-dev.mjs` (13 OK). Przy okazji naprawione „Odłącz dziecko” rodzica (RPC `unlink_my_child`).
+
+- [x] Tabela `parent_link_requests (parent_id, child_id, created_at)` + RLS (rodzic widzi swoje, opiekun swojej parafii).
+- [x] `link_parent_to_children`: zamiast ustawiać `parent_id` — zapisuje prośby; bezpośrednie łączenie tylko dla opiekuna.
+- [x] `approve_member` (rodzic): po zatwierdzeniu łączy z dziećmi z próśb (tylko dzieci nadal bez rodzica); odrzucenie usuwa prośby.
+- [x] `get_pending_members`: zwraca wskazane dzieci, żeby opiekun widział je w karcie zatwierdzania.
+- [x] UI: karta oczekującego rodzica w `members.tsx` pokazuje „Wskazane dzieci: …”; ekran rodzica „czeka na zatwierdzenie” mówi, że dzieci pojawią się po zatwierdzeniu.
+- [x] Istniejące połączenia zostają (bez migracji danych); opcjonalnie lista rodziców połączonych przed zatwierdzeniem do ręcznego przejrzenia.
 
 ## Etap 3 — meldowanie sprawdzane przez serwer
 

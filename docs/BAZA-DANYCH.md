@@ -26,6 +26,7 @@ Migracja `20261005060000_helper_role.sql` podmieniła dynamicznie `is_parish_adm
 | `parish_functions`, `member_functions` | funkcje liturgiczne (lektor, ceremoniarz…) i kto je ma | `seed_parish_functions` zakłada domyślne przy nowej parafii |
 | `groups`, `group_members` | grupy ministrantów (starszy moduł) | |
 | `user_blocks` | blokowanie użytkowników na czacie | `blocker_id`, `blocked_id` |
+| `parent_link_requests` | prośby rodzica o połączenie z dziećmi (z rejestracji); połączenie (`profiles.parent_id`) powstaje dopiero przy `approve_member` | `parent_id`, `child_id`; zapis tylko przez RPC, czyści je zmiana parafii rodzica |
 
 ### Rozkład Mszy i grafik
 
@@ -92,7 +93,7 @@ Widok: `points_summary` (sumy punktów, `security_invoker`). Storage: kubeł `av
 
 Wszystkie poniżej są `SECURITY DEFINER` (omijają RLS) i same sprawdzają uprawnienia.
 
-**Konto i członkostwo**: `handle_new_user` (trigger po rejestracji — tworzy profil), `approve_member`, `get_pending_members`, `set_member_role`, `remove_member_from_parish`, `get_parish_members`, `get_parish_by_invite_code`, `get_parish_children_by_code` + `link_parent_to_children` (rodzic łączy się z dziećmi kodem parafii), `import_members` (lista z Excela → profile zarządzane), `claim_code_info` + `claim_member_profile` + `regenerate_claim_code` (przejęcie profilu kodem), `delete_my_account`, `export_my_data`.
+**Konto i członkostwo**: `handle_new_user` (trigger po rejestracji — tworzy profil), `approve_member`, `get_pending_members`, `set_member_role`, `remove_member_from_parish`, `get_parish_members`, `get_parish_by_invite_code`, `get_parish_children_by_code` + `link_parent_to_children` (rodzic czekający na zatwierdzenie wskazuje dzieci → prośby w `parent_link_requests`; opiekun łączy od razu; `approve_member` rodzica łączy z dziećmi z próśb, `get_pending_members` pokazuje je w karcie), `unlink_my_child` (rodzic odłącza swoje dziecko), `import_members` (lista z Excela → profile zarządzane), `claim_code_info` + `claim_member_profile` + `regenerate_claim_code` (przejęcie profilu kodem), `delete_my_account`, `export_my_data`.
 
 **Rozkład i grafik**: `mass_slots(parafia, od, do)` (wylicza godziny z rozkładu + okresów + kalendarza liturgicznego; także w `lib/massSchedule.ts`), `save_rozklad` (zapis stałego tygodnia lub okresu z polityką `move`/`cancel`/`keep` dla istniejących służb i trybem próbnym), `generate_schedules_from_templates`, `materialize_slot`, `tidy_schedules` (porządkowanie służb spoza rozkładu i duplikatów, tryb próbny), `cancel_service` / `cancel_mass_slot` / `restore_mass_slot` (odwołanie Mszy z rozkładu w danym dniu — tabela `mass_cancellations`, którą `mass_slots` pomija), `apply_auto_schedule` („Ułóż grafik za mnie”), `create_recurring_assignments` / `preview_recurring_assignments` / `cancel_recurring_assignments`, `set_schedule_roles`, `assign_role_slot`, `claim_role_slot`, `release_role_slot`, `delete_church`, `easter_date`, `liturgical_anchors`.
 
