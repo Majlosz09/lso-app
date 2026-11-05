@@ -74,9 +74,15 @@ banner() {
   echo "  Tryb: $MODE"
   echo "=============================================================="
 }
-q() { npx supabase db query --linked "$@"; }
-applied() {  # $1 = wyrażenie SQL → 0 gdy prawda
-  q "select ($1) as applied" 2>&1 | grep -q '"applied": true'
+# CLI w nowszych wersjach pyta o zgodę przy każdym zapytaniu — odczyty idą jako --read-only, zapis migracji jako --yes
+q()  { npx supabase db query --linked "$@"; }
+qr() { q --read-only "$@"; }
+qw() { q --yes "$@"; }
+LAST_OUT=""
+applied() {  # $1 = wyrażenie SQL → 0 gdy prawda; surowa odpowiedź CLI zostaje w LAST_OUT
+  # -o json: w terminalu Windows CLI zwraca tabelę zamiast JSON; tabelę („│ true”) też akceptujemy
+  LAST_OUT="$(qr -o json "select ($1) as applied" 2>&1 || true)"
+  echo "$LAST_OUT" | grep -qE '"applied": true|│ true '
 }
 back_to_dev() {
   echo "→ Przełączam Supabase CLI z powrotem na LSO-dev"
@@ -93,19 +99,24 @@ npx supabase link --project-ref "$PROD_REF"
 case "$MODE" in
   check)
     echo; echo "Stan migracji na PROD:"
+    shown=0
     for m in "${MIGRATIONS[@]}"; do
       f="${m%%|*}"; cond="${m#*|}"
-      if applied "$cond"; then echo "  [jest]     $f"; else echo "  [BRAKUJE]  $f"; fi
+      if applied "$cond"; then echo "  [jest]     $f"; else
+        echo "  [BRAKUJE]  $f"
+        # pierwsza „brakująca” — pokaż, co odpowiedziało CLI (błąd zapytania wygląda tak samo jak brak migracji)
+        if [ $shown = 0 ]; then shown=1; echo "$LAST_OUT" | sed 's/^/      │ /' | head -25; fi
+      fi
     done
     echo; echo "Rozszerzenia (wymagane: pg_cron do raportu miesięcznego):"
-    q "select extname from pg_extension where extname in ('pg_cron','pg_net') order by 1"
+    qr "select extname from pg_extension where extname in ('pg_cron','pg_net') order by 1"
     ;;
   backup)
     # kopia danych wszystkich tabel public do JSON (lokalnie, katalog w .gitignore)
     dir="backups/prod-$(date +%Y%m%d-%H%M%S)"; mkdir -p "$dir"
-    tables=$(q "select string_agg(tablename, ' ' order by tablename) as t from pg_tables where schemaname = 'public'" | grep -o '"t": "[^"]*' | sed 's/"t": "//')
+    tables=$(qr "select string_agg(tablename, ' ' order by tablename) as t from pg_tables where schemaname = 'public'" | grep -o '"t": "[^"]*' | sed 's/"t": "//')
     for t in $tables; do
-      q "select count(*) as n, coalesce(json_agg(x), '[]'::json) as rows from public.\"$t\" x" > "$dir/$t.json" 2>&1 || echo "  ✖ $t"
+      qr "select count(*) as n, coalesce(json_agg(x), '[]'::json) as rows from public.\"$t\" x" > "$dir/$t.json" 2>&1 || echo "  ✖ $t"
       echo "  $t: $(grep -o '"n": [0-9]*' "$dir/$t.json" | head -1)"
     done
     echo "Kopia: $dir"
@@ -113,17 +124,17 @@ case "$MODE" in
   query)
     # tylko odczyt: bash scripts/release-prod-sql.sh query "select ..."
     case "$(echo "${2:-}" | tr 'A-Z' 'a-z' | sed 's/^ *//')" in
-      select*|with*) q "$2" ;;
+      select*|with*) qr "$2" ;;
       *) echo "Tylko zapytania SELECT/WITH."; exit 1 ;;
     esac
     ;;
   counts)
-    q "select (select count(*) from profiles) profiles, (select count(*) from schedules) schedules, (select count(*) from schedule_assignments) assignments, (select count(*) from points) points, (select count(*) from attendance) attendance, (select count(*) from mass_templates) mass_templates, (select count(*) from parishes) parishes, (select count(*) from chat_messages) chat, (select count(*) from member_badges) badges, (select count(*) from churches) churches"
+    qr "select (select count(*) from profiles) profiles, (select count(*) from schedules) schedules, (select count(*) from schedule_assignments) assignments, (select count(*) from points) points, (select count(*) from attendance) attendance, (select count(*) from mass_templates) mass_templates, (select count(*) from parishes) parishes, (select count(*) from chat_messages) chat, (select count(*) from member_badges) badges, (select count(*) from churches) churches"
     ;;
   migrate)
     # bezpiecznik: gdy zapytania nie działają, każda kontrola dałaby „brakuje” i stare migracje poszłyby drugi raz
-    out="$(q "select true as applied" 2>&1 || true)"
-    if ! echo "$out" | grep -q '"applied": true'; then
+    out="$(qr -o json "select true as applied" 2>&1 || true)"
+    if ! echo "$out" | grep -qE '"applied": true|│ true '; then
       echo "STOP: nie mogę odpytać bazy PROD (nic nie uruchomiono). Odpowiedź CLI:"; echo "$out"
       exit 1
     fi
@@ -138,7 +149,7 @@ case "$MODE" in
       f="${m%%|*}"; cond="${m#*|}"
       if applied "$cond"; then echo "  pomijam (już jest)  $f"; continue; fi
       echo "  ▶ uruchamiam        $f"
-      if ! q -f "supabase/migrations/$f" >> "$LOG" 2>&1; then
+      if ! qw -f "supabase/migrations/$f" >> "$LOG" 2>&1; then
         echo "  ✖ BŁĄD w $f — zatrzymano. Szczegóły w $LOG (koniec pliku). Nic dalej nie uruchomiono."
         exit 1
       fi
@@ -157,9 +168,9 @@ case "$MODE" in
       applied "$cond" || { echo "  [BRAKUJE] $f"; missing=1; }
     done
     [ $missing = 0 ] && echo "  ✓ wszystkie migracje są w bazie"
-    q "select jobname, schedule from cron.job where jobname='lso-monthly-report'"
-    q "select count(*) filter (where system_ranks_enabled) as parafie_z_rangami_systemowymi, count(*) as parafie from parishes"
-    q "select count(*) as kosciol_glowny_brak from parishes p where not exists (select 1 from churches c where c.parish_id=p.id and c.is_main)"
+    qr "select jobname, schedule from cron.job where jobname='lso-monthly-report'"
+    qr "select count(*) filter (where system_ranks_enabled) as parafie_z_rangami_systemowymi, count(*) as parafie from parishes"
+    qr "select count(*) as kosciol_glowny_brak from parishes p where not exists (select 1 from churches c where c.parish_id=p.id and c.is_main)"
     ;;
   *) echo "Użycie: bash scripts/release-prod-sql.sh check|backup|migrate|verify|counts|query"; exit 1 ;;
 esac
