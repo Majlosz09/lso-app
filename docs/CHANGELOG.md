@@ -4,6 +4,13 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+### Dla użytkowników
+- Grafik nie pobiera się od nowa przy każdym przejściu między Pulpitem, Grafikiem i Obecnością; zmiany od opiekuna (np. „Ułóż grafik”) odświeżają ekran raz, zamiast wielokrotnie.
+
+### Techniczne
+- `hooks/useServices.ts` (audyt Etap 6b): pobieranie przez React Query (klucz: osoba, parafia, zakres; `staleTime` 30 s), `refresh()` unieważnia grafik na wszystkich ekranach. Realtime: jedna subskrypcja na aplikację z licznikiem użytkowników (kanał przydziałów + kanał służb osobno), odświeżenie 1,5 s po ostatniej zmianie. Interfejs hooka bez zmian (`services`, `loading`, `offline`, `refresh`). Sprawdzone na lso-app-dev: 0 zapytań przy przełączaniu zakładek, 3 zmiany przydziału od opiekuna → 1 odświeżenie.
+- Ustalenie: na LSO-dev `schedules` nie jest w publikacji Realtime — subskrypcja zmian służb nigdy nie działała (także przed zmianą); bez zmian w bazie, opis w `ARCHITEKTURA.md`.
+
 ## 2026-11-05 — SQL + OTA + web (wersja 1.2.0, bd5bacf; audyt Etap 6a)
 
 OTA grupa eb5a29e9 (runtime 1.2.0, iOS + Android), web app.lsoapp.com (wdrożenie 4d4b9a9e).

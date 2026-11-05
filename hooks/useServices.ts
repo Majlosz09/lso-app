@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../stores/authStore'
-import { useRealtimeTable } from './useRealtimeTable'
 import type { AssignmentStatus, ScheduleCategory } from '../types/database'
 import { ServiceMode, slotTitle } from '../lib/massSchedule'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -49,41 +49,29 @@ export function staffing(s: Service): { count: number; staffed: boolean } {
   return { count, staffed: count >= 1 }
 }
 
-/**
- * Służby parafii w zakresie dat (włącznie) + wolne miejsca z rozkładu Mszy,
- * z obsadą, moim przydziałem i moją obecnością. Odświeża się przez realtime.
- */
-export function useServices(from: string, to: string) {
-  const profile = useAuthStore(s => s.profile)
-  const [services, setServices] = useState<Service[]>([])
-  const [loading, setLoading] = useState(true)
-  /** grafik z pamięci telefonu (brak internetu) */
-  const [offline, setOffline] = useState(false)
-  const queued = useCheckinQueue(st => st.items)
+type ServicesResult = { list: Service[]; offline: boolean }
 
-  const load = useCallback(async () => {
-    if (!profile?.id || !profile.parish_id) return
+async function fetchServices(profileId: string, parishId: string, from: string, to: string): Promise<ServicesResult> {
     const [schedRes, tplRes, chRes] = await Promise.all([
       supabase
         .from('schedules')
         .select('id, date, time, title, category, service_mode, notes, church_id')
-        .eq('parish_id', profile.parish_id)
+        .eq('parish_id', parishId)
         .gte('date', from)
         .lte('date', to)
         .order('date').order('time'),
       // obowiązujący rozkład (stały + zmiany okresowe)
-      supabase.rpc('mass_slots', { p_parish: profile.parish_id, p_from: from, p_to: to }),
-      supabase.from('churches').select('id, name, short_name, is_main, lat, lng, gps_radius').eq('parish_id', profile.parish_id),
+      supabase.rpc('mass_slots', { p_parish: parishId, p_from: from, p_to: to }),
+      supabase.from('churches').select('id, name, short_name, is_main, lat, lng, gps_radius').eq('parish_id', parishId),
     ])
-    const cacheKey = servicesCacheKey(profile.id, from, to)
+    const cacheKey = servicesCacheKey(profileId, from, to)
     if (schedRes.error && isNetworkError(schedRes.error)) {
       // bez zasięgu: ostatnio pobrany grafik (żeby dało się zameldować w zakrystii bez sieci)
       try {
         const raw = await AsyncStorage.getItem(cacheKey)
-        if (raw) { setServices(JSON.parse(raw)); setOffline(true) }
+        if (raw) return { list: JSON.parse(raw) as Service[], offline: true }
       } catch { /* brak pamięci */ }
-      setLoading(false)
-      return
+      return { list: [], offline: true }
     }
     const churches = (chRes.data ?? []) as any[]
     const churchById = new Map(churches.map(ch => [ch.id, ch]))
@@ -109,7 +97,7 @@ export function useServices(from: string, to: string) {
         supabase
           .from('attendance')
           .select('schedule_id')
-          .eq('profile_id', profile.id)
+          .eq('profile_id', profileId)
           .in('schedule_id', ids),
       ])
       assignments = aRes.data ?? []
@@ -125,7 +113,7 @@ export function useServices(from: string, to: string) {
 
     const list: Service[] = schedules.map(s => {
       const rows = byService.get(s.id) ?? []
-      const mine = rows.find(r => r.profile_id === profile.id)
+      const mine = rows.find(r => r.profile_id === profileId)
       return {
         id: s.id,
         date: s.date,
@@ -141,7 +129,7 @@ export function useServices(from: string, to: string) {
           : null,
         attended: attended.has(s.id) || mine?.status === 'present',
         people: rows
-          .map(r => ({ profileId: r.profile_id, name: r.profile?.full_name ?? '—', status: r.status, isMe: r.profile_id === profile.id, role: r.role ?? 'ministrant' }))
+          .map(r => ({ profileId: r.profile_id, name: r.profile?.full_name ?? '—', status: r.status, isMe: r.profile_id === profileId, role: r.role ?? 'ministrant' }))
           .sort((a, b) => Number(b.isMe) - Number(a.isMe) || a.name.localeCompare(b.name, 'pl')),
       }
     })
@@ -161,29 +149,91 @@ export function useServices(from: string, to: string) {
       list.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
     }
 
-    setServices(list)
-    setOffline(false)
-    setLoading(false)
     try { await Promise.resolve(AsyncStorage.setItem(cacheKey, JSON.stringify(list))) } catch { /* bez pamięci */ }
-    pruneServicesCache(profile.id, localDateStr(new Date()))
-  }, [profile?.id, profile?.parish_id, from, to])
+    pruneServicesCache(profileId, localDateStr(new Date()))
+    return { list, offline: false }
+}
 
-  useEffect(() => { setLoading(true); load() }, [load])
+// ── Odświeżanie przez realtime: jedna subskrypcja na aplikację (wcześniej każda kopia hooka — Pulpit, Grafik,
+// Obecność — miała własne kanały i przeładowywała się osobno przy każdej zmianie). Seria zmian (np. „Ułóż grafik”)
+// = jedno odświeżenie po 1,5 s. Odświeżane są tylko widoczne ekrany; pozostałe pobiorą dane przy powrocie.
+const SERVICES_KEY = 'services'
+const EMPTY: Service[] = []
+let rtChannels: ReturnType<typeof supabase.channel>[] = []
+let rtParish: string | null = null
+let rtUsers = 0
+let rtTimer: ReturnType<typeof setTimeout> | null = null
+
+function subscribeServicesRealtime(qc: QueryClient, parishId: string): () => void {
+  if (rtChannels.length && rtParish !== parishId) { rtChannels.forEach(ch => supabase.removeChannel(ch)); rtChannels = [] }
+  rtUsers++
+  if (!rtChannels.length) {
+    rtParish = parishId
+    const bump = () => {
+      if (rtTimer) clearTimeout(rtTimer)
+      rtTimer = setTimeout(() => { rtTimer = null; qc.invalidateQueries({ queryKey: [SERVICES_KEY] }) }, 1500)
+    }
+    const id = Math.random().toString(36).slice(2, 8)
+    // Osobne kanały: gdy tabela nie jest w publikacji Realtime, serwer odrzuca CAŁY kanał. Na LSO-dev (2026-11-05)
+    // schedules w publikacji nie ma — we wspólnym kanale przestałyby docierać też zmiany przydziałów.
+    // Przydziały bez kolumny parafii: Realtime i tak dostarcza tylko wiersze widoczne przez RLS (własna parafia).
+    rtChannels = [
+      supabase.channel(`services-a-${parishId}-${id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_assignments' }, bump)
+        .subscribe(),
+      supabase.channel(`services-s-${parishId}-${id}`)
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'schedules', filter: `parish_id=eq.${parishId}` }, bump)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'schedules', filter: `parish_id=eq.${parishId}` }, bump)
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'schedules' }, bump)
+        .subscribe(),
+    ]
+  }
+  return () => {
+    rtUsers--
+    if (rtUsers <= 0 && rtChannels.length) { rtChannels.forEach(ch => supabase.removeChannel(ch)); rtChannels = []; rtParish = null; rtUsers = 0 }
+  }
+}
+
+/**
+ * Służby parafii w zakresie dat (włącznie) + wolne miejsca z rozkładu Mszy,
+ * z obsadą, moim przydziałem i moją obecnością. Dane wspólne dla ekranów z tym samym zakresem (React Query),
+ * odświeżane przez realtime.
+ */
+export function useServices(from: string, to: string) {
+  const profile = useAuthStore(s => s.profile)
+  const queued = useCheckinQueue(st => st.items)
+  const qc = useQueryClient()
+  const profileId = profile?.id, parishId = profile?.parish_id
+  const query = useQuery({
+    queryKey: [SERVICES_KEY, profileId, parishId, from, to],
+    queryFn: () => fetchServices(profileId!, parishId!, from, to),
+    enabled: !!profileId && !!parishId,
+    staleTime: 30_000,
+  })
+  // po akcji (zapis, meldowanie) odśwież grafik na wszystkich ekranach — widoczne od razu, reszta przy powrocie
+  const load = useCallback(async () => { await qc.invalidateQueries({ queryKey: [SERVICES_KEY] }) }, [qc])
+
+  useEffect(() => {
+    if (!parishId) return
+    return subscribeServicesRealtime(qc, parishId)
+  }, [qc, parishId])
+
   // kolejka wysłana → odśwież (obecność jest już w bazie)
   const prevQueued = useRef(queued.length)
   useEffect(() => {
     if (queued.length < prevQueued.current) load()
     prevQueued.current = queued.length
   }, [queued.length])
-  useRealtimeTable('schedule_assignments', () => { load() })
-  useRealtimeTable('schedules', () => { load() }, profile?.parish_id ? `parish_id=eq.${profile.parish_id}` : undefined)
 
   // obecność czekająca w kolejce telefonu = już potwierdzona (nie meldujemy drugi raz)
-  const pendingKeys = new Set(queued.filter(q => q.profileId === profile?.id).map(q => q.key))
-  const shown = pendingKeys.size && profile?.id
-    ? services.map(s => pendingKeys.has(queueKey(profile.id, s.date, s.time, s.churchId)) ? { ...s, attended: true } : s)
-    : services
+  const services = query.data?.list ?? EMPTY
+  const shown = useMemo(() => {
+    const pendingKeys = new Set(queued.filter(q => q.profileId === profileId).map(q => q.key))
+    return pendingKeys.size && profileId
+      ? services.map(s => pendingKeys.has(queueKey(profileId, s.date, s.time, s.churchId)) ? { ...s, attended: true } : s)
+      : services
+  }, [services, queued, profileId])
 
-  return { services: shown, loading, offline, refresh: load }
+  return { services: shown, loading: query.isLoading || (!query.data && !!profileId && !!parishId), offline: query.data?.offline ?? false, refresh: load }
 }
 
