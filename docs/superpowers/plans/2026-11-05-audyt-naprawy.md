@@ -11,7 +11,7 @@ Decyzje użytkownika (2026-11-05):
 
 ---
 
-## Etap 1 — doszczelnienia w bazie (tylko SQL, aplikacja bez zmian) — ✅ LSO-dev 2026-11-05, prod: czeka
+## Etap 1 — doszczelnienia w bazie (tylko SQL, aplikacja bez zmian) — ✅ LSO-dev + produkcja 2026-11-05
 
 Migracja `20261105000000_audit_hardening.sql`, test `scripts/audit-hardening-smoke-dev.mjs` (21 OK). Regresja: swap, parent-absence, helper, import-claim, offline-checkin, chat-settings, excuse-penalty, points-approval, security, kids, attendance-reports — OK (`roles` i `recurring-guard` mają nieaktualne dane demo: Filip jest pomocnikiem, brak śr 17:00/18:00 w rozkładzie).
 
