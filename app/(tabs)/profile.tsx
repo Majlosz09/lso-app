@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { useRouter } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
@@ -474,7 +474,6 @@ export function ProfileView({ mode }: { mode: ProfileMode }) {
           options={[{ value: 'light', label: 'Jasny' }, { value: 'dark', label: 'Ciemny' }, { value: 'system', label: 'Systemowy' }]}
         />
       </View>
-      {(admin || profile?.is_admin) && <DigestEmailRow />}
       <ListRow icon="lock-reset" title="Zmień hasło" subtitle="Wyślemy link na Twój e-mail" onPress={() => setPasswordOpen(true)} />
       <ListRow icon="school" title="Instruktaż aplikacji" subtitle="Przewodnik po ekranach, krok po kroku" onPress={() => useTour.getState().start(tourRoleFor(profile))} />
     </Card>
@@ -659,27 +658,3 @@ const styles = StyleSheet.create({
   desktopLeft: { width: 340, gap: 14 },
   desktopRight: { flex: 1, gap: 14 },
 })
-
-/** Opiekun: codzienny e-mail, gdy coś czeka (migracja 20261105080000, Edge Function send-admin-digest). */
-function DigestEmailRow() {
-  const { profile, fetchProfile } = useAuthStore()
-  const { colors: c } = useTheme()
-  const [busy, setBusy] = useState(false)
-  const on = profile?.email_digest !== false
-  const toggle = async (v: boolean) => {
-    if (!profile?.id) return
-    setBusy(true)
-    const { error } = await supabase.from('profiles').update({ email_digest: v }).eq('id', profile.id)
-    setBusy(false)
-    if (error) { Toast.show({ type: 'error', text1: 'Nie udało się zapisać', text2: error.message }); return }
-    await fetchProfile()
-  }
-  return (
-    <ListRow
-      icon="email-fast-outline"
-      title="Codzienny e-mail o sprawach do załatwienia"
-      subtitle="Raz dziennie, tylko gdy czekają osoby do zatwierdzenia, nieobecności lub zgłoszenia obecności"
-      right={<Switch value={on} disabled={busy} onValueChange={toggle} trackColor={{ true: c.primary, false: c.inputBorder }} thumbColor="#FFFFFF" />}
-    />
-  )
-}
