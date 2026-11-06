@@ -124,7 +124,7 @@ export default function MemberDetailScreen() {
 
   useEffect(() => {
     if (!id || !adminProfile?.parish_id) return
-    const today = new Date().toISOString().split('T')[0]
+    const today = localDateStr()
 
     const queries: PromiseLike<any>[] = [
       supabase.from('profiles').select('id, full_name, role, phone, rocznik, avatar_url, rank_id, parent_id, is_helper, managed, claim_code').eq('id', id).single(),

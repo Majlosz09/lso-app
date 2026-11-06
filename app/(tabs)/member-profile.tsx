@@ -8,7 +8,7 @@ import { useIsDesktop } from '../../hooks/useIsDesktop'
 import { useLiturgyHeader } from '../../hooks/useLiturgyHeader'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans } from '../../lib/theme'
-import { pl } from '../../lib/dates'
+import { localDateStr, pl } from '../../lib/dates'
 import { FormationSection, BadgeWithDef } from '../../components/FormationBadges'
 import { FormationProgressCard } from '../../components/FormationProgressCard'
 import { BadgeGrid } from '../../components/BadgeGrid'
@@ -63,7 +63,7 @@ export default function MemberProfileScreen() {
         supabase.from('points_summary').select('profile_id, total_points, services_count')
           .eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
         supabase.from('schedule_assignments').select('status, schedule:schedules!inner(date)')
-          .eq('profile_id', id).lt('schedule.date', new Date().toISOString().slice(0, 10)),
+          .eq('profile_id', id).lt('schedule.date', localDateStr()),
       ])
       if (memberRes.error || !memberRes.data) setNotFound(true)
       else setMember(memberRes.data as unknown as MemberData)

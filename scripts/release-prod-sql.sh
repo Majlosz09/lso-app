@@ -74,6 +74,7 @@ MIGRATIONS=(
   "20261105060000_open_dm_rpc.sql|to_regprocedure('public.open_dm(uuid)') IS NOT NULL"
   "20261105070000_schedules_realtime.sql|EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'schedules')"
   "20261106000000_recurring_unify.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='leave_recurring')"
+  "20261106010000_logic_fixes.sql|EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_schedules_drop_points')"
 )
 
 banner() {

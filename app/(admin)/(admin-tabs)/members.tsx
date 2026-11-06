@@ -6,7 +6,7 @@ import { supabase } from '../../../lib/supabase'
 import { useAuthStore } from '../../../stores/authStore'
 import { useTheme } from '../../../lib/ThemeContext'
 import { sans, serif } from '../../../lib/theme'
-import { pl } from '../../../lib/dates'
+import { localDateStr, pl } from '../../../lib/dates'
 import { attendanceRate } from '../../../lib/serviceRules'
 import { useIsDesktop } from '../../../hooks/useIsDesktop'
 import { useLiturgyHeader } from '../../../hooks/useLiturgyHeader'
@@ -80,7 +80,7 @@ export default function MembersTab() {
         supabase.from('points_summary').select('profile_id, total_points, services_count').eq('parish_id', adminProfile!.parish_id),
         supabase.from('ranks').select('id, name').or(`parish_id.is.null,parish_id.eq.${adminProfile!.parish_id}`),
         supabase.from('schedule_assignments').select('profile_id, status, schedule:schedules!inner(parish_id, date)')
-          .eq('schedule.parish_id', adminProfile!.parish_id).lt('schedule.date', new Date().toISOString().slice(0, 10)),
+          .eq('schedule.parish_id', adminProfile!.parish_id).lt('schedule.date', localDateStr()),
       ])
       const rankName = new Map(((ranksRes.data ?? []) as any[]).map(r => [r.id, r.name]))
       const statuses = new Map<string, string[]>()

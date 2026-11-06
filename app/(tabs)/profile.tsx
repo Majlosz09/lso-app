@@ -14,7 +14,7 @@ import { computeAndSyncBadges } from '../../lib/badges'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
 import { sans, serif } from '../../lib/theme'
-import { pl } from '../../lib/dates'
+import { addDays, localDateStr, pl } from '../../lib/dates'
 import { useThemeStore, ThemeOverride } from '../../stores/themeStore'
 import { AvatarImage } from '../../components/AvatarImage'
 import { PRESET_ICONS, PRESET_COLORS, buildPresetUrl, parsePresetUrl, isPresetUrl } from '../../lib/presetAvatar'
@@ -286,8 +286,8 @@ function useProfileData(mode: ProfileMode) {
     if (!profile?.id || !profile.parish_id) return
     if (mode === 'parent') return
     if (admin) {
-      const today = new Date().toISOString().split('T')[0]
-      const in30 = new Date(Date.now() + 30 * 86_400_000).toISOString().split('T')[0]
+      const today = localDateStr()
+      const in30 = addDays(localDateStr(), 30)
       Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('parish_id', profile.parish_id).eq('role', 'member').eq('is_active', true),
         supabase.from('schedules').select('id', { count: 'exact', head: true }).eq('parish_id', profile.parish_id).gte('date', today).lte('date', in30),
@@ -301,7 +301,7 @@ function useProfileData(mode: ProfileMode) {
     Promise.all([
       supabase.from('points_summary').select('profile_id, total_points, services_count').eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
       supabase.from('schedule_assignments').select('status, schedule:schedules!inner(date)')
-        .eq('profile_id', profile.id).lt('schedule.date', new Date().toISOString().slice(0, 10)),
+        .eq('profile_id', profile.id).lt('schedule.date', localDateStr()),
       supabase.from('ranks').select('id, name, order').or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`).order('order'),
       profile.parent_id
         ? supabase.from('profiles').select('full_name').eq('id', profile.parent_id).maybeSingle()

@@ -5,9 +5,16 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 ## Nieopublikowane
 
 ### Dla użytkowników
+- Usunięcie albo odwołanie służby zabiera też jej punkty za obecność (wcześniej obecność znikała, a punkty zostawały w rankingu).
+- Po wypisie ze służby otwarta prośba o zamianę tej służby zamyka się sama.
+- Ogłoszenie dla wybranego stopnia wysyła też powiadomienie na telefon (wcześniej tylko dzwonek w aplikacji).
+- Zapis „co tydzień” dołącza wcześniejsze pojedyncze zapisy na ten sam termin, więc wypis z całego cyklu zdejmuje też je.
+- Usunięcie stopnia, który ktoś ma: czytelny komunikat zamiast błędu bazy.
+- „Dziś” w statystykach członka i profilu liczone wg czasu polskiego (po północy pokazywało wczoraj).
 - Nowa, zmieniona albo odwołana służba pojawia się u innych od razu (wcześniej dopiero po odświeżeniu ekranu).
 
 ### Techniczne
+- Migracja `20261106010000_logic_fixes.sql` (przegląd logiki): trigger `trg_schedules_drop_points` (BEFORE DELETE schedules → punkty checkin/penalty), `trg_assignments_close_swaps` (AFTER DELETE schedule_assignments → otwarte swap_offers cancelled), `trg_fn_notify_announcement` obsługuje stopień i pomija niezatwierdzonych/autora, `sign_up_for_slot` dopina istniejące zapisy (ON CONFLICT DO UPDATE w trybie lso.sys). Test: `scripts/logic-fixes-smoke-dev.mjs` (11/11). Na LSO-dev 2026-11-06.
 - Migracja `20261105070000_schedules_realtime.sql` (audyt Etap 7, decyzja właściciela): `schedules` w publikacji `supabase_realtime` (aplikacja już słuchała tej tabeli). Na LSO-dev 2026-11-05.
 - Sprawdzony i odrzucony podział pliku webu (`asyncRoutes` expo-router): start 1,27 MB zamiast 1,44 MB gzip (−12%), bo 4,3 MB to wspólne biblioteki; minusy — doładowanie przy każdym ekranie i błędy w otwartych kartach po wdrożeniu (stare części znikają). Bez zmian w `app.json`.
 

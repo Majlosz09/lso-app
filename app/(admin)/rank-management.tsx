@@ -8,6 +8,7 @@ import Toast from 'react-native-toast-message'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { supabase } from '../../lib/supabase'
+import { rankHolders, rankInUseMessage } from '../../lib/ranks'
 import { RankRequirement, RankRequirementsSheet, requirementSummary } from '../../components/admin/RankRequirementsSheet'
 import { useAuthStore } from '../../stores/authStore'
 import { useTheme } from '../../lib/ThemeContext'
@@ -124,6 +125,9 @@ export default function RankManagementScreen() {
     const rank = toDelete
     setToDelete(null)
     if (!rank) return
+    // stopień przypisany komuś: baza odrzuci usunięcie (klucz obcy) — mówimy po ludzku, zamiast pokazywać błąd bazy
+    const inUse = await rankHolders(rank.id)
+    if (inUse) { Toast.show({ type: 'error', ...rankInUseMessage(inUse) }); return }
     const { error } = await supabase.from('ranks').delete().eq('id', rank.id)
     if (error) Toast.show({ type: 'error', text1: 'Błąd', text2: error.message })
     else fetchRanks()
