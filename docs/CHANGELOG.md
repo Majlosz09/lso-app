@@ -4,6 +4,8 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 
 ## Nieopublikowane
 
+## 2026-11-06 — przegląd logiki: SQL + web + OTA (wersja 1.2.0, 19f8999)
+
 ### Dla użytkowników
 - Jedna frekwencja w całej aplikacji (lista Członków, profil, Statystyki, eksport, raport miesięczny, warunek awansu w ścieżce formacji): obecny ÷ (obecny + nieobecny + zapisany, którego po zamknięciu meldowania nikt nie odhaczył). Przyjęte usprawiedliwienia, czekające zgłoszenia i zamiany się nie liczą. Wcześniej trzy różne wzory — ta sama osoba miała różne %. Status w grafiku się nie zmienia.
 - Usunięcie albo odwołanie służby zabiera też jej punkty za obecność (wcześniej obecność znikała, a punkty zostawały w rankingu).
