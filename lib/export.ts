@@ -1,6 +1,7 @@
 import * as Sharing from 'expo-sharing'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { buildXlsx, Sheet } from './xlsx'
+import { rateStatus } from './serviceRules'
 
 export type MemberExportRow = {
   fullName: string
@@ -39,7 +40,7 @@ export async function buildExportData(
       .eq('is_active', true),
     supabase
       .from('schedule_assignments')
-      .select('profile_id, status, schedule:schedules!inner(parish_id, service_mode)')
+      .select('profile_id, status, schedule:schedules!inner(parish_id, service_mode, date, time)')
       .eq('schedule.parish_id', parishId)
       .gte('schedule.date', from)
       .lte('schedule.date', to),
@@ -61,8 +62,10 @@ export async function buildExportData(
   if (profilesRes.error) throw new Error(profilesRes.error.message)
   const profiles:    { id: string; full_name: string }[]       = profilesRes.data    ?? []
   // służby „bez punktów” (tryb none) nie wchodzą do frekwencji
-  const assignments: { profile_id: string; status: string }[] =
-    (assignmentsRes.data ?? []).filter((a: any) => a.schedule?.service_mode !== 'none')
+  // frekwencja wg wspólnej reguły (rateStatus): służby „bez obecności” i nieliczone statusy odpadają tu
+  const assignments: { profile_id: string; rate: 'present' | 'absent' }[] = (assignmentsRes.data ?? [])
+    .map((a: any) => ({ profile_id: a.profile_id, rate: a.schedule ? rateStatus({ status: a.status, date: a.schedule.date, time: a.schedule.time, serviceMode: a.schedule.service_mode }) : null }))
+    .filter((a: any) => a.rate) as any
   const reportRows:  { profile_id: string }[]                  = reportsRes?.data   ?? []
   const pointRows:   { profile_id: string; amount: number }[]  = pointsRes.data      ?? []
 
@@ -77,9 +80,8 @@ export async function buildExportData(
   for (const a of assignments) {
     const m = map.get(a.profile_id)
     if (!m) continue
-    // 'excused' does not count toward scheduled; 'swapped' and 'assigned' count as scheduled but not present
-    if (a.status !== 'excused') m.scheduled++
-    if (a.status === 'present' || a.status === 'confirmed') m.present++
+    m.scheduled++
+    if (a.rate === 'present') m.present++
   }
   for (const r of pointRows) {
     const m = map.get(r.profile_id)

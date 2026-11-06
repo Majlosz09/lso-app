@@ -7,7 +7,7 @@ import { useAuthStore } from '../../../stores/authStore'
 import { useTheme } from '../../../lib/ThemeContext'
 import { sans, serif } from '../../../lib/theme'
 import { localDateStr, pl } from '../../../lib/dates'
-import { attendanceRate } from '../../../lib/serviceRules'
+import { attendanceRate, RateRow } from '../../../lib/serviceRules'
 import { useIsDesktop } from '../../../hooks/useIsDesktop'
 import { useLiturgyHeader } from '../../../hooks/useLiturgyHeader'
 import {
@@ -79,14 +79,14 @@ export default function MembersTab() {
           .order('full_name'),
         supabase.from('points_summary').select('profile_id, total_points, services_count').eq('parish_id', adminProfile!.parish_id),
         supabase.from('ranks').select('id, name').or(`parish_id.is.null,parish_id.eq.${adminProfile!.parish_id}`),
-        supabase.from('schedule_assignments').select('profile_id, status, schedule:schedules!inner(parish_id, date)')
-          .eq('schedule.parish_id', adminProfile!.parish_id).lt('schedule.date', localDateStr()),
+        supabase.from('schedule_assignments').select('profile_id, status, schedule:schedules!inner(parish_id, date, time, service_mode)')
+          .eq('schedule.parish_id', adminProfile!.parish_id).lte('schedule.date', localDateStr()),
       ])
       const rankName = new Map(((ranksRes.data ?? []) as any[]).map(r => [r.id, r.name]))
-      const statuses = new Map<string, string[]>()
+      const statuses = new Map<string, RateRow[]>()
       for (const a of (assignRes.data ?? []) as any[]) {
         const list = statuses.get(a.profile_id) ?? []
-        list.push(a.status)
+        list.push({ status: a.status, date: a.schedule.date, time: a.schedule.time, serviceMode: a.schedule.service_mode })
         statuses.set(a.profile_id, list)
       }
       const servicesMap: Record<string, number> = {}

@@ -5,6 +5,7 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 ## Nieopublikowane
 
 ### Dla użytkowników
+- Jedna frekwencja w całej aplikacji (lista Członków, profil, Statystyki, eksport, raport miesięczny, warunek awansu w ścieżce formacji): obecny ÷ (obecny + nieobecny + zapisany, którego po zamknięciu meldowania nikt nie odhaczył). Przyjęte usprawiedliwienia, czekające zgłoszenia i zamiany się nie liczą. Wcześniej trzy różne wzory — ta sama osoba miała różne %. Status w grafiku się nie zmienia.
 - Usunięcie albo odwołanie służby zabiera też jej punkty za obecność (wcześniej obecność znikała, a punkty zostawały w rankingu).
 - Po wypisie ze służby otwarta prośba o zamianę tej służby zamyka się sama.
 - Ogłoszenie dla wybranego stopnia wysyła też powiadomienie na telefon (wcześniej tylko dzwonek w aplikacji).
@@ -14,6 +15,7 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 - Nowa, zmieniona albo odwołana służba pojawia się u innych od razu (wcześniej dopiero po odświeżeniu ekranu).
 
 ### Techniczne
+- Migracja `20261106020000_attendance_rate.sql` (decyzja właściciela 2026-11-06): funkcja `rate_status(status, date, time, mode)`, wzór podmieniony w `_monthly_report` i `_formation_progress`. W aplikacji `rateStatus()` / `attendanceRate(rows)` w `lib/serviceRules.ts` — używane w `lib/statistics.ts`, `lib/export.ts`, members, profile, member-profile. Testy jednostkowe zaktualizowane (219/219). Na LSO-dev 2026-11-06.
 - Migracja `20261106010000_logic_fixes.sql` (przegląd logiki): trigger `trg_schedules_drop_points` (BEFORE DELETE schedules → punkty checkin/penalty), `trg_assignments_close_swaps` (AFTER DELETE schedule_assignments → otwarte swap_offers cancelled), `trg_fn_notify_announcement` obsługuje stopień i pomija niezatwierdzonych/autora, `sign_up_for_slot` dopina istniejące zapisy (ON CONFLICT DO UPDATE w trybie lso.sys). Test: `scripts/logic-fixes-smoke-dev.mjs` (11/11). Na LSO-dev 2026-11-06.
 - Migracja `20261105070000_schedules_realtime.sql` (audyt Etap 7, decyzja właściciela): `schedules` w publikacji `supabase_realtime` (aplikacja już słuchała tej tabeli). Na LSO-dev 2026-11-05.
 - Sprawdzony i odrzucony podział pliku webu (`asyncRoutes` expo-router): start 1,27 MB zamiast 1,44 MB gzip (−12%), bo 4,3 MB to wspólne biblioteki; minusy — doładowanie przy każdym ekranie i błędy w otwartych kartach po wdrożeniu (stare części znikają). Bez zmian w `app.json`.

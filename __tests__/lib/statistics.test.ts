@@ -12,21 +12,23 @@ describe('computeParishStats', () => {
     asg('m1', 'absent', '2026-09-10'),
     asg('m2', 'confirmed', '2026-09-10'),
     asg('m2', 'excused', '2026-09-20', 'zbiorka'), // czeka na decyzję — nie liczymy
+    asg('m2', 'present', '2026-09-20', 'zbiorka'),
+    asg('m1', 'assigned', '2026-09-20'),           // nikt nie odhaczył — nieobecność
   ]
   const points = [{ profile_id: 'm1', amount: 5 }, { profile_id: 'm1', amount: -2 }, { profile_id: 'm2', amount: 3 }]
-  const s = computeParishStats('2026-09-01', '2026-09-30', schedules as any, assignments as any, points, { m1: 'Adam', m2: 'Bartek', m3: 'Cezary' })
+  const s = computeParishStats('2026-09-01', '2026-09-30', schedules as any, assignments as any, points, { m1: 'Adam', m2: 'Bartek', m3: 'Cezary' }, new Date('2026-10-15T12:00:00'))
 
-  it('overall rate ignores pending excuses', () => {
+  it('overall rate: excuses left out, unmarked past assignment = absence', () => {
     expect(s.present).toBe(2)
-    expect(s.counted).toBe(3)
-    expect(s.rate).toBe(67)
+    expect(s.counted).toBe(4)
+    expect(s.rate).toBe(50)
     expect(s.points).toBe(8) // tylko dodatnie
     expect(s.services).toBe(3)
   })
 
   it('per-member rate, members without services listed with null', () => {
     const byId = Object.fromEntries(s.members.map(m => [m.profile_id, m]))
-    expect(byId.m1.rate).toBe(50)
+    expect(byId.m1.rate).toBe(33)
     expect(byId.m2.rate).toBe(100)
     expect(byId.m3.rate).toBeNull()
     expect(s.members[0].profile_id).toBe('m2')

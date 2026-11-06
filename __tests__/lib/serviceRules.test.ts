@@ -93,8 +93,16 @@ describe('attendanceRate', () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { attendanceRate } = require('../../app/(tabs)/member-profile')
   it('present / counted past services', () => {
-    expect(attendanceRate(['present', 'present', 'absent', 'assigned'])).toBe(67)
-    expect(attendanceRate(['assigned'])).toBeNull()
-    expect(attendanceRate(['present', 'excused'])).toBe(50)
+    const r = (status: string, date = '2026-01-07', time: string | null = '18:00') => ({ status, date, time })
+    const now = new Date('2026-01-10T12:00:00')
+    // nieodhaczony zapis po zamknięciu meldowania = nieobecność
+    expect(attendanceRate([r('present'), r('present'), r('absent'), r('assigned')], now)).toBe(50)
+    // przyszła służba / jeszcze trwa meldowanie — nie liczy się
+    expect(attendanceRate([r('assigned', '2026-01-10', '11:00')], now)).toBeNull()
+    expect(attendanceRate([r('assigned', '2026-01-10', '10:00')], now)).toBe(0)
+    // usprawiedliwienia (czekające i przyjęte) oraz zamiany pomijane
+    expect(attendanceRate([r('present'), r('excused'), r('confirmed'), r('swapped')], now)).toBe(100)
+    // służba bez obecności
+    expect(attendanceRate([{ ...r('absent'), serviceMode: 'none' }], now)).toBeNull()
   })
 })

@@ -300,8 +300,8 @@ function useProfileData(mode: ProfileMode) {
     }
     Promise.all([
       supabase.from('points_summary').select('profile_id, total_points, services_count').eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
-      supabase.from('schedule_assignments').select('status, schedule:schedules!inner(date)')
-        .eq('profile_id', profile.id).lt('schedule.date', localDateStr()),
+      supabase.from('schedule_assignments').select('status, schedule:schedules!inner(date, time, service_mode)')
+        .eq('profile_id', profile.id).lte('schedule.date', localDateStr()),
       supabase.from('ranks').select('id, name, order').or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`).order('order'),
       profile.parent_id
         ? supabase.from('profiles').select('full_name').eq('id', profile.parent_id).maybeSingle()
@@ -309,7 +309,7 @@ function useProfileData(mode: ProfileMode) {
     ]).then(([rank, assign, ranks, parent]) => {
       const rows = (rank.data ?? []) as any[]
       const me = rows.find(r => r.profile_id === profile.id)
-      const rate = attendanceRate(((assign.data ?? []) as any[]).map(a => a.status))
+      const rate = attendanceRate(((assign.data ?? []) as any[]).map(a => ({ status: a.status, date: a.schedule.date, time: a.schedule.time, serviceMode: a.schedule.service_mode })))
       const services = me?.services_count ?? 0
       setStats({
         a: String(me?.total_points ?? 0), al: 'pkt',

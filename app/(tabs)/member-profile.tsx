@@ -62,8 +62,8 @@ export default function MemberProfileScreen() {
           .or(`parish_id.is.null,parish_id.eq.${profile.parish_id}`).order('order'),
         supabase.from('points_summary').select('profile_id, total_points, services_count')
           .eq('parish_id', profile.parish_id).order('total_points', { ascending: false }),
-        supabase.from('schedule_assignments').select('status, schedule:schedules!inner(date)')
-          .eq('profile_id', id).lt('schedule.date', localDateStr()),
+        supabase.from('schedule_assignments').select('status, schedule:schedules!inner(date, time, service_mode)')
+          .eq('profile_id', id).lte('schedule.date', localDateStr()),
       ])
       if (memberRes.error || !memberRes.data) setNotFound(true)
       else setMember(memberRes.data as unknown as MemberData)
@@ -74,7 +74,7 @@ export default function MemberProfileScreen() {
         points: idx >= 0 ? rows[idx].total_points : 0,
         services: idx >= 0 ? rows[idx].services_count : 0,
         position: idx + 1,
-        attendance: attendanceRate(((assignRes.data ?? []) as any[]).map(a => a.status)),
+        attendance: attendanceRate(((assignRes.data ?? []) as any[]).map(a => ({ status: a.status, date: a.schedule.date, time: a.schedule.time, serviceMode: a.schedule.service_mode }))),
       })
     } catch {
       setNotFound(true)

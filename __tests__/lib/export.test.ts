@@ -91,9 +91,10 @@ describe('buildExportData', () => {
   it('counts scheduled (excluding excused) and present correctly', async () => {
     const profiles    = [{ id: 'u1', full_name: 'Jan Kowalski' }]
     const assignments = [
-      { profile_id: 'u1', status: 'present' },
-      { profile_id: 'u1', status: 'absent' },
-      { profile_id: 'u1', status: 'excused' },   // nie liczy do scheduled
+      { profile_id: 'u1', status: 'present', schedule: { date: '2026-02-01', time: '18:00:00', service_mode: 'signup' } },
+      { profile_id: 'u1', status: 'absent', schedule: { date: '2026-02-01', time: '18:00:00', service_mode: 'signup' } },
+      { profile_id: 'u1', status: 'excused', schedule: { date: '2026-02-01', time: '18:00:00', service_mode: 'signup' } },   // nie liczy do scheduled
+      { profile_id: 'u1', status: 'present', schedule: { date: '2026-02-01', time: '18:00:00', service_mode: 'none' } }, // bez obecności
     ]
     const points = [{ profile_id: 'u1', amount: 10 }, { profile_id: 'u1', amount: 5 }]
 
@@ -112,9 +113,9 @@ describe('buildExportData', () => {
     expect(result.members[0].points).toBe(15)
   })
 
-  it('counts confirmed status as present', async () => {
+  it('accepted excuse (confirmed) is left out; unmarked past assignment counts as absence', async () => {
     const profiles    = [{ id: 'u1', full_name: 'Jan Kowalski' }]
-    const assignments = [{ profile_id: 'u1', status: 'confirmed' }]
+    const assignments = [{ profile_id: 'u1', status: 'confirmed', schedule: { date: '2026-02-01', time: '18:00:00', service_mode: 'signup' } }, { profile_id: 'u1', status: 'assigned', schedule: { date: '2026-02-01', time: '18:00:00', service_mode: 'signup' } }]
 
     const supabase: any = {
       from: jest.fn().mockReturnValue(makeChain([]))
@@ -124,7 +125,8 @@ describe('buildExportData', () => {
     }
 
     const result = await buildExportData(supabase, 'p1', 'Parafia', '2026-01-01', '2026-05-27')
-    expect(result.members[0].present).toBe(1)
+    expect(result.members[0].present).toBe(0)
+    expect(result.members[0].scheduled).toBe(1)
   })
 
   it('sorts members by points descending', async () => {

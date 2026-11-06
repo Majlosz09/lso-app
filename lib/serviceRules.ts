@@ -1,4 +1,4 @@
-import { isCheckInWindowOpen, isPast } from './dates'
+import { isCheckInWindowOpen, isPast, localDateStr } from './dates'
 import type { Service } from '../hooks/useServices'
 import type { ServiceMode } from './massSchedule'
 
@@ -49,9 +49,29 @@ export function serviceAvailability(
   return result
 }
 
-/** Frekwencja w %: obecny / (obecny + nieobecny + usprawiedliwiony) na minionych służbach. */
-export function attendanceRate(statuses: string[]): number | null {
-  const counted = statuses.filter(s => ['present', 'absent', 'excused', 'confirmed'].includes(s))
+/** Zapis do frekwencji (jak w bazie: rate_status). */
+export type RateRow = { status: string; date: string; time?: string | null; serviceMode?: string | null }
+
+/**
+ * Jak zapis liczy się do frekwencji — ta sama reguła co funkcja `rate_status` w bazie (raport miesięczny,
+ * ścieżka formacji): obecny = obecność; nieobecny albo zapisany, którego po zamknięciu meldowania
+ * (90 min po rozpoczęciu) nikt nie odhaczył = nieobecność; przyjęte usprawiedliwienie, czekające zgłoszenie,
+ * zamiana i służby bez obecności — nie liczą się wcale.
+ */
+export function rateStatus(r: RateRow, now: Date = new Date()): 'present' | 'absent' | null {
+  if (r.serviceMode === 'none') return null
+  if (r.status === 'present') return 'present'
+  if (r.status === 'absent') return 'absent'
+  if (r.status !== 'assigned') return null
+  const ended = r.time
+    ? new Date(`${r.date}T${r.time.slice(0, 5)}:00`).getTime() + 95 * 60_000 < now.getTime()
+    : r.date < localDateStr(now)
+  return ended ? 'absent' : null
+}
+
+/** Frekwencja w %: obecny ÷ (obecny + nieobecny + nieodhaczony po służbie). null = brak danych. */
+export function attendanceRate(rows: RateRow[], now: Date = new Date()): number | null {
+  const counted = rows.map(r => rateStatus(r, now)).filter(Boolean)
   if (counted.length === 0) return null
   return Math.round((counted.filter(s => s === 'present').length / counted.length) * 100)
 }

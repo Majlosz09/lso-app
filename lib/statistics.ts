@@ -1,8 +1,9 @@
 import type { ScheduleCategory } from '../types/database'
 import { addDays, shortDate } from './dates'
+import { rateStatus } from './serviceRules'
 
 export type StatSchedule = { id: string; category: ScheduleCategory; date: string }
-export type StatAssignment = { profile_id: string; status: string; schedule: { id?: string; date: string; category: ScheduleCategory } | null }
+export type StatAssignment = { profile_id: string; status: string; schedule: { id?: string; date: string; time?: string | null; category: ScheduleCategory; service_mode?: string | null } | null }
 export type StatPoint = { profile_id: string; amount: number }
 
 export type ParishStats = {
@@ -17,20 +18,19 @@ export type ParishStats = {
   members: { profile_id: string; full_name: string; services: number; points: number; rate: number | null }[]
 }
 
-const PRESENT = ['present', 'confirmed']
-// Frekwencja: obecny (lub usprawiedliwiony-przyjęty) / wszystkie przydziały poza czekającym zgłoszeniem
-const counts = (s: string) => s !== 'excused' && s !== 'swapped'
+// Frekwencja wg wspólnej reguły (lib/serviceRules → rateStatus, w bazie rate_status)
+const rowOf = (a: StatAssignment, now: Date) =>
+  a.schedule ? rateStatus({ status: a.status, date: a.schedule.date, time: a.schedule.time, serviceMode: a.schedule.service_mode }, now) : null
 
-function rateOf(list: StatAssignment[]): number | null {
-  const counted = list.filter(a => counts(a.status))
+function rateOf(list: StatAssignment[], now: Date): number | null {
+  const counted = list.map(a => rowOf(a, now)).filter(Boolean)
   if (!counted.length) return null
-  return Math.round((counted.filter(a => PRESENT.includes(a.status)).length / counted.length) * 100)
+  return Math.round((counted.filter(s => s === 'present').length / counted.length) * 100)
 }
 
 /**
- * Statystyki parafii za okres [from, to] — te same zasady co dotychczasowy ekran
- * (obecny = present/confirmed, bez czekających usprawiedliwień), plus tydzień po tygodniu
- * i frekwencja każdego ministranta.
+ * Statystyki parafii za okres [from, to]: frekwencja wg wspólnej reguły (obecny ÷ obecny + nieobecny
+ * + nieodhaczony po służbie), tydzień po tygodniu i frekwencja każdego ministranta.
  */
 export function computeParishStats(
   from: string,
@@ -39,16 +39,18 @@ export function computeParishStats(
   assignments: StatAssignment[],
   points: StatPoint[],
   names: Record<string, string>,
+  now: Date = new Date(),
 ): ParishStats {
-  const present = assignments.filter(a => PRESENT.includes(a.status)).length
-  const counted = assignments.filter(a => counts(a.status)).length
+  const statuses = assignments.map(a => rowOf(a, now))
+  const present = statuses.filter(s => s === 'present').length
+  const counted = statuses.filter(Boolean).length
 
   // tydzień po tygodniu (maks. 8 ostatnich tygodni okresu)
   const weeks: ParishStats['weeks'] = []
   for (let end = to; end >= from && weeks.length < 8; end = addDays(end, -7)) {
     const start = addDays(end, -6) < from ? from : addDays(end, -6)
     const inWeek = assignments.filter(a => a.schedule && a.schedule.date >= start && a.schedule.date <= end)
-    weeks.unshift({ label: `${shortDate(start)}–${shortDate(end)}`, rate: rateOf(inWeek) })
+    weeks.unshift({ label: `${shortDate(start)}–${shortDate(end)}`, rate: rateOf(inWeek, now) })
   }
 
   const catIds = Array.from(new Set(schedules.map(s => s.category)))
@@ -58,7 +60,7 @@ export function computeParishStats(
       category,
       services: n,
       share: schedules.length ? Math.round((n / schedules.length) * 100) : 0,
-      rate: rateOf(assignments.filter(a => a.schedule?.category === category)),
+      rate: rateOf(assignments.filter(a => a.schedule?.category === category), now),
     }
   }).sort((a, b) => b.services - a.services)
 
@@ -70,7 +72,7 @@ export function computeParishStats(
   }
   for (const a of assignments) {
     const m = a.schedule?.date.slice(0, 7)
-    if (m && monthMap[m] && PRESENT.includes(a.status)) monthMap[m].present++
+    if (m && monthMap[m] && a.status === 'present') monthMap[m].present++
   }
   const months = Object.entries(monthMap).sort(([a], [b]) => a.localeCompare(b)).map(([month, v]) => ({ month, ...v }))
 
@@ -87,7 +89,7 @@ export function computeParishStats(
     full_name: names[id],
     services: (byMember.get(id) ?? []).length,
     points: pts.get(id) ?? 0,
-    rate: rateOf(byMember.get(id) ?? []),
+    rate: rateOf(byMember.get(id) ?? [], now),
   })).sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1) || b.services - a.services)
 
   return {
