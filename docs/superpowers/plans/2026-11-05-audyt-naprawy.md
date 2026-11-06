@@ -67,10 +67,11 @@ Migracja `20261105010000_parent_link_requests.sql`, test `scripts/parent-link-sm
 - [x] (6a, bez NetInfo — paczka natywna; ponawianie co 15 s) Kolejka offline na telefonie: wysyłka po odzyskaniu sieci (NetInfo albo `AppState` + próba) — dziś tylko co 60 s.
 - [x] (6a) Logo: mniejszy plik (np. 256 px) zamiast 1,7 MB ikony sklepu w 5 miejscach.
 
-## Etap 7 — web
+## Etap 7 — web — ✅ LSO-dev 2026-11-05 (prod SQL + funkcja + sekrety SMTP + OTA/web: czeka)
 
-- [ ] Dzielenie bundla (async routes w expo-router dla weba) — dziś jeden plik 6 MB z całym panelem opiekuna.
-- [ ] Do decyzji: powiadomienia dla opiekunów pracujących tylko na webie (np. e-mail o nowych zgłoszeniach / oczekujących członkach) — na webie nie ma push.
+- [~] **Sprawdzone i odrzucone:** Dzielenie bundla (async routes w expo-router dla weba) — dziś jeden plik 6 MB z całym panelem opiekuna. Test 2026-11-05: 76 plików, ale start nadal 1,27 MB gzip (było 1,44 MB) — waga to wspólne biblioteki (4,3 MB); doładowanie przy ekranach + błędy w otwartych kartach po wdrożeniu. Prawdziwy zysk tylko z odchudzenia bibliotek.
+- [x] (decyzja: codzienny e-mail zbiorczy) Do decyzji: powiadomienia dla opiekunów pracujących tylko na webie (np. e-mail o nowych zgłoszeniach / oczekujących członkach) — na webie nie ma push. → `20261105080000_admin_digest.sql` + Edge Function `send-admin-digest`.
+- [x] (decyzja właściciela) `schedules` w publikacji Realtime → `20261105070000_schedules_realtime.sql`.
 
 ## Poza planem (niski priorytet, świadomie odłożone)
 

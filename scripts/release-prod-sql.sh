@@ -5,6 +5,8 @@
 #   bash scripts/release-prod-sql.sh check     # tylko sprawdza, co już jest w bazie PROD (nic nie zmienia)
 #   bash scripts/release-prod-sql.sh migrate   # uruchamia BRAKUJĄCE migracje po kolei, stop na pierwszym błędzie
 #   bash scripts/release-prod-sql.sh verify    # kontrola po migracji
+#   bash scripts/release-prod-sql.sh digest-setup         # e-mail opiekunów: adres projektu + wdrożenie funkcji
+#   bash scripts/release-prod-sql.sh digest-test ADRES    # przykładowy e-mail na ADRES + kto dziś by dostał
 #
 # Każda migracja jest rozpoznawana po obiekcie, który tworzy (tabela / kolumna / funkcja), więc
 # ponowne uruchomienie pomija to, co już zrobione. Na koniec CLI wraca do LSO-dev (scripts/dev-sql.sh działa dalej).
@@ -73,6 +75,7 @@ MIGRATIONS=(
   "20261105050000_service_attendance_rpc.sql|to_regprocedure('public.set_service_attendance(uuid,uuid[])') IS NOT NULL"
   "20261105060000_open_dm_rpc.sql|to_regprocedure('public.open_dm(uuid)') IS NOT NULL"
   "20261105070000_schedules_realtime.sql|EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'schedules')"
+  "20261105080000_admin_digest.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'admin_digest_due')"
 )
 
 banner() {
@@ -137,6 +140,22 @@ case "$MODE" in
     ;;
   counts)
     qr "select (select count(*) from profiles) profiles, (select count(*) from schedules) schedules, (select count(*) from schedule_assignments) assignments, (select count(*) from points) points, (select count(*) from attendance) attendance, (select count(*) from mass_templates) mass_templates, (select count(*) from parishes) parishes, (select count(*) from chat_messages) chat, (select count(*) from member_badges) badges, (select count(*) from churches) churches"
+    ;;
+  digest-setup)
+    # e-mail do opiekunów (migracja 20261105080000): adres projektu dla crona + wdrożenie Edge Function.
+    # Sekrety SMTP_USER / SMTP_PASS ustawiasz sam: Supabase → Edge Functions → Secrets (hasło aplikacji Google).
+    qw "insert into app_private.cron_secrets (name, secret) values ('project_url', 'https://$PROD_REF.supabase.co') on conflict (name) do update set secret = excluded.secret"
+    npx supabase functions deploy send-admin-digest --project-ref "$PROD_REF" --no-verify-jwt --yes
+    echo "Gotowe. Test: bash scripts/release-prod-sql.sh digest-test twoj@adres"
+    ;;
+  digest-test)
+    # jeden przykładowy e-mail na podany adres (nic nie zapisuje w dzienniku) + lista, kto dziś by dostał
+    [ -n "${2:-}" ] || { echo "Podaj adres: bash scripts/release-prod-sql.sh digest-test twoj@adres"; exit 1; }
+    sec="$(qr -o json "select secret from app_private.cron_secrets where name = 'admin_digest'" 2>/dev/null | grep -o '"secret": "[a-f0-9]*"' | cut -d'"' -f4)"
+    [ -n "$sec" ] || { echo "Brak sekretu — najpierw migrate (20261105080000)."; exit 1; }
+    url="https://$PROD_REF.supabase.co/functions/v1/send-admin-digest"
+    echo "Kto dziś dostałby e-mail:"; curl -s -X POST "$url" -H "x-digest-secret: $sec" -H 'Content-Type: application/json' -d '{"dryRun":true}'; echo
+    echo "Wysyłka testowa na $2:"; curl -s -X POST "$url" -H "x-digest-secret: $sec" -H 'Content-Type: application/json' -d "{\"testTo\":\"$2\"}"; echo
     ;;
   migrate)
     # bezpiecznik: gdy zapytania nie działają, każda kontrola dałaby „brakuje” i stare migracje poszłyby drugi raz

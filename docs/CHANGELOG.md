@@ -5,10 +5,14 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 ## Nieopublikowane
 
 ### Dla użytkowników
+- Opiekun dostaje raz dziennie (ok. 17:00) e-mail, gdy coś na niego czeka: osoby do zatwierdzenia, zgłoszone nieobecności, zgłoszenia obecności — przydatne przy pracy tylko na webie (bez powiadomień push). Wyłącznik: Profil → „Codzienny e-mail o sprawach do załatwienia”.
 - Nowa, zmieniona albo odwołana służba pojawia się u innych od razu (wcześniej dopiero po odświeżeniu ekranu).
 
 ### Techniczne
 - Migracja `20261105070000_schedules_realtime.sql` (audyt Etap 7, decyzja właściciela): `schedules` w publikacji `supabase_realtime` (aplikacja już słuchała tej tabeli). Na LSO-dev 2026-11-05.
+- Migracja `20261105080000_admin_digest.sql` + Edge Function `send-admin-digest` (audyt Etap 7, decyzja właściciela): kolumna `profiles.email_digest` (domyślnie włączona), schemat `app_private` (sekret crona, adres projektu, dziennik `admin_digest_emails` — jeden e-mail na opiekuna dziennie), RPC `admin_digest_due` / `admin_digest_mark_sent` (tylko z sekretem, `service_role`), `poke_admin_digest()` + pg_cron `lso-admin-digest` (16:00 UTC). Liczby jak liczniki w aplikacji (`useNavBadges`). Wysyłka SMTP Google Workspace (lsoapp@parafia-borzapilski.pl, hasło aplikacji w sekretach funkcji), pomija konta `*.test` i zarządzane. Na LSO-dev 2026-11-05 (bez SMTP — sprawdzone: sekret, lista, cron → funkcja).
+- `app/(tabs)/profile.tsx`: przełącznik e-maila dla opiekuna. `scripts/release-prod-sql.sh`: tryby `digest-setup` i `digest-test ADRES`.
+- Sprawdzony i odrzucony podział pliku webu (`asyncRoutes` expo-router): start 1,27 MB zamiast 1,44 MB gzip (−12%), bo 4,3 MB to wspólne biblioteki; minusy — doładowanie przy każdym ekranie i błędy w otwartych kartach po wdrożeniu (stare części znikają). Bez zmian w `app.json`.
 
 ## 2026-11-05 — OTA + web (wersja 1.2.0, 9d77bc0; audyt Etap 6b, bez zmian w bazie)
 

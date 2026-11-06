@@ -125,6 +125,7 @@ Wszystkie poniżej są `SECURITY DEFINER` (omijają RLS) i same sprawdzają upra
 | Zadanie | Kiedy | Co robi |
 |---|---|---|
 | `lso-monthly-report` | 1. dnia miesiąca, 07:00 UTC | powiadamia opiekunów o raporcie za poprzedni miesiąc |
+| `lso-admin-digest` | codziennie 16:00 UTC | `poke_admin_digest()` → Edge Function `send-admin-digest` (pg_net, nagłówek z sekretem z `app_private.cron_secrets`): e-mail do opiekunów z `email_digest`, gdy czekają osoby / nieobecności / zgłoszenia obecności; dziennik `app_private.admin_digest_emails` |
 | `lso-extend-schedules` | codziennie 02:20 UTC | `extend_schedule_coverage()` — parafiom z `setup_done` dopisuje grafik z rozkładu na rok do przodu, gdy ostatnia Msza jest bliżej niż 60 dni przed „za rok” (wcześniej robił to telefon każdego członka przy logowaniu) |
 
 ## Migracje — jak wprowadzać

@@ -88,6 +88,8 @@ export interface Profile {
   is_admin: boolean
   /** pomocnik opiekuna: grafik, obecność, zgłoszenia (bez członków i ustawień) */
   is_helper?: boolean
+  /** opiekun: codzienny e-mail o sprawach do załatwienia (domyślnie włączony) */
+  email_digest?: boolean
   rocznik: number | null
   rank_id: string | null
   parish_id: string | null
