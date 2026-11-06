@@ -73,6 +73,7 @@ MIGRATIONS=(
   "20261105050000_service_attendance_rpc.sql|to_regprocedure('public.set_service_attendance(uuid,uuid[])') IS NOT NULL"
   "20261105060000_open_dm_rpc.sql|to_regprocedure('public.open_dm(uuid)') IS NOT NULL"
   "20261105070000_schedules_realtime.sql|EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'schedules')"
+  "20261106000000_recurring_unify.sql|EXISTS (SELECT 1 FROM pg_proc WHERE proname='leave_recurring')"
 )
 
 banner() {

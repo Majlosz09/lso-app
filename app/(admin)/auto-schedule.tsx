@@ -66,12 +66,14 @@ export default function AutoScheduleScreen() {
       supabase.from('profiles').select('id, full_name').eq('parish_id', parishId).eq('role', 'member').eq('is_active', true).eq('approved', true),
       supabase.from('schedule_assignments').select('profile_id, status, schedule:schedules!inner(parish_id, date)')
         .eq('schedule.parish_id', parishId).gte('schedule.date', since).lt('schedule.date', localDateStr()),
-      supabase.from('recurring_commitments').select('profile_id, day_of_week, time_slot'),
+      // stałe dyżury (od opiekuna i zapisy „co tydzień” z grafiku) — jedna tabela
+      supabase.from('recurring_assignments').select('profile_id, day_of_week, time')
+        .eq('parish_id', parishId).gte('end_date', localDateStr()),
     ]).then(([p, a, rc]) => {
       const recent = new Map<string, number>()
       for (const x of (a.data ?? []) as any[]) if (!INACTIVE.includes(x.status)) recent.set(x.profile_id, (recent.get(x.profile_id) ?? 0) + 1)
       const regular = new Map<string, string[]>()
-      for (const x of (rc.data ?? []) as any[]) if (x.time_slot) regular.set(x.profile_id, [...(regular.get(x.profile_id) ?? []), `${x.day_of_week}_${String(x.time_slot).slice(0, 5)}`])
+      for (const x of (rc.data ?? []) as any[]) if (x.time) regular.set(x.profile_id, [...(regular.get(x.profile_id) ?? []), `${x.day_of_week}_${String(x.time).slice(0, 5)}`])
       setMembers(((p.data ?? []) as any[]).map(m => ({ id: m.id, name: m.full_name, recent: recent.get(m.id) ?? 0, regular: regular.get(m.id) })))
     })
   }, [parishId])

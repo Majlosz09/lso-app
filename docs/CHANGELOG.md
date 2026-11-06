@@ -5,9 +5,14 @@ Format: każda zmiana kodu = wpis w „Nieopublikowane”. Przy wydaniu sekcja p
 ## Nieopublikowane
 
 ### Dla użytkowników
+- Wypis „Z całego cyklu” usuwa wszystkie przyszłe służby ze stałego zapisu „co tydzień” (wcześniej tylko klikniętą — reszta tygodni zostawała). Przycisk pokazuje, ile służb usunie.
+- Rodzic może wypisać dziecko z całego cyklu „co tydzień” (wcześniej tylko z pojedynczej służby).
+- Zapisy „co tydzień” ministrantów widać u opiekuna w „Stałych dyżurach” (z dopiskiem „zapisał się sam” / „zapisany przez rodzica”) i można je tam cofnąć; uwzględnia je też auto-grafik, także u pomocnika.
+- Stały dyżur ustawiony przez opiekuna: ministrant wypisze się z pojedynczej służby, cały dyżur zmienia opiekun.
 - Nowa, zmieniona albo odwołana służba pojawia się u innych od razu (wcześniej dopiero po odświeżeniu ekranu).
 
 ### Techniczne
+- Migracja `20261106000000_recurring_unify.sql`: zapis „co tydzień” (`sign_up_for_slot` recurring) tworzy wiersz `recurring_assignments` (created_by = ministrant/rodzic) i ustawia `recurring_assignment_id` na każdym zapisie; nowe RPC `assignment_cycle` i `leave_recurring`; `cancel_recurring_assignments` nie kasuje służb, które już się zaczęły; stare `recurring_commitments` przeniesione (z powiązaniem przyszłych zapisów) i wyczyszczone — tabela zostaje dla starszych wersji apki. Test: `scripts/recurring-unify-smoke-dev.mjs` (23/23 + przeniesienie). Na LSO-dev 2026-11-06.
 - Migracja `20261105070000_schedules_realtime.sql` (audyt Etap 7, decyzja właściciela): `schedules` w publikacji `supabase_realtime` (aplikacja już słuchała tej tabeli). Na LSO-dev 2026-11-05.
 - Sprawdzony i odrzucony podział pliku webu (`asyncRoutes` expo-router): start 1,27 MB zamiast 1,44 MB gzip (−12%), bo 4,3 MB to wspólne biblioteki; minusy — doładowanie przy każdym ekranie i błędy w otwartych kartach po wdrożeniu (stare części znikają). Bez zmian w `app.json`.
 

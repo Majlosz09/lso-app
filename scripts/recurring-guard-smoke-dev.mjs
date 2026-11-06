@@ -26,7 +26,8 @@ if (!t17 || !t18) throw new Error('Demo: brak śr 17:00 / 18:00 w rozkładzie')
 
 const before = new Set(((await admin.sb.from('schedules').select('id').eq('parish_id', parish).gte('date', START).lte('date', END)).data ?? []).map(s => s.id))
 const stasBefore = new Set(((await admin.sb.from('schedule_assignments').select('id').eq('profile_id', stas.uid)).data ?? []).map(x => x.id))
-const commitBefore = new Set(((await stas.sb.from('recurring_commitments').select('id').eq('profile_id', stas.uid)).data ?? []).map(x => x.id))
+// od 2026-11-06 zapis „co tydzień” to wiersz recurring_assignments (created_by = ministrant)
+const commitBefore = new Set(((await admin.sb.from('recurring_assignments').select('id').eq('profile_id', stas.uid)).data ?? []).map(x => x.id))
 let periodId = null, ruleIds = [], schedPoints = null
 
 try {
@@ -101,7 +102,8 @@ try {
   if (ruleIds.length) await admin.sb.rpc('cancel_recurring_assignments', { p_ids: ruleIds })
   const stasAsg = (await admin.sb.from('schedule_assignments').select('id, schedule:schedules!inner(date)').eq('profile_id', stas.uid).gte('schedule.date', iso(new Date()))).data ?? []
   for (const a of stasAsg.filter(x => !stasBefore.has(x.id))) await admin.sb.from('schedule_assignments').delete().eq('id', a.id)
-  for (const c of ((await stas.sb.from('recurring_commitments').select('id').eq('profile_id', stas.uid)).data ?? []).filter(x => !commitBefore.has(x.id))) await stas.sb.from('recurring_commitments').delete().eq('id', c.id)
+  const stasRules = ((await admin.sb.from('recurring_assignments').select('id').eq('profile_id', stas.uid)).data ?? []).filter(x => !commitBefore.has(x.id)).map(x => x.id)
+  if (stasRules.length) await admin.sb.rpc('cancel_recurring_assignments', { p_ids: stasRules })
   if (periodId) await admin.sb.rpc('save_rozklad', { p_target: 'delete_period', p_period_id: periodId, p_policy: 'keep', p_dry_run: false })
   if (schedPoints) { await admin.sb.from('attendance').delete().eq('schedule_id', schedPoints); await admin.sb.from('schedules').delete().eq('id', schedPoints) }
   const after = ((await admin.sb.from('schedules').select('id').eq('parish_id', parish).gte('date', START).lte('date', END)).data ?? []).map(s => s.id)

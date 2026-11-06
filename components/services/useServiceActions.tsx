@@ -17,6 +17,7 @@ import { SwapSheet } from './SwapSheet'
 import { useSwapStore } from '../../stores/swapStore'
 import { useCheckinQueue } from '../../stores/checkinQueueStore'
 import { isNetworkError, queueKey } from '../../lib/offlineQueue'
+import { Cycle, cycleLabel, fetchCycle, leaveCycle, servicesWord } from '../../lib/recurring'
 
 const DAY_ACC = ['niedzielę', 'poniedziałek', 'wtorek', 'środę', 'czwartek', 'piątek', 'sobotę']
 
@@ -33,7 +34,7 @@ export function useServiceActions(onChanged: () => void) {
 
   const [signUpFor, setSignUpFor] = useState<Service | null>(null)
   const [signUpMode, setSignUpMode] = useState<'once' | 'recurring'>('once')
-  const [unsign, setUnsign] = useState<{ service: Service; commitmentId: string | null } | null>(null)
+  const [unsign, setUnsign] = useState<{ service: Service; cycle: Cycle | null } | null>(null)
   const [absenceFor, setAbsenceFor] = useState<Service | null>(null)
   const [swapFor, setSwapFor] = useState<Service | null>(null)
   const outgoingSwaps = useSwapStore(st => st.outgoing)
@@ -161,28 +162,29 @@ export function useServiceActions(onChanged: () => void) {
   // ── Wypis ────────────────────────────────────────────────────────────────
   const openUnsign = async (s: Service) => {
     if (!s.mine) return
-    const dow = new Date(s.date + 'T12:00:00').getDay()
-    const { data: commitment } = await supabase
-      .from('recurring_commitments')
-      .select('id')
-      .eq('profile_id', profile!.id)
-      .eq('day_of_week', dow)
-      .eq('time_slot', s.time)
-      .maybeSingle()
-    setUnsign({ service: s, commitmentId: commitment?.id ?? null })
+    setBusyId(s.id)
+    const cycle = await fetchCycle(s.mine.id)
+    setBusyId(null)
+    setUnsign({ service: s, cycle })
   }
-  const doUnsign = async (cycle: boolean) => {
+  const doUnsign = async (wholeCycle: boolean) => {
     const u = unsign
     if (!u?.service.mine) return
     setUnsign(null)
     setBusyId(u.service.id)
-    const ops = [supabase.from('schedule_assignments').delete().eq('id', u.service.mine.id)]
-    if (cycle && u.commitmentId) ops.push(supabase.from('recurring_commitments').delete().eq('id', u.commitmentId))
-    const results = await Promise.all(ops)
+    if (wholeCycle) {
+      // cały cykl: serwer usuwa wszystkie przyszłe służby z tego stałego zapisu (razem z tą)
+      const res = await leaveCycle(u.service.mine.id)
+      setBusyId(null)
+      if ('error' in res) { Toast.show({ type: 'error', text1: 'Błąd', text2: res.error }); return }
+      Toast.show({ type: 'success', text1: 'Wypisano z całego cyklu', text2: `Usunięto ${res.removed} ${servicesWord(res.removed)}.` })
+      onChanged()
+      return
+    }
+    const { error } = await supabase.from('schedule_assignments').delete().eq('id', u.service.mine.id)
     setBusyId(null)
-    const err = results.find(r => r.error)?.error
-    if (err) { Toast.show({ type: 'error', text1: 'Błąd', text2: err.message }); return }
-    Toast.show({ type: 'success', text1: cycle ? 'Wypisano z całego cyklu' : 'Wypisano z tej służby' })
+    if (error) { Toast.show({ type: 'error', text1: 'Błąd', text2: error.message }); return }
+    Toast.show({ type: 'success', text1: 'Wypisano z tej służby' })
     onChanged()
   }
 
@@ -263,10 +265,10 @@ export function useServiceActions(onChanged: () => void) {
         onClose={() => setUnsign(null)}
         title="Wypisać się?"
         eyebrow={unsign ? `${unsign.service.title} · ${longDate(unsign.service.date)} ${unsign.service.time}` : undefined}
-        footer={unsign?.commitmentId ? (
+        footer={unsign?.cycle?.canLeave ? (
           <>
             <Button label="Tylko z tej służby" variant="danger" onPress={() => doUnsign(false)} />
-            <Button label="Z całego cyklu" variant="secondary" onPress={() => doUnsign(true)} />
+            <Button label={`Z całego cyklu (${unsign.cycle.future})`} variant="secondary" onPress={() => doUnsign(true)} />
           </>
         ) : (
           <>
@@ -276,9 +278,11 @@ export function useServiceActions(onChanged: () => void) {
         )}
       >
         <AppText muted>
-          {unsign?.commitmentId
-            ? 'Ta służba jest częścią Twojego stałego dyżuru. Wypisać się tylko z niej czy z całego cyklu?'
-            : 'Miejsce zwolni się dla innych ministrantów.'}
+          {unsign?.cycle?.canLeave
+            ? `Ta służba jest częścią Twojego stałego zapisu (${cycleLabel(unsign.cycle)}). Wypisać się tylko z niej czy z całego cyklu — ${unsign.cycle.future} ${servicesWord(unsign.cycle.future)}?`
+            : unsign?.cycle
+              ? `To Twój stały dyżur od opiekuna (${cycleLabel(unsign.cycle)}). Możesz wypisać się z tej jednej służby — cały dyżur zmienia opiekun.`
+              : 'Miejsce zwolni się dla innych ministrantów.'}
         </AppText>
       </Sheet>
 

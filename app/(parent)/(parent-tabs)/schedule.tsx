@@ -16,8 +16,9 @@ import { dayShort, longDate, shortDate } from '../../../lib/dates'
 import { STATUS_COLORS, STATUS_LABELS } from '../../../lib/status'
 import { useIsDesktop } from '../../../hooks/useIsDesktop'
 import { ChildDuty, useChildren } from '../../../hooks/useChildren'
-import { AppText, Avatar, Button, Card, ScreenHeader } from '../../../components/ui'
+import { AppText, Avatar, Button, Card, ScreenHeader, Sheet } from '../../../components/ui'
 import { ChildReports } from '../../../components/services/ChildReports'
+import { Cycle, cycleLabel, fetchCycle, leaveCycle, servicesWord } from '../../../lib/recurring'
 
 type Duty = ChildDuty & { child: string; avatar: string | null }
 
@@ -51,13 +52,34 @@ export default function ParentSchedule() {
   const childRef = activeChild ? { id: activeChild.id, name: activeChild.full_name.split(' ')[0] } : null
   const takenIds = new Set((activeChild?.duties ?? []).map(d => d.scheduleId))
 
-  const unsign = async (d: Duty) => {
+  // zapis z cyklu „co tydzień” — pytamy: ta jedna służba czy cały cykl
+  const [unsignFor, setUnsignFor] = useState<{ duty: Duty; cycle: Cycle } | null>(null)
+  const unsignOne = async (d: Duty) => {
     setBusy(d.assignmentId)
     const { error } = await supabase.rpc('unsign_child', { p_assignment_id: d.assignmentId })
     setBusy(null)
     if (error) { Toast.show({ type: 'error', text1: 'Nie wypisano', text2: error.message }); return }
     Toast.show({ type: 'success', text1: 'Wypisano', text2: `${d.child} · ${d.title} ${d.time}` })
     reload()
+  }
+  const unsign = async (d: Duty) => {
+    setBusy(d.assignmentId)
+    const cycle = await fetchCycle(d.assignmentId)
+    setBusy(null)
+    if (cycle?.canLeave) { setUnsignFor({ duty: d, cycle }); return }
+    await unsignOne(d)
+  }
+  const unsignCycle = async () => {
+    const u = unsignFor
+    if (!u) return
+    setUnsignFor(null)
+    setBusy(u.duty.assignmentId)
+    const res = await leaveCycle(u.duty.assignmentId)
+    setBusy(null)
+    if ('error' in res) { Toast.show({ type: 'error', text1: 'Nie wypisano', text2: res.error }); return }
+    Toast.show({ type: 'success', text1: 'Wypisano z całego cyklu', text2: `${u.duty.child} · usunięto ${res.removed} ${servicesWord(res.removed)}` })
+    reload()
+    refreshServices()
   }
   const canUnsign = (d: Duty) => d.status === 'assigned' && d.serviceMode === 'signup'
     && new Date(`${d.date}T${d.time}`).getTime() > Date.now() + 30 * 60_000
@@ -170,6 +192,22 @@ export default function ParentSchedule() {
         onClose={() => setAbsenceFor(null)}
         onSubmit={report}
       />
+      <Sheet
+        visible={!!unsignFor}
+        onClose={() => setUnsignFor(null)}
+        title="Wypisać dziecko?"
+        eyebrow={unsignFor ? `${unsignFor.duty.child} · ${unsignFor.duty.title} · ${longDate(unsignFor.duty.date)} ${unsignFor.duty.time}` : undefined}
+        footer={unsignFor ? (
+          <>
+            <Button label="Tylko z tej służby" variant="danger" onPress={() => { const d = unsignFor.duty; setUnsignFor(null); unsignOne(d) }} />
+            <Button label={`Z całego cyklu (${unsignFor.cycle.future})`} variant="secondary" onPress={unsignCycle} />
+          </>
+        ) : undefined}
+      >
+        <AppText muted>
+          {unsignFor ? `Ta służba jest częścią stałego zapisu (${cycleLabel(unsignFor.cycle)}). Wypisać tylko z niej czy z całego cyklu — ${unsignFor.cycle.future} ${servicesWord(unsignFor.cycle.future)}?` : ''}
+        </AppText>
+      </Sheet>
       <ChildSignUpSheet visible={signUpOpen} onClose={() => setSignUpOpen(false)} child={childRef}
         services={services} takenScheduleIds={takenIds} onDone={() => { reload(); refreshServices() }} />
       <ReportAttendanceSheet visible={reportOpen} onClose={() => setReportOpen(false)} forChild={childRef}

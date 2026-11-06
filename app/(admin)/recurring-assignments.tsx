@@ -43,8 +43,14 @@ type Rule = {
   time: string
   start_date: string
   end_date: string
-  profile: { full_name: string } | null
+  created_by: string | null
+  profile: { full_name: string; parent_id: string | null } | null
 }
+/** Kto ustawił stały dyżur: zapis „co tydzień” z grafiku (ministrant / rodzic) albo opiekun. */
+const ruleSource = (r: Rule) =>
+  r.created_by && r.created_by === r.profile_id ? 'zapisał się sam'
+    : r.created_by && r.created_by === r.profile?.parent_id ? 'zapisany przez rodzica'
+    : null
 type Member = { id: string; full_name: string }
 type Template = { day_of_week: number; time: string; label: string | null }
 /** Jeden tydzień stałego dyżuru wg rozkładu (z okresami) — z preview_recurring_assignments */
@@ -139,7 +145,7 @@ export default function RecurringAssignmentsScreen() {
     if (!parishId) return
     const [rulesRes, membersRes, tmplRes] = await Promise.all([
       supabase.from('recurring_assignments')
-        .select('id, profile_id, day_of_week, time, start_date, end_date, profile:profiles!recurring_assignments_profile_id_fkey(full_name)')
+        .select('id, profile_id, day_of_week, time, start_date, end_date, created_by, profile:profiles!recurring_assignments_profile_id_fkey(full_name, parent_id)')
         .eq('parish_id', parishId)
         .order('day_of_week').order('time'),
       supabase.from('profiles').select('id, full_name')
@@ -244,6 +250,7 @@ export default function RecurringAssignmentsScreen() {
         <Text style={styles.intro}>
           Stały dyżur przypisuje ministranta do tej samej Mszy co tydzień. Przydziały pojawią się
           w grafiku od razu na cały okres — cofnięcie usuwa wszystkie przyszłe naraz (historia zostaje).
+          Tu są też zapisy „co tydzień”, które ministranci (albo rodzice) zrobili sami w grafiku.
         </Text>
 
         {groups.length === 0 ? (
@@ -275,7 +282,9 @@ export default function RecurringAssignmentsScreen() {
                 <Ionicons name="person-outline" size={16} color={c.subtext} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.ruleName}>{r.profile?.full_name ?? '—'}</Text>
-                  <Text style={styles.ruleDates}>{formatDate(r.start_date)} – {formatDate(r.end_date)}</Text>
+                  <Text style={styles.ruleDates}>
+                    {formatDate(r.start_date)} – {formatDate(r.end_date)}{ruleSource(r) ? ` · ${ruleSource(r)}` : ''}
+                  </Text>
                 </View>
                 <TouchableOpacity
                   hitSlop={8}
